@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizOperatingCountMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizOperatingCount" id="bizOperatingCountMap">
+        <result property="id" column="id"/>
+        <result property="objectId" column="object_id"/>
+        <result property="notliekNum" column="notliek_num"/>
+        <result property="likeNum" column="like_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询评论点赞数-->
+    <select id="selectLikeNumByPostsId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.posts.out.LikeInfo">
+        select
+        id,
+        like_num likeNum
+        from
+        biz_operating_count
+        where
+        status = '1'
+        and object_id = #{commentId}
+    </select>
+
+</mapper>

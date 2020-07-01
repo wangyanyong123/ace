@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizSubProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizSubProduct" id="bizSubProductMap">
+        <result property="id" column="id"/>
+        <result property="subId" column="sub_Id"/>
+        <result property="productId" column="product_Id"/>
+        <result property="productName" column="product_name"/>
+        <result property="specId" column="spec_id"/>
+        <result property="specName" column="spec_name"/>
+        <result property="subNum" column="sub_num"/>
+        <result property="price" column="price"/>
+        <result property="uint" column="uint"/>
+        <result property="cost" column="cost"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--获取订单产品详情-->
+    <select id="getSubProductInfo" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubProductInfo">
+        SELECT product_Id productId,product_name productName,spec_id specId,spec_name specName,sub_num subNum,price price,img_id imgId,unit unit
+        from biz_sub_product
+        where sub_id=#{subId}
+        order by create_Time desc
+    </select>
+
+    <!--获取订单产品详情-->
+    <select id="getSubToRobotProductInfo" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubToRobotProductInfo">
+        SELECT product_Id productId,product_name productName,spec_id specId,spec_name specName,sub_num subNum,price price,img_id imgId,unit unit
+        from biz_sub_product
+        where sub_id=#{subId}
+        order by create_Time desc
+    </select>
+
+    <!-- 获取上下午订单量 -->
+    <select id="getSubProductCountForDay" parameterType="map" resultType="java.util.Map">
+        select DATE_FORMAT(t.expected_service_time, '%p') createTime, t.day, sum(sp.sub_num) num from biz_sub_product sp left outer join (select id, DATE_FORMAT(expected_service_time, '%Y-%m-%d') day, expected_service_time from biz_subscribe_wo) t
+        on sp.sub_id=t.id where t.day=#{day} and sp.product_Id=#{productId} and sp.status='1' GROUP BY createTime
+    </select>
+</mapper>

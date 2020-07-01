@@ -1,0 +1,25 @@
+
+---- jinmao-----------------------
+xxl:
+  job:
+    admin:
+      addresses: http://39.105.78.122:9800
+    accessToken: Sino+2020
+    executor:
+      appname: xxl-jinmao-executor
+      address:
+      ip:
+      port: 9840
+      logpath: /mnt/logs/xxl-job/jobhandler
+      logretentiondays: 30
+app:
+  decision-ordinary-pass-rate: 50
+  decision-special-pass-rate: 66
+----------------------------------------
+
+-------app--------------------
+
+app:
+  decision-ordinary-pass-rate: 50
+  decision-special-pass-rate: 66
+--------------------------------

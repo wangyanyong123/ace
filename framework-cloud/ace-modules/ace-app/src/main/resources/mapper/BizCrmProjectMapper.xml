@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCrmProjectMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCrmProject" id="bizCrmProjectMap">
+        <result property="projectId" column="project_id"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="projectName" column="project_name"/>
+        <result property="cityId" column="city_id"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="projectStage" column="project_stage"/>
+        <result property="businessUnitName" column="business_unit_name"/>
+        <result property="owningBusinessUnit" column="owning_business_unit"/>
+        <result property="beginDate" column="begin_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="modifiedOn" column="modified_on"/>
+    </resultMap>
+    <select id="getByIds" resultMap="bizCrmProjectMap">
+        select * from biz_crm_project
+        where 1=1 and
+        (project_id in
+            <foreach collection="ids" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            or
+            project_code in
+            <foreach collection="ids" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>)
+    </select>
+    <!--<update id="updateBatch">-->
+
+    <!--</update>-->
+    <!--<insert id="insertBatch">-->
+
+    <!--</insert>-->
+    <select id="getProjectListByCityId" resultType="com.github.wxiaoqi.security.app.vo.city.out.ProjectInfoVo">
+        select project_id projectId ,project_name projectName
+        from biz_crm_project
+        where `status` = '1'and city_id = #{cityId}
+    </select>
+
+    <select id="sysProjectInfo" resultType="com.github.wxiaoqi.security.api.vo.face.SysProjectInfoVo">
+        SELECT project_id projectId
+        ,project_name projectName
+        FROM biz_crm_project WHERE `status` = '1'
+    </select>
+
+
+    <!--根据用户查询项目-->
+    <select id="selectProjectByUserId" resultType="java.lang.String">
+        SELECT
+            bup.project_id projectId
+        FROM biz_user_project bup
+        LEFT JOIN biz_user_house buh ON buh.user_id = bup.user_id AND buh.user_id = #{userId} AND buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '1'
+        INNER JOIN biz_crm_project bcp ON bcp.project_id = bup.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_house bch ON  bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bch.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bc ON bc.housing_resources_id = bcu.building_id AND bc.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bc.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bup.user_id = #{userId} AND bup.`status` = '1' AND bup.is_now = '1'
+        ORDER BY buh.id DESC, bch.record_house_num DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectProjectIdListByCCodeList" resultType="string">
+       SELECT
+           distinct p.project_id
+        FROM
+            biz_crm_project p
+        INNER JOIN biz_crm_city c on p.city_id = c.city_id
+
+        where c.c_code in
+        <foreach collection="cityCodeList" item = 'cityCode' separator="," open="(" close=")">
+            #{cityCode}
+        </foreach>
+        and p.status = '1' and c.status = '1'
+    </select>
+    <select id="count" resultType="int">
+        select count(1) from biz_crm_project where status = '1'
+    </select>
+</mapper>

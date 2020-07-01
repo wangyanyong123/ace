@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.external.mapper.BizQrEnclosedMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.external.entity.BizQrEnclosed" id="bizQrEnclosedMap">
+        <result property="id" column="id"/>
+        <result property="qrId" column="qr_id"/>
+        <result property="enclosedId" column="enclosed_id"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getEncloseIdByQrId" resultType="java.lang.String">
+        SELECT DISTINCT bqe.enclosed_id
+        FROM biz_qr_enclosed bqe
+        INNER JOIN base_app_client_user bacu ON bacu.id = bqe.create_by AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        INNER JOIN biz_user_house buh ON buh.`status` = '1' AND buh.is_delete = '0' AND buh.user_id = bacu.id
+        INNER JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        INNER JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        INNER JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.enclosed_id = bqe.enclosed_id AND bcu.`status` = '1'
+        INNER JOIN biz_enclosed be ON be.ID = bcu.enclosed_id AND be.`status` = '1'
+        WHERE bqe.`status` = '1' AND be.ID is not null AND bqe.qr_id = #{id}
+    </select>
+
+</mapper>

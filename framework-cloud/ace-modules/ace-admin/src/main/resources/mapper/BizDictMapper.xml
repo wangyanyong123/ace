@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.admin.mapper.BizDictMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.admin.entity.BizDict" id="bizDictMap">
+        <result property="id" column="id"/>
+        <result property="pid" column="pid"/>
+        <result property="val" column="val"/>
+        <result property="name" column="name"/>
+        <result property="enName" column="en_name"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <select id="selectIsCodeById" parameterType="java.lang.String" resultType="java.lang.String">
+        select id from biz_dict where status = '1' and id = #{id}
+    </select>
+
+    <select id="selectIsChildNodeById" resultType="java.lang.Integer">
+       select COUNT(id) from biz_dict where status = '1' and (id = #{id}  or pid = #{id})
+    </select>
+
+    <select id="selectCodeByPid"  parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        CONCAT(substring_index(pid,'_',1),'_',substring_index(id,'_',-1)+1)
+        from
+        biz_dict
+        where
+        pid = #{pid}
+        ORDER BY create_time DESC
+        limit 1
+    </select>
+
+    <update id="updateDictStatus">
+        UPDATE biz_dict
+        SET
+        status = '0',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+    <select id="selectDictTreeList"
+            resultType="com.github.wxiaoqi.security.admin.vo.dict.out.DictVo">
+        select * from ((
+            select
+            id,
+            pid,
+            name,
+            val,
+            view_sort viewSort
+            from
+            biz_dict
+            where
+            status = '1'
+            <if test="searchVal != null and searchVal != '' ">
+                AND (
+                name LIKE CONCAT('%',#{searchVal},'%')
+                )
+            </if>
+            ORDER BY view_sort)
+            UNION
+            (
+            select
+            d.id,
+            d.pid,
+            d.name,
+            val,
+            d.view_sort viewSort
+            from
+            biz_dict d
+            INNER JOIN (select
+            id
+            from
+            biz_dict
+            where
+            status = '1'
+            <if test="searchVal != null and searchVal != '' ">
+                AND (
+                name LIKE CONCAT('%',#{searchVal},'%')
+                )
+            </if>
+            ) a on substring_index(a.id,'_',1) = substring_index(d.id,'_',1) and d.status = '1'))A
+            ORDER BY A.viewSort
+    </select>
+    
+    
+    
+    <select id="selectDictListById" resultType="com.github.wxiaoqi.security.admin.vo.dict.out.DictVo">
+        select
+        id,
+        pid,
+        val,
+        name,
+        en_name enName,
+        view_sort viewSort
+        from
+        biz_dict
+        where
+        status = '1'
+        and pid = #{id}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%') or
+            id LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_sort
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectDictListCount" resultType="java.lang.Integer">
+        select
+        count(id)
+        from
+        biz_dict
+        where
+        status = '1'
+        and pid = #{id}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%') or
+            id LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_sort
+</select>
+
+
+    <select id="selectDictInfoById"  parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.admin.vo.dict.out.DictVo">
+        select
+        id,
+        pid,
+        val,
+        name,
+        en_name enName,
+        view_sort viewSort
+        from
+        biz_dict
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+    <select id="selectDictValueList" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.admin.vo.dict.out.DictValueVo">
+        select
+        id,
+        pid,
+        val,
+        name,
+        view_sort viewSort
+        from
+        biz_dict
+        where
+        status = '1'
+        and pid = #{pid}
+        ORDER BY view_sort
+    </select>
+
+    <!-- 查询三级字典树-->
+    <select id="selectDictThreeList" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.admin.vo.dict.out.DictValueVo">
+        SELECT id,pid,val,name from (
+            SELECT * from biz_dict  where pid=#{pid} and status='1'
+            UNION ALL
+            SELECT * from biz_dict  where pid in(SELECT id from biz_dict  where pid=#{pid} and status='1' )  and status='1'
+            UNION ALL
+            SELECT * from biz_dict  where pid in(SELECT id from biz_dict  where pid in(SELECT id from biz_dict  where pid=#{pid} and status='1' ) and status='1')  and status='1'
+        ) b order by pid,view_sort
+    </select>
+
+</mapper>

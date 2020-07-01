@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BizUserHouseMapper">
+
+    <select id="getCurrentHouseInfoById" resultType="com.github.wxiaoqi.security.merchant.vo.userhouse.out.UserHouseVo">
+        SELECT bur.id
+            ,bur.house_id houseId
+            ,bch.record_house_num houseName
+            ,bcp.project_Id projectId
+            ,bcp.project_name projectName
+			,bb.record_building_name buildName
+			,bcf.record_floor_name floorName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+--         LEFT JOIN biz_crm_house bcr ON bur.house_id = bcr.house_id AND bcr.`status` = '1'
+--         LEFT JOIN biz_crm_project bcp ON bcr.project_id = bcp.project_id AND bcp.`status` = '1'
+-- 		LEFT JOIN biz_crm_block bcb ON bcp.project_id = bcb.project_id AND bcb.`status` = '1'
+--         LEFT JOIN biz_crm_building bb ON bcb.block_id = bb.block_id AND bb.`status` = '1'
+--         LEFT JOIN biz_crm_floor bcf ON bcr.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        WHERE bur.id = #{id} AND bur.`status` = '1' AND bur.is_delete = '0' AND bur.is_now = '1'
+    </select>
+
+</mapper>

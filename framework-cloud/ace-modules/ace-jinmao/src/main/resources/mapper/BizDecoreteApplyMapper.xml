@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizDecoreteApplyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizDecoreteApply" id="bizDecoreteApplyMap">
+        <result property="id" column="id"/>
+        <result property="decoreteId" column="decorete_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="address" column="address"/>
+        <result property="decoreteStage" column="decorete_stage"/>
+        <result property="coveredArea" column="covered_area"/>
+        <result property="cost" column="cost"/>
+        <result property="decoreteStatus" column="decorete_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getDecoreteApplyList" resultType="com.github.wxiaoqi.security.jinmao.vo.decoreteapply.DecoreteApplyListVo">
+    SELECT DISTINCT(a.id),a.sub_id subId,a.contactor_name name,a.contact_tel phone,a.address addr,a.decorete_stage stage,
+    a.cost price,a.decorete_status status,DATE_FORMAT(a.create_time,'%Y-%m-%d %H:%i:%s')  createTime
+    from biz_decorete_apply a
+    INNER JOIN biz_decorete_supervise s on a.decorete_id = s.id and s.status = '1'
+    INNER JOIN base_tenant_project tp ON tp.project_id = s.project_id and tp.status = '1'
+    where a.status = '1'
+    <if test="type != 3 ">
+        and tp.tenant_id = #{tenantId}
+    </if>
+    <if test="projectId !=null and projectId !=''">
+        and s.project_id = #{projectId}
+    </if>
+    <if test="searchVal !=null and searchVal !=''">
+        AND (
+        a.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+        or a.contact_tel LIKE CONCAT('%',#{searchVal},'%') )
+    </if>
+    <if test="status != null and status !=''">
+        and a.decorete_status = #{status}
+    </if>
+    ORDER BY a.create_time desc
+    <if test="page != null and limit != null">
+        LIMIT #{page},#{limit}
+    </if>
+    </select>
+
+    <select id="getDecoreteApplyCount" resultType="java.lang.Integer">
+        SELECT count(DISTINCT(a.id)) total
+        from biz_decorete_apply a
+        INNER JOIN biz_decorete_supervise s on a.decorete_id = s.id and s.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = s.project_id and tp.status = '1'
+        where a.status = '1'
+        <if test="type != 3 ">
+            and tp.tenant_id = #{tenantId}
+        </if>
+        <if test="projectId !=null and projectId !=''">
+            and s.project_id = #{projectId}
+        </if>
+        <if test="searchVal !=null and searchVal !=''">
+            AND (
+            a.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            or a.contact_tel LIKE CONCAT('%',#{searchVal},'%') )
+        </if>
+        <if test="status != null and status !=''">
+            and a.decorete_status = #{status}
+        </if>
+    </select>
+
+</mapper>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizOrderInvoiceMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizOrderInvoice" id="bizOrderInvoiceMap">
+        <result property="id" column="id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="invoiceType" column="invoice_type"/>
+        <result property="invoiceName" column="invoice_name"/>
+        <result property="dutyCode" column="duty_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+    <select id="selectByOrderId" resultMap="bizOrderInvoiceMap">
+        select
+        id,parent_id,order_id,tenant_id,invoice_type,invoice_name,duty_code
+        from biz_order_invoice
+        where order_id = #{orderId} and status = '1'
+    </select>
+
+    <update id="updateBySplitOrder">
+         update biz_order_invoice set order_id = #{targetOrderId},
+        modify_by = "splitOrder" where order_id = #{sourceOrderId} and tenant_id = #{tenantId} and status= '1'
+    </update>
+</mapper>

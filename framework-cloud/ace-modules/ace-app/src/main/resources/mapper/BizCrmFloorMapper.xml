@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCrmFloorMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCrmFloor" id="bizCrmFloorMap">
+        <result property="floorId" column="floor_id"/>
+        <result property="floorCode" column="floor_code"/>
+        <result property="recordFloorCode" column="record_floor_code"/>
+        <result property="name" column="name"/>
+        <result property="recordFloorName" column="record_floor_name"/>
+        <result property="floorNum" column="floor_num"/>
+        <result property="recordFloorNum" column="record_floor_num"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="unitCode" column="unit_code"/>
+        <result property="recordUnitCode" column="record_unit_code"/>
+        <result property="modifiedOn" column="modified_on"/>
+        <result property="propertyType" column="property_type"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getByIds" resultMap="bizCrmFloorMap">
+        select * from biz_crm_floor
+        where 1=1 and
+        floor_id in
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+    <select id="getFloorInfoListByUnitId" resultType="com.github.wxiaoqi.security.app.vo.city.out.FloorInfoVo">
+        select floor_id floorId ,record_floor_name floorName
+        from biz_crm_floor
+        where `status` = '1'and unit_id = #{unitId}
+        <if test="type != null and type == 1">
+            and property_type = 'House'
+        </if>
+        <if test="type != null and type == 2">
+            and property_type = 'PublicArea'
+        </if>
+        order by floor_num + 0 ASC ,record_floor_name asc
+    </select>
+</mapper>

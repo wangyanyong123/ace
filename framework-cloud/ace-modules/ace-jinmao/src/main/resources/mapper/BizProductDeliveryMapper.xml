@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductDeliveryMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductDelivery" id="bizProductDeliveryMap">
+        <result property="id" column="id"/>
+        <result property="companyId" column="company_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="regionCode" column="region_code"/>
+        <result property="regionName" column="region_name"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="cityName" column="city_name"/>
+        <result property="fullName" column="full_Name"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="deleteTime" column="delete_time"/>
+    </resultMap>
+
+    <select id="selectIdList" resultType="string">
+        select
+            id
+        from biz_product_delivery
+        where company_id = #{companyId} and product_id  = #{productId} and status = '1'
+    </select>
+    <update id="deleteByIds">
+        update biz_product_delivery
+        set status = '0',modify_by = #{modifyBy},delete_time =#{deleteTime}
+        where id in
+        <foreach collection="deleteIdList" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+        and status = '1'
+    </update>
+    <update id="deleteByCityCode">
+        update biz_product_delivery
+        set status = '0',modify_by = #{modifyBy},delete_time =#{deleteTime}
+        where
+        product_id = #{productId}
+        and city_code in
+        <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+            #{cityCode}
+        </foreach>
+        and status = '1'
+    </update>
+    <select id="findProductDeliveryCityCodeList"
+            resultType="string">
+        select city_code from biz_product_delivery where product_id = #{productId} and status = '1'
+    </select>
+
+    <select id="findProductDeliveryList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.productdelivery.ProductDeliveryData">
+       select
+           id,company_id companyId,product_id productId,proc_code procCode,
+           proc_name procName,city_code cityCode,city_name cityName,full_Name fullName
+       from biz_product_delivery
+       where product_id = #{productId} and status = '1'
+    </select>
+
+</mapper>

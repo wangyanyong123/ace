@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BaseTenantMapper">
+
+    <select id="selectRoleTypeByUserId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.merchant.vo.user.UserInfo">
+        select
+        u.name userName,
+        t.tenant_type tenantType,
+        t.name tenantName
+        from
+        base_app_server_user u
+        LEFT JOIN base_tenant t on u.tenant_id=t.id and t.status ='1'
+        where
+        u.status ='1'
+        and u.id = #{userId}
+    </select>
+
+    <!--查询当前用户所属角色-->
+    <select id="selectRoleTypeByUser" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.merchant.vo.user.UserInfo">
+        select
+        u.name userName,
+        t.tenant_type tenantType,
+        t.name tenantName
+        from
+        base_user u
+        LEFT JOIN base_tenant t on u.tenant_id=t.id and t.status ='1'
+        where
+        u.status ='1'
+        and u.id = #{userId}
+    </select>
+
+</mapper>

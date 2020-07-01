@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizProductOrderMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizProductOrder" id="bizProductOrderMap">
+        <result property="id" column="id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="orderCode" column="order_code"/>
+        <result property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="orderType" column="order_type"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="refundStatus" column="refund_status"/>
+        <result property="commentStatus" column="comment_status"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="appType" column="app_type"/>
+        <result property="productPrice" column="product_price"/>
+        <result property="expressPrice" column="express_price"/>
+        <result property="actualPrice" column="actual_price"/>
+        <result property="discountPrice" column="discount_price"/>
+        <result property="quantity" column="quantity"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="deliveryAddr" column="delivery_addr"/>
+        <result property="sendTime" column="send_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap id="OrderListVoResultMap" type="com.github.wxiaoqi.security.app.vo.order.out.ProductOrderListVo">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="order_code" property="orderCode"/>
+        <result column="order_status" property="orderStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="tenant_name" property="tenantName"/>
+        <result column="actual_price" property="actualPrice"/>
+        <result column="quantity" property="quantity"/>
+        <result column="contact_name" property="contactName"/>
+        <result column="sales_price" property="price"/>
+        <result column="unit" property="unit"/>
+        <result column="contact_name" property="contactName"/>
+        <result column="send_time" property="sendTime"/>
+        <result column="refund_status" property="refundStatus"/>
+        <result column="comment_status" property="commentStatus"/>
+
+        <collection property="imgList" ofType="string">
+            <result column="spec_img"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectOrderList" resultMap="OrderListVoResultMap">
+        select
+            o.id,o.order_code,o.title ,o.order_status,o.create_time ,o.contact_name,o.send_time,
+            o.refund_status,o.comment_status,
+            t.`name` tenant_name,o.actual_price,o.quantity,od.sales_price,od.unit,od.spec_img
+        FROM biz_product_order o
+        INNER JOIN (
+            SELECT
+            dd.order_id,
+            dd.spec_img,
+            dd.sales_price,
+            dd.unit,
+            dd.STATUS
+            FROM
+            biz_product_order_detail dd
+            INNER JOIN (
+            SELECT
+            d.order_id,
+            MIN(d.product_name) product_name
+            FROM
+            biz_product_order_detail d
+            WHERE
+            d.`status` = 1
+            GROUP BY
+            d.order_id
+            ) oo ON dd.order_id = oo.order_id
+            AND oo.product_name = dd.product_name
+        ) od on o.id = od.order_id and od.status = '1'
+        LEFT JOIN base_tenant t on t.id = o.tenant_id
+        <where>
+            <if test="userId != null and userId != ''">
+                and o.user_id = #{userId}
+            </if>
+            <if test="orderStatus != null">
+                and o.order_status = #{orderStatus}
+            </if>
+            <if test="commentStatus != null">
+                and o.comment_status  = #{commentStatus}
+            </if>
+            <if test="refundStatus != null">
+                and o.refund_status  = #{refundStatus}
+            </if>
+            and o.status = '1' GROUP BY o.id order by o.create_time desc
+        </where>
+        <if test="start != null">
+            limit #{start},#{limit}
+        </if>
+    </select>
+
+    <select id="selectListForPaySuccessByActualId"
+            resultType="com.github.wxiaoqi.security.app.vo.order.out.OrderDataForPaySuccess">
+        select
+            o.id orderId,o.parent_id parentId,o.order_status orderStatus,o.actual_price actualPrice,
+             b.pay_status accountBookPayStatus
+        from biz_product_order o
+        INNER JOIN biz_account_book b on o.parent_id = b.sub_id and b.status ='1'
+        where b.actual_Id = #{actualId} and o.status = '1'
+
+    </select>
+    <select id="selectOneForPaySuccessByActualId"
+            resultType="com.github.wxiaoqi.security.app.vo.order.out.OrderDataForPaySuccess">
+        select
+                o.id orderId,o.parent_id parentId,o.order_status orderStatus,o.actual_price actualPrice,
+                b.pay_status accountBookPayStatus,o.order_type orderType
+        from biz_product_order o
+        INNER JOIN biz_account_book b on o.parent_id = b.sub_id and b.status ='1'
+        where b.actual_Id = #{actualId} and o.status = '1' limit 1
+    </select>
+    <update id="updateOrderStatusByGroupComplete">
+        update biz_product_order o,biz_product_order_detail od
+        set o.order_status = 10 ,o.modify_by = #{modifyBy},od.detail_status = 10,od.modify_by = #{modifyBy}
+        where o.id = od.order_id and od.order_id = #{orderId} and o.order_status = 6
+    </update>
+    <update id="updateInValid">
+        update biz_product_order set status = '0',modify_by = #{modifyBy},delete_time = #{modifyTime}
+        where id = #{orderId} and status = '1'
+    </update>
+    <update id="updateOrderStatusById">
+        update biz_product_order o
+        set o.order_status = #{targetStatus} ,o.modify_by = #{modifyBy}
+        where  o.id = #{orderId} and o.order_status = #{sourceStatus} and status = '1'
+    </update>
+
+    <select id="selectOrderIdListGroupWaitingComplete"
+            resultType="com.github.wxiaoqi.security.app.vo.order.out.OrderIdResult">
+        SELECT
+            o.id orderId,o.parent_id parentId,o.order_status orderStatus
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail od ON o.id = od.order_id and od.status = '1'
+        where  o.order_status = 6 and o.refund_status = 0 and od.product_id = #{productId} and o.`status` = '1'
+    </select>
+
+    <select id="getPurchasedCount" resultType="int">
+        SELECT
+            sum(od.quantity)
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail od on o.id  = od.order_id
+        where o.user_id = #{userId} and od.product_id = #{productId}
+        and o.order_status != 45  and o.refund_status != 20
+        and od.detail_status != 45 and od.detail_refund_status = 0
+        and o.`status` = '1' and od.`status` = '1'
+    </select>
+
+    <select id="queryRefundProductOrder" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubVo">
+        SELECT
+            o.id,
+            o.order_code CODE,
+            3 woType,
+            o.title,
+            o.description,
+            o.refund_status woStatus,
+            o.refund_status subStatus,
+            '' processId,
+            DATE_FORMAT(
+                o.create_Time,
+                '%Y-%m-%d %H:%i:%s'
+            ) createTimeStr,
+            d.spec_img imgId,
+            su. NAME handleBy,
+            '' handleByUserId,
+            o.contact_name contactName,
+            o.contact_tel contactTel,
+            o.delivery_addr deliveryAddr,
+            '' remark,
+            o.actual_price actualCost,
+            o.quantity totalNum,
+            DATE_FORMAT(
+                o.create_time,
+                '%Y-%m-%d %H:%i:%s'
+            ) expectedServiceTimeStr,
+            DATE_FORMAT(
+                o.create_time,
+                '%Y-%m-%d %H:%i:%s'
+            ) reviewWoTimeStr,
+            IFNULL(cu.nickname, cu. NAME) userName,
+            ab.actual_id actualId,
+            IFNULL(t.is_print, '0') isPrint,
+            IFNULL(i.invoice_name, '') invoiceName,
+            IFNULL(i.duty_code, '') dutyNum,
+            IFNULL(i.invoice_type, '0') invoiceType,
+            CASE
+        WHEN ab.pay_type = '1' THEN
+            '支付宝'
+        ELSE
+            '微信'
+        END payType,
+         IFNULL(o.express_price, '') postageCost,
+         IFNULL(o.discount_price, '') couponCost,
+         o.comment_status commentStatus
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail d ON o.id = d.order_id
+        LEFT JOIN biz_account_book ab ON o.id = ab.sub_id
+        AND ab. STATUS = '1'
+        LEFT JOIN base_app_client_user cu ON o.user_id = cu.id
+        AND cu. STATUS = '1'
+        LEFT JOIN base_app_server_user su ON o.create_by = su.id
+        AND su. STATUS = '1'
+        LEFT JOIN base_tenant t ON t.id = o.tenant_id
+        AND t. STATUS = '1'
+        LEFT JOIN biz_order_invoice i ON i.order_id = o.id
+        AND i.`status` = '1'
+        WHERE
+            o. STATUS = '1'
+        AND o.id = #{orderId}
+        GROUP BY o.id
+    </select>
+
+    <select id="queryRefundProductOrderInfo" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubProductInfo">
+        SELECT
+            d.product_Id productId,
+            d.product_name productName,
+            d.spec_id specId,
+            d.spec_name specName,
+            d.quantity subNum,
+            d.sales_price price,
+            d.spec_img imgId,
+            d.unit unit
+        FROM
+            biz_product_order_detail d
+        WHERE
+            d.order_id = #{orderId}
+        ORDER BY
+            d.create_Time DESC
+    </select>
+
+    <select id="queryRefundProductOrderOperation"  resultType="com.github.wxiaoqi.security.api.vo.order.out.TransactionLogVo">
+        SELECT
+            r.id,
+            r.curr_step currStep,
+            r.description,
+            '' conName,
+            '' conTel,
+            DATE_FORMAT(
+                r.create_Time,
+                '%Y-%m-%d %H:%i:%s'
+            ) createTime,
+            '' imgId,
+            0 appraisalVal
+        FROM
+            biz_order_operation_record r
+        WHERE
+            STATUS = '1'
+
+        AND r.order_id = #{orderId}
+        GROUP BY
+            r.curr_step,
+            r.description,
+            DATE_FORMAT(
+                r.create_time,
+                '%Y-%m-%d %H:%i:%s'
+            )
+        ORDER BY
+            r.create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>ace-security</artifactId>
+        <groupId>com.github.wxiaoqi</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+    <artifactId>ace-modules</artifactId>
+    <modules>
+        <module>ace-admin</module>
+        <module>ace-interface</module>
+        <module>ace-dict</module>
+        <module>ace-tool</module>
+        <module>ace-workflow</module>
+        <module>ace-app</module>
+        <module>ace-jinmao</module>
+        <module>ace-schedule-wo</module>
+        <module>ace-im</module>
+        <module>ace-external-service</module>
+        <module>ace-report-form</module>
+        <module>ace-plan-wo</module>
+        <module>ace-merchant</module>
+    </modules>
+
+</project>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizIntegralPersonalDetailMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizIntegralPersonalDetail" id="bizIntegralPersonalDetailMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="ruleId" column="rule_id"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="creditsValue" column="credits_value"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询用户个人积分-->
+    <select id="selectUserIntegralInfo" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        credits_value creditsValue
+        from
+        base_app_client_user
+        where
+        status = '1'
+        and is_auth = '1'
+        and is_deleted = '1'
+        and id = #{userId}
+    </select>
+
+
+    <!--查询用户积分账单-->
+    <select id="selectIntegralPersonalDetail" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.integral.IntegralPersonalVo">
+        select
+        rule_name ruleName,
+        credits_value creditsValue,
+        DATE_FORMAT(create_Time,'%Y-%m-%d') createTime
+        from
+        biz_integral_personal_detail
+        where
+        status = '1'
+        and user_id = #{userId}
+        <if test="createTime != null and createTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m') LIKE CONCAT('%',#{createTime},'%')
+        </if>
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--根据规则编码查询规则信息-->
+    <select id="selectRuleInfoByCode" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.integral.RuleInfo">
+        select
+        id,
+        rule_name ruleName,
+        rule_desc ruleDesc,
+        credits_value creditsValue,
+        credits_upper_day creditsUpperDay,
+        credits_upper_month creditsUpperMonth,
+        credits_upper_total creditsUpperTotal,
+        type
+        type
+        from
+        biz_integral_rule
+        where
+        status = '1'
+        and rule_status = '2'
+        and  rule_code = #{ruleCode}
+    </select>
+
+    <!--查询用户积分明细-->
+    <select id="selectRuleInfoByUserId" resultType="java.lang.Integer">
+        select
+        IFNULL(SUM(credits_value),0) creditsValue
+        from
+        biz_integral_personal_detail
+        where
+        status = '1'
+        and user_id = #{userId}
+        and rule_id = #{ruleId}
+        <if test="createTime != null and createTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d') LIKE CONCAT('%',#{createTime},'%')
+        </if>
+    </select>
+
+    <!--查询小组的帖子是否领取-->
+    <select id="selectGroupRuleInfoByUserId" resultType="java.lang.Integer">
+        select
+        IFNULL(SUM(credits_value),0) creditsValue
+        from
+        biz_integral_group_detail
+        where
+        status = '1'
+        and group_id = #{groupId}
+        and object_id = #{objectId}
+        and rule_id = #{ruleId}
+    </select>
+
+</mapper>

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizBrainpowerFunctionMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizBrainpowerFunction" id="bizBrainpowerFunctionMap">
+        <result property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="functionPoint" column="function_point"/>
+        <result property="jumpLink" column="jump_link"/>
+        <result property="describe" column="describe"/>
+        <result property="picture" column="picture"/>
+        <result property="isShow" column="is_show"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询该功能点是否存在-->
+    <select id="selectIsFunctionByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select COUNT(*) from biz_brainpower_function where status = '1' and enable_status in ('1','2') and code = #{code}
+    </select>
+
+    <!--查询功能点列表-->
+    <select id="selectFunctionList" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.FunctionVo">
+        select
+        id,
+        code,
+        description,
+        function_point functionPoint,
+        enable_status enableStatus,
+        is_show isShow,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i') createTime
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+        <if test="code != null and code != '' ">
+            and code = #{code}
+        </if>
+        <if test="enableStatus != 0">
+            and enable_status = #{enableStatus}
+        </if>
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectFunctionSearchVal" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.FunctionVo">
+        select
+        DISTINCT(code),
+        function_point functionPoint
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+    </select>
+
+
+
+    <select id="selectFunctionCount" resultType="java.lang.Integer">
+        select
+        count(id)
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+        <if test="code != null and code != '' ">
+            and code = #{code}
+        </if>
+        <if test="enableStatus != 0">
+            and enable_status = #{enableStatus}
+        </if>
+        ORDER BY create_Time DESC
+    </select>
+
+    <!--查询功能点详情-->
+    <select id="selectFunctionInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.FunctionInfo">
+        select
+        id,
+        description,
+        code,
+        function_point functionPoint,
+        jump_code jumpCode,
+        jump_link jumpLink,
+        enable_status enableStatus,
+        picture
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+    <!--置底功能-->
+    <update id="updatefunctionIsShow">
+      UPDATE biz_brainpower_function
+      SET  <if test="status != null and status != ''">
+               is_show = #{status},
+           </if>
+  	       modify_Time = NOW(),
+  	       modify_By = #{userId}
+      where
+  		   status = 1
+  		   AND id = #{id}
+    </update>
+
+    <!--发布与撤回-->
+    <update id="updatefunctionStatus">
+        UPDATE biz_brainpower_function
+        SET   <if test="status != null and status != ''">
+                 enable_status = #{status},
+              </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+    <select id="seelctFunctionPointList" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.ResultFunctionDictList">
+        select code, function_point functionPoint from biz_brainpower_function where status = '1' and enable_status in ('1','2')
+    </select>
+
+
+    <select id="selectDictValueList" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.ResultFunctionDictList">
+        select
+        id code,
+        name functionPoint
+        from
+        biz_dict
+        where
+        status = '1'
+        and pid = #{pid}
+        ORDER BY view_sort
+    </select>
+
+    <select id="selectDictValueList2" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.ResultJumpLinkList">
+        select
+        id jumpCode,
+        name jumpLink
+        from
+        biz_dict
+        where
+        status = '1'
+        and pid = #{pid}
+        ORDER BY view_sort
+    </select>
+
+
+
+    <!--查询置底功能点列表-->
+    <select id="selectViewSortVo" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.ViewSortVo">
+        select
+        id,
+        view_sort viewSort,
+        function_point functionPoint
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+        and is_show = '1'
+        and enable_status in ('1','2')
+        ORDER BY view_sort
+    </select>
+
+
+    <update id="updateViewSort">
+        UPDATE biz_brainpower_function
+        SET
+        view_sort = #{sort},
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+
+    <!--根据功能点编码查询置底的功能点-->
+    <select id="selectFunctionByCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select id from biz_brainpower_function where code = (select code from biz_brainpower_function where id =#{id})
+    </select>
+
+
+</mapper>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizAccountBookMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizAccountBook" id="bizAccountBookMap">
+        <result property="id" column="ID"/>
+        <result property="subId" column="sub_id"/>
+        <result property="payId" column="pay_Id"/>
+        <result property="actualId" column="actual_Id"/>
+        <result property="busType" column="bus_type"/>
+        <result property="accountPid" column="account_pid"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="payType" column="pay_type"/>
+        <result property="payDate" column="pay_date"/>
+        <result property="settleAccount" column="settle_account"/>
+        <result property="actualCost" column="actual_cost"/>
+        <result property="payFailRemark" column="pay_fail_remark"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <update id="updatePayStatusById" parameterType="com.github.wxiaoqi.security.app.entity.BizAccountBook">
+		update biz_account_book
+		set
+        <if test="payStatus != null and payStatus !=''">
+		    pay_status=#{payStatus},
+        </if>
+        <if test="payId != null and payId !=''">
+            pay_Id=#{payId},
+        </if>
+        <if test="payType != null and payType !=''">
+            pay_type=#{payType},
+        </if>
+        <if test="settleAccount != null and settleAccount !=''">
+            settle_account=#{settleAccount},
+        </if>
+        <if test="payFailRemark != null and payFailRemark !=''">
+            pay_fail_remark=#{payFailRemark},
+        </if>
+          pay_date=now(),
+		  modify_Time=now(),
+		  time_Stamp=now()
+		where actual_Id=#{actualId} or account_pid=#{actualId}
+	</update>
+
+    <select id="selectBusIdByActualId" resultType="String" parameterType="String" >
+        SELECT sw.bus_id busId
+        from biz_account_book b
+        INNER JOIN biz_subscribe_wo sw ON sw.id = b.sub_id and sw.status='1'
+        WHERE  b.status='1'
+        and (b.actual_Id=#{actualId} or b.account_pid=#{actualId})
+        order by sw.create_time desc
+        limit 1
+    </select>
+
+    <select id="getPayAndRefundStatusBySubId" resultMap="bizAccountBookMap">
+        select
+            id,sub_id,pay_status,refund_status,actual_Id
+        from biz_account_book
+        where sub_id =#{subId} and status = "1"  limit 1;
+    </select>
+    <select id="getPayAndRefundStatusByActualId" resultMap="bizAccountBookMap">
+        select
+            id,sub_id,pay_status,refund_status,actual_Id,bus_type,actual_cost
+        from biz_account_book
+        where actual_Id =#{actualId} and status = "1"  limit 1;
+    </select>
+    <select id="getBusTypeByActualId" resultType="int">
+        select bus_type from biz_account_book where (actual_Id = #{actualId} or account_pid = #{actualId}) limit 1
+    </select>
+</mapper>

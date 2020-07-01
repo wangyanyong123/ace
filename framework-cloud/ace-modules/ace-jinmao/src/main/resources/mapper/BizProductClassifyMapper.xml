@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductClassifyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductClassify" id="bizProductClassifyMap">
+        <result property="id" column="id"/>
+        <result property="productId" column="product_id"/>
+        <result property="busId" column="bus_id"/>
+        <result property="classifyId" column="classify_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询商户下业务的所属分类名称-->
+    <select id="selectClassifyNameById" resultType="java.lang.String" parameterType="java.lang.String">
+       select
+        bc.classify_name classifyName
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on bc.id = c.classify_id and bc.status = '1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <select id="selectClassifyListById" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultClassifyVo"
+            parameterType="java.lang.String">
+        select
+        c.classify_id classifyId,
+        bc.classify_name classifyName
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on bc.id = c.classify_id and bc.status = '1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+
+    <!--根据业务id查询业务类型-->
+    <select id="selectTypeByBusId" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        type
+        from
+        biz_business
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <delete id="delClassifyInfo" parameterType="java.lang.String">
+         delete from biz_product_classify where product_id = #{id}
+    </delete>
+
+    <!--查询商户列表下的商品分类名称列表-->
+    <select id="selectClassifyNameList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultClassifyVo">
+        select
+        DISTINCT(pc.classify_id) classifyId,
+        bc.classify_name classifyName
+        from
+        biz_product_classify pc
+        INNER JOIN biz_business_classify bc on pc.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        INNER JOIN biz_business bb on bc.bus_id=bb.id and bb.wo_type = '3'
+        where
+        pc.status = '1'
+    </select>
+
+</mapper>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BizProductOrderDetailMapper">
+
+    <update id="updateStatus">
+        UPDATE biz_product_order_detail od
+        SET od.detail_status = #{query.detailStatus},
+            od.modify_time = NOW(),
+            od.modify_by = #{query.modifyBy}
+        <where>
+            od.order_id = #{query.orderId}
+            <if test="query.tenantId != null and query.tenantId != ''">
+                AND od.tenant_id = #{query.tenantId}
+            </if>
+            AND od.`status` = 1
+        </where>
+    </update>
+</mapper>

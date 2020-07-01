@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.wxiaoqi.security.plan.mapper.PlanWoTimerMapper">
+
+    <select id="getLast" resultType="com.github.wxiaoqi.security.plan.entity.PlanWoTimer">
+        SELECT id,create_Time createTime
+        from biz_plan_wo_timer
+        ORDER BY create_Time DESC
+        LIMIT 1
+    </select>
+
+    <insert id="save" parameterType="com.github.wxiaoqi.security.plan.entity.PlanWoTimer">
+        insert into biz_plan_wo_timer
+        <trim prefix="(" suffix=")" suffixOverrides="," >
+            <if test="id != null" >
+                id,
+            </if>
+            <if test="createTime != null" >
+                create_Time,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides="," >
+            <if test="id != null" >
+                #{id},
+            </if>
+            <if test="createTime != null" >
+                #{createTime},
+            </if>
+        </trim>
+    </insert>
+
+</mapper>

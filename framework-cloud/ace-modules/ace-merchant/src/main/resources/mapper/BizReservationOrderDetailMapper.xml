@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BizReservationOrderDetailMapper">
+
+    <select id="queryOderStatusTotal" resultType="com.github.wxiaoqi.security.merchant.vo.order.OrderStatusDO">
+       SELECT
+            COUNT(*) total,
+            o.detail_status orderStatus
+        FROM
+            biz_order o
+        WHERE
+            o.tenant_id = #{tenantId}
+        AND o.detail_refund_status = 0
+        GROUP BY
+            o.detail_status
+    </select>
+
+    <select id="queryRefundStatusTotal" resultType="com.github.wxiaoqi.security.merchant.vo.order.OrderStatusDO">
+        SELECT
+            COUNT(*) total,
+            o.detail_refund_status orderStatus
+        FROM
+            biz_order o
+        WHERE
+            o.tenant_id = #{tenantId}
+        AND o.detail_refund_status = #{detailRefundStatus}
+        GROUP BY
+            o.detail_refund_status
+    </select>
+
+    <select id="queryCommentStatusTotal" resultType="com.github.wxiaoqi.security.merchant.vo.order.OrderStatusDO">
+        SELECT
+            COUNT(*) total,
+            o.comment_status orderStatus
+        FROM
+            biz_order o
+        WHERE
+            o.tenant_id = #{tenantId}
+        AND o.detail_status = #{detailStatus}
+        AND o.comment_status = #{commentStatus}
+        AND o.detail_refund_status = #{detailRefundStatus}
+        GROUP BY
+            o.detail_status,o.comment_status
+    </select>
+
+    <select id="yesterdayTotal" resultType="java.math.BigDecimal">
+        SELECT
+            IFNULL(SUM(o.total_price), 0) totalPrice
+        FROM
+            biz_order o
+        WHERE
+            DATEDIFF(NOW(), o.create_time) = 1
+        AND o.detail_refund_status != 20
+        AND o.tenant_id = #{tenantId}
+    </select>
+    <select id="todayOrderTotal" resultType="Integer">
+        SELECT
+            IFNULL(
+                COUNT(DISTINCT o.order_id),
+                0
+            ) total
+        FROM
+            biz_order o
+        WHERE
+            DATEDIFF(NOW(), o.create_time) = 0
+        AND o.tenant_id = #{tenantId}
+    </select>
+
+</mapper>

@@ -1,0 +1,26 @@
+spring:
+    profiles:
+      active: localhost
+    application:
+        name: ace-dict
+
+# 配置swagger
+swagger:
+    enabled: true
+    base-package: com.github.wxiaoqi.security.dict
+    title: ace-dict
+    version: 1.0.0.SNAPSHOT
+    description: 数据字典服务
+    contact:
+        name: admin
+
+logging:
+  level:
+    #        tk.mybatis: DEBUG
+    com.github.wxiaoqi.security.dict: DEBUG
+  file: /mnt/logs/ace-dict.log
+  file.max-size: 10MB
+  file.max-history : 365
+  pattern:
+    file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+    console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

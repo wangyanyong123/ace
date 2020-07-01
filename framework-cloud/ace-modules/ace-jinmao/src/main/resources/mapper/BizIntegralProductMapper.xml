@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizIntegralProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizIntegralProduct" id="bizIntegralProductMap">
+        <result property="id" column="ID"/>
+        <result property="productCode" column="product_code"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="selectionImage" column="selection_image"/>
+        <result property="productImagetextInfo" column="product_imagetext_info"/>
+        <result property="specName" column="spec_name"/>
+        <result property="specIntegral" column="spec_integral"/>
+        <result property="specUnit" column="spec_unit"/>
+        <result property="productNum" column="product_Num"/>
+        <result property="cashNum" column="cash_Num"/>
+        <result property="busStatus" column="bus_Status"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询积分商品列表-->
+    <select id="selectIntegralProductList" resultType="com.github.wxiaoqi.security.jinmao.vo.integralproduct.out.IntegralProductVo">
+        select
+        DISTINCT(bip.id),
+        product_code productCode,
+        product_name productName,
+        case product_classify when '1' then '积分商品' when '2' then '补签卡' end productClassify,
+        product_Num productNum,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        IFNULL(DATE_FORMAT(bip.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        bus_Status busStatus,
+        is_recommend isRecommend,
+        cash_Num cashNum
+        from
+        biz_integral_product bip
+        INNER JOIN biz_product_project pp on bip.id=pp.product_id and pp.status = '1'
+        where
+        bip.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="isRecommend != null and isRecommend != '' ">
+            and is_recommend = #{isRecommend}
+        </if>
+        <if test="busStatus != null and busStatus != '' ">
+            and bip.bus_Status = #{busStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY is_recommend+0 desc, bip.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询积分商品列表数量-->
+    <select id="selectIntegralProductCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(bip.id))
+        from
+        biz_integral_product bip
+        INNER JOIN biz_product_project pp on bip.id=pp.product_id and pp.status = '1'
+        where
+        bip.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="isRecommend != null and isRecommend != '' ">
+            and is_recommend = #{isRecommend}
+        </if>
+        <if test="busStatus != null and busStatus != '' ">
+            and bip.bus_Status = #{busStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY is_recommend+0 desc, bip.create_Time desc
+    </select>
+
+    <!--查询积分商品详情-->
+    <select id="selectIntegralProductInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.integralproduct.out.ProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        product_classify productClassify,
+        selection_image selectionImage,
+        product_imagetext_info productImagetextInfo,
+        spec_name specName,
+        spec_integral specIntegral,
+        spec_unit unit,
+        bus_Status busStatus,
+        product_Num productNum
+        from
+        biz_integral_product
+        where
+        status = '1' and id = #{id}
+    </select>
+
+    <!--申请上架,业务状态为已发布-->
+    <update id="updateAuditStatus">
+        UPDATE biz_integral_product
+        SET bus_Status = '2',
+  	         publish_time = NOW(),
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--下架,业务状态为已下架-->
+    <update id="updateSoldStatus">
+        UPDATE biz_integral_product
+        SET bus_Status = '3',
+             is_recommend = '0',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--设置推荐-->
+    <update id="updateRecommendStatus">
+        UPDATE biz_integral_product
+        SET  is_recommend =#{isRecommend},
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+
+    <select id="selectRecommendCount" resultType="java.lang.Integer">
+        select count(id) from biz_integral_product where status = '1' and bus_Status = '2' and is_recommend = '1'
+    </select>
+
+    <select id="getResignCard" resultType="java.lang.Integer">
+        SELECT COUNT(*) from biz_integral_product ip
+        INNER JOIN biz_product_project pp on pp.product_id = ip.id and pp.status = '1'
+        where ip.status = '1' and pp.project_id in
+        <foreach collection="projectVo" index="index" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+        and ip.product_classify =  '2'
+    </select>
+
+    <select id="getResignCardTop" resultType="java.lang.Integer">
+        SELECT COUNT(*) from biz_integral_product ip
+        INNER JOIN biz_product_project pp on pp.product_id = ip.id and pp.status = '1'
+        where pp.project_id in
+        <foreach collection="projectVo" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        and ip.product_classify =  '2' and ip.bus_Status = '2'
+    </select>
+</mapper>

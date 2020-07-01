@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizContentReaderMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizContentReader" id="bizContentReaderMap">
+        <result property="id" column="id"/>
+        <result property="contentId" column="content_id"/>
+        <result property="viewNum" column="view_num"/>
+        <result property="userNum" column="user_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_stamp"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTy" column="modify_ty"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <select id="selectContentReader" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.GoodVisitReaderVo">
+       SELECT
+		cr.id id,
+		cr.content_id contentId,
+		cr.view_num viewNum,
+        cr.user_num userNum
+		FROM biz_content_reader cr
+		INNER JOIN biz_product_goodto_visit gv on cr.content_id = gv.id AND gv.status = '1'
+		WHERE
+			cr.status = '1'
+		AND
+			gv.id = #{id}
+    </select>
+
+    <!--查询阅读信息-->
+    <select id="selectReaderInfoByPostsId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.posts.out.ReaderInfo">
+        select
+        id,
+        IFNULL(view_num,0) viewNum,
+        IFNULL(user_num,0) userNum
+        from
+        biz_content_reader
+        where
+        status = '1'
+        AND content_id = #{postsId}
+    </select>
+</mapper>

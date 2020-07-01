@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductRecommendMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductRecommend" id="bizProductRecommendMap">
+        <result property="id" column="ID"/>
+        <result property="productId" column="product_id"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="projectId" column="project_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询项目下的商品列表-->
+    <select id="selectProductList"
+			resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultRecommendListVo">
+		select a.id,a.productId,a.productName,a.productCode,a.viewSort,a.busName,a.tenantName,a.imgUrl from(SELECT
+		DISTINCT(pr.id) id,
+		p.id productId,
+		p.product_name productName,
+		p.product_code productCode,
+		t.name tenantName,
+		pr.view_sort viewSort,
+		b.bus_Name busName,
+		pr.img_url imgUrl
+		FROM biz_product p
+		INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+		INNER JOIN biz_product_recommend pr ON pp.product_id = pr.product_id AND pr.status = '1'
+		INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+		INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+		WHERE
+		p.status = '1' AND p.bus_status = '3'
+		and (b.type = '1' or DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; p.end_Time)
+		AND
+		pr.project_id = #{projectId}
+		union all
+		SELECT
+		DISTINCT(pr.id) id,
+		p.id productId,
+		p.name productName,
+		p.reservation_code productCode,
+		t.name tenantName,
+		pr.view_sort viewSort,
+		b.bus_Name busName,
+		pr.img_url imgUrl
+		FROM biz_reservation p
+		INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+		INNER JOIN biz_product_recommend pr ON pp.product_id = pr.product_id AND pr.status = '1'
+		INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+		INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+		WHERE
+		p.status = '1' AND p.reserva_Status = '3'
+		AND
+		pr.project_id = #{projectId}
+		) a
+		<if test="searchVal != null and searchVal != '' ">
+			where 1=1 and  (
+			a.productCode LIKE CONCAT('%',#{searchVal},'%')
+			OR a.productName LIKE CONCAT('%',#{searchVal},'%')
+			)
+		</if>
+		ORDER BY a.busName,a.viewSort
+		<if test="page != null and limit != null">
+			LIMIT #{page},#{limit}
+		</if>
+
+    </select>
+
+
+	<select id="selectProductCount" resultType="java.lang.Integer">
+		select count(*) from(SELECT
+		DISTINCT(pr.id) id,
+		p.id productId,
+		p.product_name productName,
+		p.product_code productCode,
+		t.name tenantName,
+		pr.view_sort viewSort,
+		b.bus_Name busName
+		FROM biz_product p
+		INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+		INNER JOIN biz_product_recommend pr ON pp.product_id = pr.product_id AND pr.status = '1'
+		INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+		INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+		WHERE
+		p.status = '1' AND p.bus_status = '3'
+		and (b.type = '1' or DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; p.end_Time)
+		AND
+		pr.project_id = #{projectId}
+		union all
+		SELECT
+		DISTINCT(pr.id) id,
+		p.id productId,
+		p.name productName,
+		p.reservation_code productCode,
+		t.name tenantName,
+		pr.view_sort viewSort,
+		b.bus_Name busName
+		FROM biz_reservation p
+		INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+		INNER JOIN biz_product_recommend pr ON pp.product_id = pr.product_id AND pr.status = '1'
+		INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+		INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+		WHERE
+		p.status = '1' AND p.reserva_Status = '3'
+		AND
+		pr.project_id = #{projectId}
+		) a
+		<if test="searchVal != null and searchVal != '' ">
+			where 1=1 and  (
+			a.productCode LIKE CONCAT('%',#{searchVal},'%')
+			OR a.productName LIKE CONCAT('%',#{searchVal},'%')
+			)
+		</if>
+	</select>
+
+    <!--查询项目下所有商品-->
+    <select id="selectAllProduct" resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultRecommendInfo">
+		select a.productId,a.productName,a.productCode,a.tenantName,a.busName from (SELECT
+		DISTINCT(p.id) productId,
+		p.product_code productCode,
+		p.product_name productName,
+		t.name tenantName,
+		b.bus_Name busName
+		FROM biz_product p
+		INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1' and b.type in ('1','2')
+		INNER JOIN biz_product_project pp on pp.product_id = p.id AND pp.status = '1'
+		INNER JOIN base_tenant t on p.tenant_id = t.id and t.status = '1'
+		INNER JOIN base_tenant_project tp on tp.tenant_id = t.id and tp.status = '1'
+		WHERE
+		p.status = '1'  and p.bus_Status = '3'
+		and (b.type = '1' or DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; p.end_Time)
+		AND
+			pp.project_id = #{projectId}
+		<if test="tenantId != null and tenantId != ''">
+        	and t.id = #{tenantId}
+		</if>
+		union all
+		select
+		DISTINCT(bp.id) productId,
+		bp.reservation_code productCode,
+		bp.name productName,
+		t.name tenantName,
+		b.bus_Name busName
+		from
+		biz_reservation bp
+		INNER JOIN biz_product_classify c on bp.id =c.product_id
+		INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+		INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+		INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+		INNER JOIN base_tenant t on bp.tenant_id = t.id and t.status = '1'
+		INNER JOIN base_tenant_project tp on tp.tenant_id = t.id and tp.status = '1'
+		where
+		bp.status = '1'
+		and bp.reserva_Status = '3'
+		AND
+		p.project_id = #{projectId}
+		<if test="tenantId != null and tenantId != ''">
+			and t.id = #{tenantId}
+		</if>
+		)a
+		<if test="searchVal != null and searchVal != '' ">
+			where 1=1 AND (
+			a.productCode LIKE CONCAT('%',#{searchVal},'%')
+			OR a.productName LIKE CONCAT('%',#{searchVal},'%')
+			)
+		</if>
+		ORDER BY a.productCode
+
+    </select>
+
+	<!--查询商品是否已被推荐-->
+	<select id="selectProductIsRecommend" resultType="java.lang.String">
+		SELECT
+		distinct(pr.id)
+		FROM biz_product_recommend pr
+		WHERE
+		pr.product_id = #{productId} and pr.project_id = #{projectId} and status = '1'
+	</select>
+    <!--根据ID删除推荐商品-->
+    <delete id="deleteRecProductById" parameterType="java.lang.String" >
+        update  biz_product_recommend  set status = '0',modify_Time = now() WHERE id = #{id}
+    </delete>
+	<!--查询商品关联项目和商户-->
+	<select id="selectTenantByProductId" resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultTenantInfo">
+	SELECT
+		DISTINCT(p.id),
+		p.tenant_Id tenantId
+		FROM biz_product p
+		INNER JOIN base_tenant t on p.tenant_id = t.id and t.status='1' and t.tenant_type = '2' or t.tenant_type = '3'
+		where
+			p.status = '1'
+		and
+			p.id = #{productId}
+	</select>
+
+	<select id="selectTenantByReserveId" resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultTenantInfo">
+	SELECT
+		DISTINCT(p.id),
+		p.tenant_Id tenantId
+		FROM biz_reservation p
+		INNER JOIN base_tenant t on p.tenant_id = t.id and t.status='1' and t.tenant_type = '2' or t.tenant_type = '3'
+		where
+			p.status = '1'
+		and
+			p.id = #{productId}
+	</select>
+	<!--查询商品推荐详情-->
+	<select id="selectRecommendById" parameterType="java.lang.String"
+			resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultRecommendInfoVo">
+		SELECT
+		r.id,
+		r.project_id projectId,
+		p.product_name productName,
+		br.name busName,
+		r.view_sort viewSort,
+		r.img_url imgUrl
+		FROM biz_product_recommend r
+		left JOIN biz_product p on r.product_id = p.id and p.status = '1'
+		LEFT JOIN biz_reservation br on br.id = r.product_id and br.status = '1'
+		WHERE
+			r.status = '1'
+		AND
+			r.id = #{id}
+	</select>
+</mapper>

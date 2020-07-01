@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizPlanWoPmpsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizPlanWoPmps" id="bizPlanWoPmpsMap">
+        <result property="id" column="id"/>
+        <result property="doc" column="doc"/>
+        <result property="instructions" column="instructions"/>
+        <result property="pmpId" column="pmp_id"/>
+        <result property="pmpsId" column="pmps_id"/>
+        <result property="opType" column="op_type"/>
+        <result property="opVal" column="op_val"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="createBy" column="create_By"/>
+    </resultMap>
+
+    <select id="getPlanWoOptDetail" resultType="com.github.wxiaoqi.security.api.vo.order.out.PlanWoOptDetail">
+        SELECT pwps.id
+        ,pwps.instructions
+        ,pwps.op_type opType
+        ,pwps.pmps_id pmpsId
+        ,pwpo.op_val opVal
+        FROM biz_plan_wo_pmps pwps
+        LEFT JOIN biz_plan_wo_pmps_op pwpo on pwpo.pwps_id = pwps.id AND pwpo.pwr_id = #{pwrId}
+        WHERE pwps.pmp_id = #{pmpId}
+        ORDER BY pwps.pmps_id ASC
+    </select>
+</mapper>

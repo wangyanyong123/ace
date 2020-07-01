@@ -1,0 +1,18 @@
+一、新增服务配置
+1.服务编码：ace-merchant
+2.服务秘钥：123456
+3.服务名：ace-merchant
+4.描述：商户端
+
+二、修改服务之间的访问权限配置
+1.ace-gate 新增 ace-merchant
+2.ace-auth 新增 ace-merchant
+
+三、服务网关配置
+1.ID：merchant
+2.映射路径：/merchant/**
+3.映射服务:  ace-merchant
+4.映射外连接：
+5.允许重试：否
+6.启动：是
+7.忽略前缀：是

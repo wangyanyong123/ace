@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizJobFailRecordMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.job.entity.BizJobFailRecord"
+               id="bizJobFailRecordMap">
+        <result property="id" column="id"/>
+        <result property="appName" column="app_name"/>
+        <result property="jobHandler" column="job_handler"/>
+        <result property="jobData" column="job_data"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="handleStatus" column="handle_status"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+</mapper>

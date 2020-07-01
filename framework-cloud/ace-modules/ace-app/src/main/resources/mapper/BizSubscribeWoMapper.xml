@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizSubscribeWoMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizSubscribeWo" id="bizSubscribeWoMap">
+        <result property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="vrobotWoId" column="vrobot_wo_id"/>
+        <result property="woType" column="wo_type"/>
+        <result property="createType" column="create_type"/>
+        <result property="userId" column="user_id"/>
+        <result property="busId" column="bus_id"/>
+        <result property="busName" column="bus_name"/>
+        <result property="flowId" column="flow_id"/>
+        <result property="processId" column="process_id"/>
+        <result property="companyId" column="company_Id"/>
+        <result property="subscribeStatus" column="subscribe_status"/>
+        <result property="woStatus" column="wo_status"/>
+        <result property="commentStatus" column="comment_status"/>
+        <result property="groupStatus" column="group_status"/>
+        <result property="expectedServiceTime" column="expected_service_time"/>
+        <result property="dealType" column="deal_type"/>
+        <result property="handleBy" column="handle_by"/>
+        <result property="lastHandleBy" column="last_handle_by"/>
+        <result property="acceptBy" column="accept_by"/>
+        <result property="receiveWoTime" column="receive_wo_time"/>
+        <result property="startProcessTime" column="start_process_time"/>
+        <result property="finishWoTime" column="finish_wo_time"/>
+        <result property="arriveWoTime" column="ARRIVE_WO_TIME"/>
+        <result property="reviewWoTime" column="Review_Wo_Time"/>
+        <result property="isArriveOntime" column="IS_ARRIVE_ONTIME"/>
+        <result property="projectId" column="project_id"/>
+        <result property="landId" column="land_id"/>
+        <result property="buildId" column="build_id"/>
+        <result property="imgId" column="img_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--获取订单详情To服务端app-->
+    <select id="getSubWoDetail" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubVo">
+       SELECT s.id,sw.code code,sw.wo_type woType,s.title,s.description,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        sw.process_id processId,DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,su.name handleBy,sw.handle_by handleByUserId,
+        s.contact_name contactName,s.contact_tel contactTel,s.delivery_addr deliveryAddr,s.remark remark,s.actual_cost actualCost,s.total_num totalNum,
+        DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s') expectedServiceTimeStr,DATE_FORMAT(sw.Review_Wo_Time,'%Y-%m-%d %H:%i:%s') reviewWoTimeStr,
+        IFNULL(cu.nickname,cu.name) userName,ab.actual_id actualId,IFNULL(t.is_print,'0') isPrint,IFNULL(s.invoice_name,'') invoiceName,IFNULL(s.duty_num,'') dutyNum,
+        IFNULL(s.invoice_type,'0')  invoiceType,case when ab.pay_type='1' then '支付宝' else '微信' end payType,IFNULL(s.express_cost,'') postageCost,IFNULL(s.discount_cost,'') couponCost,
+        sw.comment_status commentStatus
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id=sw.id and sw.status='1'
+        LEFT JOIN biz_account_book ab on s.id=ab.sub_id and ab.status='1'
+		LEFT JOIN base_app_client_user cu on sw.user_id=cu.id and cu.status='1'
+		LEFT JOIN base_app_server_user su on sw.handle_by=su.id and su.status='1'
+        LEFT JOIN biz_wo  w on w.id=sw.id and w.status='1'
+        LEFT JOIN base_tenant t on t.id=sw.company_Id and t.status='1'
+        where s.status='1' and s.id=#{id}
+    </select>
+
+    <!--获取工单详情To服务端app-->
+    <select id="getWoDetail" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.WoVo">
+        SELECT w.id,sw.code woCode,sw.wo_type woType,w.title,w.description,sw.wo_status woStatus,sw.subscribe_status subStatus,w.contact_Name contactName,w.contact_Tel contactTel,
+        sw.process_id processId,DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,sw.handle_by handleBy,w.addr addr,w.three_category_name threeCategoryName,
+        DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s') expectedServiceTimeStr,w.incident_Type incidentType,IFNULL(t.is_print,'0') isPrint,IFNULL(s.invoice_name,'') invoiceName,IFNULL(s.duty_num,'') dutyNum,
+        IFNULL(s.invoice_type,'0')  invoiceType, DATE_FORMAT(sw.ARRIVE_WO_TIME,'%Y-%m-%d %H:%i:%s') arriveWoTime
+		from biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        LEFT JOIN  biz_subscribe s on s.id=sw.id and s.status='1'
+        LEFT JOIN base_tenant t on t.id=sw.company_Id and t.status='1'
+        where w.status='1' and w.id=#{id}
+    </select>
+
+    <!--根据实际支付id获取支付回调操作-->
+    <select id="getPayNotifyOperateId" parameterType="String" resultType="map">
+        SELECT sw.id subId,o.id operateId,sw.bus_id busId,sw.flow_id flowId,b.actual_cost actualCost
+        from biz_subscribe_wo sw
+        INNER JOIN biz_account_book b on sw.id=b.sub_id and b.status='1'
+        LEFT JOIN biz_flow_process_operate o on sw.flow_id=o.flow_Id and o.status='1' and o.operate_type='2'
+        where sw.status='1' and b.pay_status='1'
+        and (b.actual_Id=#{actualId} or b.account_pid=#{actualId}) and b.pay_id=#{payId}
+    </select>
+
+    <!--获取待成团已支付的订单-->
+    <select id="getWaitGroupBuySubList" parameterType="String" resultType="map">
+        SELECT bs.id subId
+        from biz_subscribe_wo bs
+        INNER JOIN biz_sub_product s on bs.id=s.sub_id and s.status='1'
+        INNER JOIN biz_account_book ab on bs.id=ab.sub_id and ab.status='1'
+        where bs.status='1'
+        and s.product_id=#{productId}
+        and bs.group_status='1'
+        and ab.pay_status='2'
+        order by bs.create_time desc
+    </select>
+
+    <!--获取未成团但已支付的订单-->
+    <select id="getNotCompleteGroupBuySubList" parameterType="String" resultType="map">
+        SELECT bs.id subId,s.sub_num
+        from biz_subscribe_wo bs
+        INNER JOIN biz_sub_product s on bs.id=s.sub_id and s.status='1'
+        INNER JOIN biz_account_book ab on bs.id=ab.sub_id and ab.status='1'
+        where bs.status='1'
+        and s.product_id=#{productId}
+        and ab.pay_status='2'
+        order by bs.create_time desc
+    </select>
+
+    <!--获取用户的完成工单数和接单数-->
+    <select id="getWoSumByUserId" parameterType="String" resultType="map">
+        SELECT a.finishWoSum finishWoSum,b.acceptWoSum acceptWoSum
+        from
+        (SELECT count(1) finishWoSum
+            from biz_subscribe_wo
+            where handle_by=#{userId} and wo_status='05'
+            <if test="projectId != null and projectId != ''">
+                and project_id = #{projectId}
+            </if>
+        ) a
+        LEFT JOIN
+        (SELECT count(1) acceptWoSum
+            from biz_subscribe_wo
+            where handle_by=#{userId}
+            <if test="projectId != null and projectId != ''">
+                and project_id = #{projectId}
+            </if>
+        )
+        b on 1=1
+    </select>
+
+    <!--获取服务端用户工单服务评价分数-->
+    <select id="getAppraisalValByUserId" parameterType="String" resultType="Double">
+        SELECT IFNULL(avg(b.appraisal_val),5)  appraisalVal
+        from (
+            SELECT DISTINCT sw.id ,t.appraisal_val
+            from biz_subscribe_wo sw
+            INNER JOIN biz_transaction_log t on sw.id=t.wo_id and t.appraisal_val!='-1' and t.curr_step='服务评价' and t.status='1'
+            where sw.status='1' and sw.handle_by=#{userId}
+        ) b
+    </select>
+
+    <!--获取CRM 报修/投诉工单同步信息接口-->
+    <select id="getSyncWorkOrderState" parameterType="String" resultType="com.github.wxiaoqi.security.app.vo.crm.in.SyncWorkOrderStateIn">
+        SELECT w.crm_wo_code woId,w.title woTitle,w.crm_project_code projectId,w.crm_room_code roomId,w.contact_Name contacts,w.contact_Tel contactTel,DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s') planTime,
+        case when w.incident_Type='repair' then '2' else '1' end type,
+        w.one_category_code firstClassifyCode,w.two_category_code secondClassifyCode,w.three_category_code thirdClassifyCode,w.three_category_code complaintClassifyCode,
+        w.description description,su.name dealName,su.mobile_phone dealTel,sw.wo_status woStatus,
+        case when w.come_from='3' then '2' else '1' end comeFrom,
+        DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s') createTime,DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s') finishTime,
+        sw.img_id fileList,t.img_id serviceFileList,t.description processResult,
+        DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s') acceptTime
+        from biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        LEFT JOIN base_app_server_user su on sw.handle_by=su.id and su.status='1'
+        <!--LEFT JOIN biz_transaction_log t on w.id=t.wo_id and t.status='1' and curr_step='已完成'-->
+        LEFT JOIN ( SELECT wo_id,img_id,description from biz_transaction_log g where wo_id=#{woId} and g.status='1' order by g.create_Time desc limit 1) t on w.id=t.wo_id
+        where w.status='1' and w.id=#{woId}
+    </select>
+
+    <!--获取订单详情To调度引擎-->
+    <select id="getSubWoToRobotDetail" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubToRobotVo">
+       SELECT s.id,sw.code code,sw.wo_type woType,s.title,s.description,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        sw.process_id processId,DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,su.name handleBy,sw.handle_by handleByUserId,
+        s.contact_name contactName,s.contact_tel contactTel,s.delivery_addr deliveryAddr,s.remark remark,FORMAT(s.actual_cost,2) actualCostStr,s.total_num totalNum,
+        IFNULL(cu.nickname,cu.name) userName,ab.actual_id actualId,IFNULL(t.is_print,'0') isPrint,IFNULL(s.invoice_name,'') invoiceName,IFNULL(s.duty_num,'') dutyNum,
+        IFNULL(s.invoice_type,'0')  invoiceType,case when ab.pay_type='1' then '支付宝' else '微信' end payType,IFNULL(FORMAT(s.express_cost,2),'') postageCostStr,IFNULL(FORMAT(s.discount_cost,2),'') couponCostStr,
+        sw.project_id projectId,sw.company_Id companyId
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id=sw.id and sw.status='1'
+        LEFT JOIN biz_account_book ab on s.id=ab.sub_id and ab.status='1'
+		LEFT JOIN base_app_client_user cu on sw.user_id=cu.id and cu.status='1'
+		LEFT JOIN base_app_server_user su on sw.handle_by=su.id and su.status='1'
+        LEFT JOIN biz_wo  w on w.id=sw.id and w.status='1'
+        LEFT JOIN base_tenant t on t.id=sw.company_Id and t.status='1'
+        where s.status='1' and s.id=#{id}
+    </select>
+
+    <!--获取工单详情To调度引擎-->
+    <!--<select id="getWoToRobotDetail" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.WoToRobotVo">
+        SELECT w.id,sw.code woCode,sw.wo_type woType,w.title,w.description,sw.subscribe_status subStatus,w.contact_Name contactName,w.contact_Tel contactTel,
+        sw.process_id processId,DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,sw.handle_by handleBy,w.addr addr,w.three_category_name threeCategoryName,
+        DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s') expectedServiceTimeStr,w.incident_Type incidentType,IFNULL(t.is_print,'0') isPrint,IFNULL(s.invoice_name,'') invoiceName,IFNULL(s.duty_num,'') dutyNum,
+        IFNULL(s.invoice_type,'0')  invoiceType,sw.company_Id companyId,w.room_id roomId,w.project_Id projectId
+		from biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        LEFT JOIN  biz_subscribe s on s.id=sw.id and s.status='1'
+        LEFT JOIN base_tenant t on t.id=sw.company_Id and t.status='1'
+        where w.status='1' and w.id=#{id}
+    </select>-->
+    <select id="getWoToRobotDetail" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.WoToRobotVo">
+        SELECT s.id,sw.code code,sw.code woCode,sw.wo_type woType,s.title,s.description,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        sw.process_id processId,DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,su.name handleBy,sw.handle_by handleByUserId,
+        s.contact_name contactName,s.contact_tel contactTel,s.delivery_addr deliveryAddr,s.remark remark,FORMAT(s.actual_cost,2) actualCostStr,s.total_num totalNum,
+        IFNULL(cu.nickname,cu.name) userName,ab.actual_id actualId,IFNULL(t.is_print,'0') isPrint,IFNULL(s.invoice_name,'') invoiceName,IFNULL(s.duty_num,'') dutyNum,
+        IFNULL(s.invoice_type,'0')  invoiceType,case when ab.pay_type='1' then '支付宝' else '微信' end payType,IFNULL(FORMAT(s.express_cost,2),'') postageCostStr,IFNULL(FORMAT(s.discount_cost,2),'') couponCostStr,
+        sw.project_id projectId,sw.company_Id companyId,DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s') expectedServiceTimeStr,w.incident_Type incidentType
+        ,w.addr addr,w.three_category_name threeCategoryName,w.room_id roomId
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id=sw.id and sw.status='1'
+        LEFT JOIN biz_account_book ab on s.id=ab.sub_id and ab.status='1'
+		    LEFT JOIN base_app_client_user cu on sw.user_id=cu.id and cu.status='1'
+		    LEFT JOIN base_app_server_user su on sw.handle_by=su.id and su.status='1'
+        LEFT JOIN biz_wo  w on w.id=sw.id and w.status='1'
+        LEFT JOIN base_tenant t on t.id=sw.company_Id and t.status='1'
+        where s.status='1' and s.id=#{id}
+    </select>
+
+    <update id="updateSubReservationExpectTime" parameterType="map">
+        UPDATE
+        biz_subscribe_wo s
+        SET
+        expected_service_time = #{dateTime},
+        modify_Time = NOW()
+        WHERE
+        s.id = #{subId}
+        AND
+        s.subscribe_status in ('1', '5')
+        AND
+        s.status = '1'
+    </update>
+
+</mapper>

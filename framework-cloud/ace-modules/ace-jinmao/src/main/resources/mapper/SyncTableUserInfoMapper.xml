@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.SyncTableUserInfoMapper">
+
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.SyncTableUserInfo" id="syncTableUserInfoMap">
+        <result property="id" column="id"/>
+        <result property="status" column="status"/>
+        <result property="userId" column="user_id"/>
+        <result property="operateSeq" column="operate_seq"/>
+        <result property="operateType" column="operate_type"/>
+        <result property="messageType" column="message_type"/>
+        <result property="message" column="message"/>
+        <result property="createTime" column="create_time"/>
+        <result property="syncTime" column="sync_time"/>
+    </resultMap>
+
+    <select id="selectByStatus" resultMap="syncTableUserInfoMap">
+        select * from sync_table_user_info where status = #{status}
+    </select>
+
+    <select id="updateByIds" resultMap="syncTableUserInfoMap">
+        update sync_table_user_info set status = #{status} where id in
+        <foreach collection="ids" open="(" close=")" separator="," item="id">
+            #{id}
+        </foreach>
+    </select>
+
+    <insert id="insertByCondition">
+        insert into sync_table_user_info(id, user_id, operate_seq, message, create_time)
+            select #{userInfo.id}, #{userInfo.userId}, (max(operate_seq)+1), #{userInfo.message} #{userInfo.createTime}
+            from sync_table_user_info where user_id = #{userInfo.userId}
+    </insert>
+
+    <select id="getMaxSeqByUserId" resultType="int">
+        select max(operate_seq) from sync_table_user_info where user_id = #{userId}
+    </select>
+
+</mapper>

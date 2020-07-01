@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.external.mapper.BizPropertyAnnouncementMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.external.entity.BizPropertyAnnouncement" id="bizPropertyAnnouncementMap">
+        <result property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="announcementType" column="announcement_type"/>
+        <result property="announcementName" column="announcement_name"/>
+        <result property="content" column="content"/>
+        <result property="projectId" column="project_id"/>
+        <result property="images" column="images"/>
+        <result property="publisher" column="publisher"/>
+        <result property="importantDegree" column="important_degree"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询物业公告列表-->
+    <select id="selectAnnouncementList" resultType="com.github.wxiaoqi.security.external.vo.ResultAnnList">
+        select
+        a.id,
+        a.title,
+        a.announcement_name announcementName,
+        IFNULL(DATE_FORMAT(a.publisher_time,'%Y-%m-%d %H:%i'),'') createTime
+        from biz_property_announcement a
+        INNER JOIN biz_crm_project p on p.project_id = a.project_id and p.status = '1'
+        where a.status = '1'
+        and p.project_code = #{projectId}
+        ORDER BY a.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+
+    </select>
+
+    <!--查询物业公告详情-->
+    <select id="selectAnnouncementInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.external.vo.AnnInfoVo">
+        select
+        id,
+        title,
+        announcement_name announcementName,
+        publisher,
+        IFNULL(DATE_FORMAT(publisher_time,'%Y-%m-%d %H:%i'),'') createTime,
+        content
+        from
+        biz_property_announcement
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+</mapper>

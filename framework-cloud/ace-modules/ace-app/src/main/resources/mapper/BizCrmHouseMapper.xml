@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCrmHouseMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCrmHouse" id="bizCrmHouseMap">
+        <result property="houseId" column="house_id"/>
+        <result property="useArea" column="use_area"/>
+        <result property="businessClass" column="business_class"/>
+        <result property="businessCategories" column="business_categories"/>
+        <result property="actualCheckinDate" column="actual_checkin_date"/>
+        <result property="propertyNature" column="property_nature"/>
+        <result property="useNature" column="use_nature"/>
+        <result property="houseStatus" column="house_status"/>
+        <result property="orientation" column="orientation"/>
+        <result property="bedroom" column="bedroom"/>
+        <result property="parlour" column="parlour"/>
+        <result property="toilet" column="toilet"/>
+        <result property="kitchen" column="kitchen"/>
+        <result property="balcony" column="balcony"/>
+        <result property="structureArea" column="structure_area"/>
+        <result property="insideSpace" column="inside_space"/>
+        <result property="decorationStandard" column="decoration_standard"/>
+        <result property="unitHouseCode" column="unit_house_code"/>
+        <result property="recordHouseCode" column="record_house_code"/>
+        <result property="floorId" column="floor_id"/>
+        <result property="floorCode" column="floor_code"/>
+        <result property="recordFloorCode" column="record_floor_code"/>
+        <result property="houseNum" column="house_num"/>
+        <result property="recordHouseNum" column="record_house_num"/>
+        <result property="houseName" column="house_name"/>
+        <result property="recordHouseName" column="record_house_name"/>
+        <result property="modifiedOn" column="modified_on"/>
+        <result property="blockBuildingCode" column="block_building_code"/>
+        <result property="businessType" column="business_type"/>
+        <result property="housingResourcesId" column="housing_resources_id"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="projectId" column="project_id"/>
+        <result property="propertyType" column="property_type"/>
+        <result property="recordBuildingCode" column="record_building_code"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getByIds" resultMap="bizCrmHouseMap">
+        select * from biz_crm_house
+        where 1=1 and
+        house_id in
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getHouseInfoListByFloorId" resultType="com.github.wxiaoqi.security.app.vo.city.out.HouseInfoVo">
+        select house_id houseId ,record_house_num houseName
+        from biz_crm_house
+        where `status` = '1' and floor_id = #{floorId}
+        <if test="type != null and type == 1">
+            and property_type = 'House'
+        </if>
+        <if test="type != null and type == 2">
+            and property_type = 'PublicArea'
+        </if>
+    </select>
+    <select id="getHouseInfoListByFloorIds" resultType="com.github.wxiaoqi.security.app.vo.city.out.HouseInfoVo">
+        select house_id houseId ,record_house_num houseName, floor_id floorId
+        from biz_crm_house
+        where `status` = '1'
+        <if test="type != null and type == 1">
+            and property_type = 'House'
+        </if>
+        <if test="type != null and type == 2">
+            and property_type = 'PublicArea'
+        </if>
+        and floor_id IN
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+        order by house_num + 0 ASC,record_house_num asc
+    </select>
+
+    <select id="getHouseInfoVoByHouseId" resultType="com.github.wxiaoqi.security.app.vo.house.HouseInfoVO">
+         SELECT bch.house_id houseId
+          ,bch.record_house_num houseName
+          ,bcp.project_name projectName
+		  ,bb.record_building_name buildName
+		  ,bcf.record_floor_name floorName
+          ,bcc.`name` cityName
+        FROM biz_crm_house bch
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+		LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bch.house_id = #{houseId} AND bch.`status` = '1'
+    </select>
+    <select id="getHouseInfoTree" resultType="com.github.wxiaoqi.security.app.vo.house.HouseTreeList">
+        SELECT id,parentId,name,code FROM (
+--             SELECT city_id id , '1' parentId, `name`, city_code code FROM biz_crm_city WHERE `status` = '1'
+--             UNION ALL
+--             SELECT project_id id , city_id parentId, project_name name, project_code code FROM biz_crm_project WHERE `status` = '1'
+--             UNION ALL
+--             SELECT block_id id, project_id parentId,name,block_code code FROM biz_crm_block WHERE `status` = '1'
+--             UNION ALL
+--             SELECT housing_resources_id id, block_id parentId,record_building_name name,record_building_code code FROM biz_crm_building WHERE `status` = '1'
+--             UNION ALL
+--             SELECT unit_id id, building_id parentId,record_unit_name name,record_unit_code code FROM biz_crm_unit WHERE `status` = '1'
+--             UNION ALL
+--             SELECT floor_id id, unit_id parentId,record_floor_name name, record_floor_code code FROM biz_crm_floor WHERE `status` = '1'
+--             UNION ALL
+--             SELECT house_id id, floor_id parentId,record_house_num name,record_house_code code FROM biz_crm_house WHERE `status` = '1' AND property_type = 'House'
+
+--             SELECT bch.house_id id, bcf.unit_id parentId,bch.record_house_num name,record_house_code code
+--             FROM biz_crm_house bch
+--             LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+--             WHERE bch.`status` = '1'AND bch.property_type = 'House'
+        (SELECT block_id id, project_id parentId,name,block_code code,block_code + 0 num ,0 as sort
+            FROM biz_crm_block
+            WHERE `status` = '1' AND project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and property_type = 'PublicArea'
+            </if>
+            order by block_num + 0 ASC ,name asc)
+
+            UNION ALL
+
+        (SELECT bcb.housing_resources_id id, bcb.block_id parentId,bcb.record_building_name name,bcb.record_building_code code,bcb.building_num + 0 num ,1 as sort
+            FROM biz_crm_building bcb
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcb.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bc.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bc.property_type = 'PublicArea'
+            </if>
+            order by bcb.building_num + 0 ASC,bcb.record_building_name asc)
+
+            UNION ALL
+
+        (SELECT bcu.unit_id id, bcu.building_id parentId,bcu.record_unit_name name,bcu.record_unit_code code,bcu.record_unit_num + 0 num ,2 as sort
+            FROM biz_crm_unit bcu
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcu.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bcu.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bcu.property_type = 'PublicArea'
+            </if>
+            order by bcu.record_unit_num + 0 ASC ,bcu.record_unit_name asc)
+
+            UNION ALL
+
+        (SELECT bcf.floor_id id, bcf.unit_id parentId,bcf.record_floor_name name, bcf.record_floor_code code,REPLACE(bcf.record_floor_name, '层', '') + 0 num ,3 as sort
+            FROM biz_crm_floor bcf
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcf.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bcf.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bcf.property_type = 'PublicArea'
+            </if>
+            order by REPLACE(bcf.record_floor_name,'层','') + 0 ASC ,bcf.floor_num + 0 ASC ,bcf.record_floor_name asc)
+
+            UNION ALL
+
+        (SELECT bch.house_id id, bch.floor_id parentId,bch.record_house_num name,record_house_code code,bch.record_house_num + 0 num ,4 as sort
+            FROM biz_crm_house bch
+            LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bch.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bch.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bch.property_type = 'PublicArea'
+            </if>
+            order by bch.record_house_num + 0 asc)
+            )a
+        ORDER BY a.sort ASC, a.num ASC
+    </select>
+
+    <select id="getHouseAllInfoVoByHouseId" resultType="com.github.wxiaoqi.security.app.vo.house.HouseAllInfoVo">
+        SELECT
+            bcc.city_id cityId,bcc.`name` cityName,
+            bcp.project_id projectId,bcp.project_name projectName,bcp.project_code crmProjectCode,
+            bcb.block_id blockId,bcb.`name` blockName,
+            bb.housing_resources_id buildId,bb.record_building_name buildName,
+            bcu.unit_id unitId,bcu.`name` unitName,
+            bcf.floor_id floorId,bcf.record_floor_name floorName,
+            bch.house_id houseId,bch.record_house_name houseName,bch.record_house_code crmHouseCode
+        FROM biz_crm_house bch
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bch.`status` = '1' AND (bch.house_id = #{houseId} or bch.record_house_code=#{houseId})
+    </select>
+    <select id="getHouseByCode" resultMap="bizCrmHouseMap">
+        SELECT * FROM biz_crm_house
+        WHERE record_house_code = #{houseCode} AND `status` = '1'
+    </select>
+
+    <select id="getRegionInfo" resultType="com.github.wxiaoqi.security.app.entity.BizCrmHouse">
+        SELECT HOUSE_ID houseId,RECORD_HOUSE_NAME recordHouseName,
+        case property_type when 'House' then '0' when 'PublicArea' then '1' end propertyType
+         from biz_crm_house where record_house_code = #{queryId}
+    </select>
+
+    <select id="getEqInfo" resultType="com.github.wxiaoqi.security.app.entity.BizPlanWoEq">
+        SELECT id,EQ_NAME eqName,eq_code eqCode from biz_plan_wo_eq where EQ_CODE = #{queryId}
+    </select>
+</mapper>

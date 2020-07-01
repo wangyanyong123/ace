@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizBusinessMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizBusiness" id="bizBusinessMap">
+        <result property="id" column="ID"/>
+        <result property="busCode" column="bus_Code"/>
+        <result property="busName" column="bus_Name"/>
+        <result property="flowId" column="flow_Id"/>
+        <result property="createType" column="create_type"/>
+        <result property="description" column="description"/>
+        <result property="viewType" column="view_Type"/>
+        <result property="viewSort" column="view_Sort"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="type" column="type"/>
+        <result property="woType" column="wo_type"/>
+        <result property="dealType" column="deal_type"/>
+    </resultMap>
+
+    <sql id="Base_Column_List" >
+        ID, bus_Code, bus_Name, flow_Id,type,wo_type,create_type,deal_type
+    </sql>
+
+    <select id="selectAllBusinessList" resultMap="bizBusinessMap" parameterType="Map" >
+        select
+        <include refid="Base_Column_List" />
+        from biz_business
+        where status='1'
+        <if test="id != null" >
+            AND id=#{id}
+        </if>
+    </select>
+
+    <select id="selectBusinessClassifyList" resultType="com.github.wxiaoqi.security.app.vo.classify.out.ClassifyVo">
+        select  ID id, bus_Code classifyCode, bus_Name classifyName,1 level,img_url imgUrl
+        from biz_business where is_classify = '1' and status = '1' and show_home =1  order by view_sort
+    </select>
+
+</mapper>

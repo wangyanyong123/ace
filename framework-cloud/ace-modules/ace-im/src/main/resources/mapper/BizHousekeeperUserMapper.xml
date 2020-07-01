@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BizHousekeeperUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.im.entity.BizHousekeeperUser" id="bizHousekeeperUserMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="housekeeperId" column="housekeeper_id"/>
+        <result property="isDelete" column="is_delete"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getHouseholdList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.HouseholdVo">
+        SELECT buh.user_id userId
+        ,buh.identity_type identityType
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        FROM biz_user_house buh
+        LEFT JOIN base_app_client_user cu ON buh.user_id = cu.id AND cu.`status` = '1'
+        WHERE buh.`status` = '1' AND buh.house_id = #{houseId}
+        ORDER BY buh.identity_type DESC;
+    </select>
+    <select id="getHouseList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.HouseInfoVo">
+        SELECT house_id houseId,record_house_num houseName
+        FROM biz_crm_house
+        WHERE `status` = '1' AND property_type = 'House' AND floor_id = #{floorId}
+        order by house_num + 0 ASC,record_house_num asc
+    </select>
+    <select id="getFloorList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.FloorInfoVo">
+        SELECT floor_id floorId, record_floor_name floorName
+        FROM biz_crm_floor
+        WHERE `status` = '1' AND unit_id = #{unitId} and property_type = 'House'
+        order by floor_num + 0 ASC ,record_floor_name asc
+    </select>
+    <select id="getUnitList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.UnitInfoVo">
+        SELECT unit_id unitId, record_unit_name unitName
+        FROM biz_crm_unit
+        WHERE `status` = '1' AND building_id = #{buildId} and property_type = 'House'
+        order by record_unit_num + 0 ASC ,record_unit_name asc
+    </select>
+    <select id="getBuildList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.BuildInfoVo">
+        SELECT bcb.housing_resources_id buildId, bcb.record_building_name buildName
+        FROM biz_crm_building bcb
+        LEFT JOIN base_app_housekeeper_area baha ON baha.building_id = bcb.housing_resources_id AND baha.`status` = '1' AND baha.user_id = #{userId}
+        WHERE bcb.block_id = #{blockId} AND bcb.`status` = '1' AND baha.id is not NULL
+        order by bcb.building_num + 0 ASC,bcb.record_building_name asc;
+    </select>
+    <select id="getBlockList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.BlockInfoVo">
+        SELECT DISTINCT bc.block_id blockId, bc.`name` blockName
+        FROM base_app_housekeeper_area baha
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = baha.building_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bc.block_id = bcb.block_id AND bc.`status` = '1' AND bc.property_type = 'House'
+        WHERE baha.user_id = #{userId} AND bc.block_id is not null AND baha.`status` = '1'
+        order by bc.block_num + 0 ASC ,bc.`name` asc
+    </select>
+    <select id="getUserInfoList" resultType="com.github.wxiaoqi.security.im.vo.housekeeperchat.out.UserInfoVo">
+        SELECT DISTINCT bacu.id userId
+        ,CASE WHEN IFNULL(bacu.`name`, '')='' THEN (CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END) ELSE bacu.`name` END AS userName
+        ,bacu.profile_photo profilePhoto
+        ,GROUP_CONCAT(CONCAT_WS('',bc.`name`,bcb.record_building_name,bcu.record_unit_name,bcf.record_floor_name,bch.record_house_num) ORDER BY bc.`name`,bcb.building_num + 0 ASC,bcu.record_unit_num + 0 ASC,bcf.floor_num + 0 ASC,bch.house_num + 0 ASC) houseInfos
+        ,CASE WHEN bcm.small_img is null THEN bcm.message ELSE bcm.small_img END AS lastMsg
+        ,bcm.msg_type msgType
+        ,(SELECT COUNT(*) FROM biz_chat_message WHERE from_user_id = bacu.id AND to_user_id = #{userId} AND (is_read != 1 OR is_read is null OR is_read = '')) unReadNum
+        ,bcm.house_id houseId
+        ,bcm.create_time createTime
+        FROM biz_housekeeper_user bhu
+        LEFT JOIN base_app_client_user bacu ON bhu.user_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bhu.user_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = bcu.building_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bc.block_id = bcb.block_id AND bc.`status` = '1'
+        LEFT JOIN biz_chat_message bcm ON bcm.id = (SELECT id FROM biz_chat_message WHERE (from_user_id = bacu.id and to_user_id = #{userId} )OR (to_user_id = bacu.id and from_user_id = #{userId}) ORDER BY create_time DESC, read_time DESC LIMIT 1)
+        WHERE bhu.`status` = '1' AND bhu.is_delete = '0' AND bacu.id is not null AND bc.block_id is not NULL AND bhu.housekeeper_id = #{userId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            bacu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR bacu.nickname LIKE CONCAT('%',#{searchVal},'%')
+            OR bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        GROUP BY bacu.id
+        ORDER BY bcm.create_time DESC,bcm.read_time DESC,userName ASC,bhu.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="getUserInfoNum" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT bacu.id)
+        FROM biz_housekeeper_user bhu
+        LEFT JOIN base_app_client_user bacu ON bhu.user_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bhu.user_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = bcu.building_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bc.block_id = bcb.block_id AND bc.`status` = '1'
+        WHERE bhu.`status` = '1' AND bhu.is_delete = '0' AND bacu.id is not null AND bc.block_id is not NULL AND bhu.housekeeper_id = #{userId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            bacu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR bacu.nickname LIKE CONCAT('%',#{searchVal},'%')
+            OR bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+    </select>
+
+
+    <select id="isHasHouse" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM biz_user_house buh
+        LEFT JOIN base_app_client_user ba ON ba.id = buh.user_id AND ba.`status` = '1' AND ba.is_auth = '1' AND ba.is_deleted = '1'
+        WHERE buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '1' AND ba.id is not NULL AND buh.user_id = #{userId}
+    </select>
+    <select id="getHouseKeeperInfo" resultType="com.github.wxiaoqi.security.im.vo.userchat.out.HouseKeeperVo">
+        SELECT basu.id userId
+        ,t.name companyName
+        ,CASE WHEN IFNULL(basu.`name`, '')='' THEN (basu.mobile_phone) ELSE basu.`name` END AS userName
+        ,basu.profile_photo profilePhoto
+        ,basu.mobile_phone tel
+        FROM biz_user_house buh
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = bcu.building_id AND bcb.`status` = '1'
+        LEFT JOIN base_app_housekeeper_area baha ON baha.building_id = bcb.housing_resources_id AND baha.`status` = '1'
+        LEFT JOIN base_tenant t on t.id=baha.tenant_id and t.status='1'
+        LEFT JOIN base_app_server_user basu ON basu.id = baha.user_id AND basu.`status` = '1' AND basu.is_housekeeper = '1'
+        WHERE buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '1' AND basu.id is not NULL AND buh.user_id = #{userId}
+    </select>
+</mapper>

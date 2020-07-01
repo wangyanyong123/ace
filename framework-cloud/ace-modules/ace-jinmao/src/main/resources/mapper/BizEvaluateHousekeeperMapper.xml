@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizEvaluateHousekeeperMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizEvaluateHousekeeper" id="bizEvaluateHousekeeperMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="housekeeperId" column="housekeeper_id"/>
+        <result property="content" column="content"/>
+        <result property="evaluateType" column="evaluate_type"/>
+        <result property="evaluateReason" column="evaluate_reason"/>
+        <result property="evaluateDate" column="evaluate_date"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询评价列表-->
+    <select id="selectEvaluateList" resultType="com.github.wxiaoqi.security.jinmao.vo.evaluate.EvaluateVo">
+        SELECT
+        DISTINCT h.user_id,
+        u.name housekeeperName,
+        h.user_name userName,
+        h.content,
+        evaluate_type evaluateType,
+        evaluate_reason evaluateReason,
+        IFNULL(DATE_FORMAT(h.create_time,'%Y-%m-%d %H:%i:%s'),'') evaluateDate
+        FROM
+        biz_evaluate_housekeeper h
+        INNER JOIN base_app_server_user u on h.housekeeper_id=u.id and u.status = '1' and u.enable_status = '1' and u.is_housekeeper = '1'
+        INNER JOIN base_app_housekeeper_area a on h.housekeeper_id=a.user_id and a.status = '1'
+        where
+        h.status = '1'
+        <if test="type != 3 ">
+            and a.tenant_id = #{tenantId}
+        </if>
+        <if test="time != null and time != ''">
+            and evaluate_date = #{time}
+        </if>
+        <if test="evaluateType != null and evaluateType != ''">
+            and evaluate_type = #{evaluateType}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            h.user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and h.project_id = #{projectId}
+        </if>
+        <if test="housekeeperId != null and housekeeperId != ''">
+            and u.id = #{housekeeperId}
+        </if>
+        ORDER BY h.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectEvaluateCount" resultType="java.lang.Integer">
+        SELECT
+        count(DISTINCT h.id)
+        FROM
+        biz_evaluate_housekeeper h
+        INNER JOIN base_app_server_user u on h.housekeeper_id=u.id and u.status = '1' and u.enable_status = '1' and u.is_housekeeper = '1'
+        INNER JOIN base_app_housekeeper_area a on h.housekeeper_id=a.user_id and a.status = '1'
+        where
+        h.status = '1'
+        <if test="type != 3 ">
+            and a.tenant_id = #{tenantId}
+        </if>
+        <if test="time != null and time != ''">
+            and evaluate_date = #{time}
+        </if>
+        <if test="evaluateType != null and evaluateType != ''">
+            and evaluate_type = #{evaluateType}
+        </if>
+        <if test="searchVal != null and searchVal != ''">
+            AND (
+            h.user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and h.project_id = #{projectId}
+        </if>
+        <if test="housekeeperId != null and housekeeperId != ''">
+            and u.id = #{housekeeperId}
+        </if>
+    </select>
+
+    <!--查询租户下所属管家-->
+    <select id="selectHousekeeperByTenandId" resultType="com.github.wxiaoqi.security.jinmao.vo.evaluate.HousekeeperInfo">
+        SELECT
+        DISTINCT u.id housekeeperId,
+        u.name housekeeperName
+        FROM
+        biz_user_house bur
+        INNER JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.status = '1'
+        INNER JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.status = '1'
+        INNER JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.status = '1'
+        INNER JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.status = '1'
+        INNER JOIN biz_crm_block b on bb.block_id=b.block_id and b.status = '1'
+        INNER JOIN biz_crm_project p on b.project_id=p.project_id and p.`status` = '1'
+        INNER JOIN base_app_housekeeper_area a on a.building_id=bb.housing_resources_id and a.status = '1'
+        INNER JOIN base_app_server_user u on a.user_id=u.id and u.status = '1' and u.enable_status = '1' and u.is_housekeeper = '1'
+        where
+        bur.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+    </select>
+
+</mapper>

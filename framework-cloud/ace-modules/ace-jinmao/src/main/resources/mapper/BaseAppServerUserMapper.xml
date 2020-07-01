@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BaseAppServerUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BaseAppServerUser" id="baseAppServerUserMap">
+        <result property="id" column="id"/>
+        <result property="mobilePhone" column="mobile_phone"/>
+        <result property="password" column="password"/>
+        <result property="name" column="name"/>
+        <result property="birthday" column="birthday"/>
+        <result property="email" column="email"/>
+        <result property="sex" column="sex"/>
+        <result property="profilePhoto" column="profile_photo"/>
+        <result property="isService" column="is_service"/>
+        <result property="seniorityPhoto" column="seniority_photo"/>
+        <result property="serviceGroupId" column="service_group_id"/>
+        <result property="isActive" column="is_active"/>
+        <result property="isHousekeeper" column="is_housekeeper"/>
+        <result property="isCustomer" column="is_customer"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="isBusiness" column="is_business"/>
+    </resultMap>
+
+    <!--查询客服人员列表-->
+    <select id="selectCustomerList" resultType="com.github.wxiaoqi.security.jinmao.vo.Customer.outParam.ResultCustomerVo">
+        SELECT
+        id,
+        name,
+        sex,
+        mobile_phone mobilePhone,
+        email,
+        is_active isActive,
+        enable_status enableStatus
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_customer = '1'
+        <if test="type != 3 ">
+            and tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus != 3 ">
+            and enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%')
+            OR mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectCustomerCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*) total
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_customer = '1'
+        <if test="type != 3 ">
+            and tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus != 3 ">
+            and enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%')
+            OR mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time DESC
+    </select>
+
+
+    <!--查询物业人员列表-->
+    <select id="selectServiceList" resultType="com.github.wxiaoqi.security.jinmao.vo.Service.OutParam.ResultServiceListVo">
+--         SELECT
+--         id,
+--         name,
+--         sex,
+--         mobile_phone mobilePhone,
+--         email,
+--         is_active isActive,
+--         enable_status enableStatus,
+--         is_service service,
+--         is_housekeeper houseKeeper,
+--         is_customer customer
+--         FROM
+--         base_app_server_user
+--         WHERE
+--         status = '1'
+--         and is_business='0'
+        SELECT DISTINCT(u.id),u.name,u.sex,u.mobile_phone mobilePhone,u.email,u.is_active isActive,
+        u.enable_status enableStatus,u.is_service service,u.is_housekeeper houseKeeper,u.is_customer customer FROM base_app_server_user u
+        inner JOIN base_app_server_user_tenant_id t on t.id = u.id and t.status = '1'
+        WHERE u.status = '1' and u.is_business='0'
+        <if test="type != 3 ">
+            and t.tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus == 1 ">
+            and u.is_customer = '1'
+        </if>
+        <if test="enableStatus == 2 ">
+            and u.is_housekeeper = '1'
+        </if>
+        <if test="enableStatus == 3 ">
+            and u.is_service = '1'
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            u.name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY u.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectServiceCount" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT(u.id)) FROM base_app_server_user u
+        left JOIN base_app_server_user_tenant_id t on t.id = u.id and t.status = '1'
+        WHERE u.status = '1' and u.is_business='0'
+        <if test="type != 3 ">
+            and u.tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus == 1 ">
+            and u.is_customer = '1'
+        </if>
+        <if test="enableStatus == 2 ">
+            and u.is_housekeeper = '1'
+        </if>
+        <if test="enableStatus == 3 ">
+            and u.is_service = '1'
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            u.name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+    </select>
+
+    <!--据手机号判断用户是否已存在-->
+    <select id="selectIsUserByPhone"
+        resultMap="baseAppServerUserMap">
+        SELECT
+        *
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and mobile_phone = #{phone}
+    </select>
+
+    <select id="getUserByPhone" resultMap="baseAppServerUserMap">
+    SELECT u.* from base_app_server_user_tenant_id t
+    INNER JOIN base_app_server_user u on u.id = t.id and u.status = '1'
+    where t.tenant_id = #{tenantId} and t.status = '1' and u.mobile_phone = #{phone}
+    </select>
+
+    <!--根据用户id查询客服人员信息-->
+    <select id="selectCustomerInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Customer.outParam.ResultCusInfoVo">
+        SELECT
+        id,
+        name,
+        sex,
+        mobile_phone mobilePhone,
+        email,
+        profile_photo profilePhoto,
+        enable_status enableStatus
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_customer = '1'
+        and id = #{id}
+    </select>
+
+    <!--删除客服人员-->
+    <update id="delCusInfo">
+        UPDATE base_app_server_user
+        SET is_customer = '0', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        and is_customer = '1'
+        AND id = #{id}
+    </update>
+
+    <!--删除物业人员-->
+    <update id="deleteServiceInfo">
+        UPDATE base_app_server_user
+        SET status = '0', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        AND id = #{id}
+    </update>
+
+    <!--根据用户id查询物业人员信息-->
+    <select id="selectServiceInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Service.OutParam.ResultServiceInfo">
+        SELECT
+        id,
+        name,
+        sex,
+        mobile_phone mobilePhone,
+        email,
+        profile_photo profilePhoto,
+        seniority_photo seniorityPhoto,
+        service_group_id serviceGroupId,
+        enable_status enableStatus,
+        is_service isService,
+		is_houseKeeper isHouseKeeper,
+		is_customer isCustomer
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+
+    <!--查询商业服务人员列表-->
+    <select id="selectBusServiceList" resultType="com.github.wxiaoqi.security.jinmao.vo.busService.out.BusServiceVo">
+        SELECT
+        id,
+        name,
+        sex,
+        mobile_phone mobilePhone,
+        email,
+        is_active isActive,
+        enable_status enableStatus
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_business = '1'
+        <if test="type != 3 ">
+            and tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus != 3 ">
+            and enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%')
+            OR mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectBusServiceCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*) total
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_business = '1'
+        <if test="type != 3 ">
+            and tenant_id = #{tenantId}
+        </if>
+        <if test="enableStatus != 3 ">
+            and enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            name LIKE CONCAT('%',#{searchVal},'%')
+            OR mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time DESC
+    </select>
+
+
+    <!--根据用户id查询商业服务人员信息-->
+    <select id="selectBusServiceInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.busService.out.BusServiceInfo">
+        SELECT
+        id,
+        name,
+        sex,
+        mobile_phone mobilePhone,
+        email,
+        profile_photo profilePhoto,
+        enable_status enableStatus
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and is_business = '1'
+        and id = #{id}
+    </select>
+
+    <!--删除商业服务人员-->
+    <update id="delBusServiceInfo">
+        UPDATE base_app_server_user
+        SET is_business = '0', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        and is_business = '1'
+        AND id = #{id}
+    </update>
+
+    <!--删除人员-->
+    <update id="delAppUser">
+        UPDATE base_app_server_user
+        SET status = '0', is_active = '0',tenant_id = '', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        AND id = #{id}
+    </update>
+    <delete id="delMemberUser">
+        delete from base_group_member  where user_id=#{id}
+    </delete>
+    <update id="relieve">
+        UPDATE biz_user_house
+        SET `status` = '0',modify_time = NOW(),modify_by=#{userId}
+        WHERE id = #{id} AND `status` = '1'
+    </update>
+    <!--住户列表查询-->
+    <select id="selectHouseholdList" resultType="com.github.wxiaoqi.security.jinmao.vo.household.HouseholdVo">
+        SELECT DISTINCT base.userId
+        ,base.houseNumber
+				,base.rfname
+        ,base.auditId
+        ,CASE WHEN base.identityType = 0 THEN 2 ELSE base.identityType END identityType
+        ,base.userStatus
+        ,insert(base.mobilePhone,4,4,'****') as mobilePhone
+        ,CONCAT(LEFT(base.userName,1) , '**') userName
+        ,base.profilePhoto
+        ,base.registerTime
+        ,base.id
+        FROM (
+        SELECT buh.id
+        ,buh.user_id userId
+        ,bchh.record_house_num houseNumber
+        ,null auditId
+        ,CASE WHEN buh.identity_type = 2 THEN 0 ELSE buh.identity_type END identityType
+        ,CASE WHEN buh.is_delete = 1 THEN 3 ELSE buh.is_delete END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,buh.create_time
+				,bcf.record_floor_name rfname
+        FROM biz_user_house buh
+        LEFT JOIN base_app_client_user cu ON buh.user_id = cu.id AND cu.`status` = '1'
+				left join biz_crm_house bchh on bchh.house_id= buh.house_id
+				left join biz_crm_floor bcf on bcf.floor_id = bchh.floor_id
+        WHERE buh.`status` = '1'
+        <if test="floorId !=null and floorId !=''">
+            AND buh.house_id in(select house_id From biz_crm_house where floor_id=#{floorId})
+        </if>
+        <if test="houseId !=null and houseId !=''">
+            AND buh.house_id=#{houseId}
+        </if>
+        UNION ALL
+        SELECT ''
+        ,bua.apply_id userId
+        ,bchh.record_house_num houseNumber
+        ,bua.id auditId
+        ,CASE WHEN bua.identity_type = 2 THEN 0 ELSE bua.identity_type END identityType
+        ,CASE WHEN bua.audit_status = 0 THEN 1 ELSE bua.audit_status END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,bua.create_time
+				,bcf.record_floor_name rfname
+        FROM biz_user_audit bua
+        LEFT JOIN base_app_client_user cu ON bua.apply_id = cu.id AND cu.`status` = '1'
+				left join biz_crm_house bchh on bchh.house_id=bua.house_id
+				left join biz_crm_floor bcf on bcf.floor_id = bchh.floor_id
+        WHERE bua.`status` = '1' AND bua.audit_status != '1'
+        <if test="floorId !=null and floorId !=''">
+            AND bua.house_id in(select house_id From biz_crm_house where floor_id=#{floorId}))base
+        </if>
+        <if test="houseId !=null and houseId !=''">
+            AND bua.house_id=#{houseId} )base
+        </if>
+
+
+        WHERE 1=1
+        <if test="searchVal != null and searchVal != '' ">
+            and (base.userName LIKE CONCAT('%',#{searchVal},'%')
+            OR base.mobilePhone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY base.userStatus ASC, base.identityType DESC, base.create_time ASC
+        limit #{page} , #{limit}
+    </select>
+
+    <select id="getHouseholdCount" resultType="java.lang.Integer">
+        SELECT   COUNT(base.userId) as total
+        FROM (
+        SELECT buh.user_id userId
+        ,null auditId
+        ,CASE WHEN buh.identity_type = 2 THEN 0 ELSE buh.identity_type END identityType
+        ,CASE WHEN buh.is_delete = 1 THEN 3 ELSE buh.is_delete END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,buh.create_time
+				,bcf.record_floor_name rfname
+        FROM biz_user_house buh
+        LEFT JOIN base_app_client_user cu ON buh.user_id = cu.id AND cu.`status` = '1'
+				left join biz_crm_house bchh on bchh.house_id= buh.house_id
+				left join biz_crm_floor bcf on bcf.floor_id = bchh.floor_id
+        WHERE buh.`status` = '1'
+
+        <if test="floorId !=null and floorId !=''">
+            AND buh.house_id in(select house_id From biz_crm_house where floor_id=#{floorId})
+        </if>
+        <if test="houseId !=null and houseId !=''">
+            AND buh.house_id=#{houseId}
+        </if>
+        UNION ALL
+        SELECT bua.apply_id userId
+        ,bua.id auditId
+        ,CASE WHEN bua.identity_type = 2 THEN 0 ELSE bua.identity_type END identityType
+        ,CASE WHEN bua.audit_status = 0 THEN 1 ELSE bua.audit_status END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,bua.create_time
+				,bcf.record_floor_name rfname
+        FROM biz_user_audit bua
+        LEFT JOIN base_app_client_user cu ON bua.apply_id = cu.id AND cu.`status` = '1'
+				left join biz_crm_house bchh on bchh.house_id=bua.house_id
+				left join biz_crm_floor bcf on bcf.floor_id = bchh.floor_id
+        WHERE bua.`status` = '1' AND bua.audit_status != '1'
+
+        <if test="floorId !=null and floorId !=''">
+            AND bua.house_id in(select house_id From biz_crm_house where floor_id=#{floorId}))base
+        </if>
+        <if test="houseId !=null and houseId !=''">
+            AND bua.house_id=#{houseId})base
+        </if>
+
+        WHERE 1=1
+        <if test="searchVal != null and searchVal != '' ">
+            and (base.userName LIKE CONCAT('%',#{searchVal},'%')
+            OR base.mobilePhone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY base.userStatus ASC, base.identityType DESC, base.create_time ASC
+    </select>
+
+    <select id="getProjectId" resultType="java.lang.String">
+        SELECT btp.project_id
+        FROM base_app_server_user basu
+        LEFT JOIN base_tenant_project btp ON btp.tenant_id = basu.tenant_id AND btp.`status` = '1'
+        WHERE basu.id = #{userId} AND basu.`status` = '1'
+    </select>
+
+    <select id="getUserList" resultType="com.github.wxiaoqi.security.jinmao.vo.user.UserInfoVo">
+        SELECT id,nickname name,mobile_phone phone,IFNULL(email,'') email,case sex when '0' then '未知' when '1' then '男' when '2' then '女' end sex,
+        case is_operation when '1' then '已启用' when '2' then '已禁用' end isOperation
+        from base_app_client_user where status = '1' and is_deleted = '1' and is_operation &lt;&gt; '0'
+        <if test="searchVal !=null and searchVal !=''">
+            and ( nickname like CONCAT('%',#{searchVal},'%')
+            or mobile_phone like CONCAT('%',#{searchVal},'%'))
+        </if>
+        <if test="isOperation !=null and isOperation != ''">
+            and is_operation = #{isOperation}
+        </if>
+        order by upd_time desc
+        limit #{page} , #{limit}
+    </select>
+
+    <select id="getUserListTotal" resultType="java.lang.Integer">
+        SELECT count(id)
+        from base_app_client_user where status = '1' and is_deleted = '1' and is_operation &lt;&gt; '0'
+        <if test="searchVal !=null and searchVal !=''">
+            and ( nickname like CONCAT('%',#{searchVal},'%')
+            or mobile_phone like CONCAT('%',#{searchVal},'%'))
+        </if>
+        <if test="isOperation !=null and isOperation != ''">
+            and is_operation = #{isOperation}
+        </if>
+    </select>
+
+    <select id="getUserDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.user.UserInfoVo">
+        SELECT id,nickname name,mobile_phone phone,IFNULL(email,'') email,profile_photo photo,
+        case sex when '0' then '未知' when '1' then '男' when '2' then '女' end sex
+        from base_app_client_user where status = '1' and id = #{id}
+    </select>
+
+    <select id="checkUser" resultType="com.github.wxiaoqi.security.jinmao.vo.user.UserInfoVo">
+        SELECT id,is_operation isOperation from base_app_client_user where status = '1' and mobile_phone = #{phone}
+    </select>
+    <select id="getUserFaceInfoById" resultType="com.github.wxiaoqi.security.jinmao.vo.face.UserFaceInfo">
+        SELECT uh.user_id userId, cf.unit_id unitId
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch ON ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf ON cf.floor_id = ch.floor_id
+        WHERE id = #{id}
+    </select>
+
+    <update id="deleteUserOperation">
+        update base_app_client_user set is_operation = '0' where status = '1' and id = #{id}
+    </update>
+
+
+    <update id="updateStatus">
+        update base_app_client_user set is_operation = #{isOperation} where status = '1' and id = #{id}
+    </update>
+
+    <update id="setUserOperation">
+        update base_app_client_user set is_operation = '1' where status = '1' and mobile_phone = #{phone}
+    </update>
+</mapper>

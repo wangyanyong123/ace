@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BizFriendUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.im.entity.BizFriendUser" id="bizFriendUserMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="friendId" column="friend_id"/>
+        <result property="isDelete" column="is_delete"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <select id="getNames" resultType="com.github.wxiaoqi.security.im.vo.friend.NameVo">
+        SELECT
+        DISTINCT bacu.id userId
+        ,CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END AS userName
+        ,bacu.profile_photo profilePhoto
+        FROM biz_friend_user bfu
+        LEFT JOIN base_app_client_user bacu ON bfu.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bfu.friend_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        WHERE bfu.`status` = '1' AND bfu.is_delete = '0' AND bacu.id is not null AND bfu.user_id = #{userId} AND buh.id is not NULL
+        <if test="searchVal != null and searchVal != '' ">
+            AND (bacu.nickname LIKE CONCAT('%',#{searchVal},'%') or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        GROUP BY bacu.id
+        ORDER BY userName ASC,bfu.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getNamesNum" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT bacu.id)
+        FROM biz_friend_user bfu
+        LEFT JOIN base_app_client_user bacu ON bfu.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bfu.friend_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        WHERE bfu.`status` = '1' AND bfu.is_delete = '0' AND bacu.id is not null AND bfu.user_id = #{userId} AND buh.id is not NULL
+        <if test="searchVal != null and searchVal != '' ">
+            AND (bacu.nickname LIKE CONCAT('%',#{searchVal},'%') or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+    </select>
+
+    <select id="getIsTourist" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT bacu.id)
+        FROM base_app_client_user bacu
+        LEFT JOIN biz_user_house buh ON buh.user_id = bacu.id AND buh.`status` = '1' AND buh.is_delete = '0'
+        WHERE bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1' AND buh.id is not NULL AND bacu.id = #{userId}
+    </select>
+
+    <select id="getUserInfoList" resultType="com.github.wxiaoqi.security.im.vo.friend.UserInfoVo">
+        SELECT
+        DISTINCT bacu.id userId
+        ,CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END AS userName
+        ,bacu.profile_photo profilePhoto
+        ,CASE WHEN bfcm.small_img is null THEN bfcm.message ELSE bfcm.small_img END AS lastMsg
+        ,bfcm.msg_type msgType
+        ,(SELECT COUNT(*) FROM biz_friend_chat_message WHERE from_user_id = bacu.id AND to_user_id = #{userId} AND (is_read != 1 OR is_read is null OR is_read = '')) unReadNum
+        ,bfcm.create_time createTime
+        FROM biz_friend_user bfu
+        LEFT JOIN base_app_client_user bacu ON bfu.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bfu.friend_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_friend_chat_message bfcm ON bfcm.id = (SELECT id FROM biz_friend_chat_message WHERE (from_user_id = bacu.id and to_user_id = #{userId} )OR (to_user_id = bacu.id and from_user_id = #{userId}) ORDER BY create_time DESC, read_time DESC LIMIT 1)
+        WHERE bfu.`status` = '1' AND bfu.is_delete = '0' AND bacu.id is not null AND bfu.user_id = #{userId} AND buh.id is not NULL and bfcm.id is not NULL
+        <if test="searchVal != null and searchVal != '' ">
+            AND (bacu.nickname LIKE CONCAT('%',#{searchVal},'%') or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        GROUP BY bacu.id
+        ORDER BY bfcm.create_time DESC,bfcm.read_time DESC,userName ASC,bfu.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getUserInfoNum" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT bacu.id)
+        FROM biz_friend_user bfu
+        LEFT JOIN base_app_client_user bacu ON bfu.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LEFT JOIN biz_user_house buh ON buh.user_id = bfu.friend_id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_friend_chat_message bfcm ON bfcm.id = (SELECT id FROM biz_friend_chat_message WHERE (from_user_id = bacu.id and to_user_id = #{userId} )OR (to_user_id = bacu.id and from_user_id = #{userId}) ORDER BY create_time DESC, read_time DESC LIMIT 1)
+        WHERE bfu.`status` = '1' AND bfu.is_delete = '0' AND bacu.id is not null AND bfu.user_id = #{userId} AND buh.id is not NULL and bfcm.id is not NULL
+        <if test="searchVal != null and searchVal != '' ">
+            AND (bacu.nickname LIKE CONCAT('%',#{searchVal},'%') or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+    </select>
+
+    <select id="getUserInfoById" resultType="com.github.wxiaoqi.security.im.vo.friend.UserStatusVo">
+        SELECT
+        CASE WHEN buh.id is null THEN 1 ELSE 0 END isTourist,
+        CASE WHEN bfa.id is null THEN 0 ELSE 1 END isApply,
+        CASE WHEN bfb.id is null THEN 0 ELSE 1 END isBlack,
+        CASE WHEN bfu.id is null THEN 0 ELSE 1 END isFriend
+        FROM base_app_client_user bacu
+        LEFT JOIN biz_user_house buh ON buh.user_id = bacu.id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_friend_apply bfa ON bfa.`status` = '1' AND bfa.is_pass = '0' AND (bfa.friend_id = #{id} AND bfa.user_id = bacu.id)
+        LEFT JOIN biz_friend_black bfb ON bfb.`status` = '1' AND bfb.is_delete = '0' AND ((bfb.friend_id = #{id} AND bfb.user_id = bacu.id) OR (bfb.friend_id = bacu.id AND bfb.user_id = #{id}))
+        LEFT JOIN biz_friend_user bfu ON bfu.`status` = '1' AND bfu.is_delete = '0' AND (bfu.friend_id = bacu.id AND bfu.user_id = #{id})
+        WHERE bacu.id = #{userId} AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        LIMIT 1
+    </select>
+
+    <select id="isFriend" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM biz_friend_user
+        WHERE `status` = '1' AND is_delete = '0' AND user_id = #{userId} AND friend_id = #{friendId}
+    </select>
+
+    <update id="delFriend">
+        update biz_friend_user
+        SET is_delete = '1', modify_time = NOW(), modify_by = #{userId}
+        where `status` = '1' AND is_delete = '0' AND user_id = #{userId} AND friend_id = #{friendId}
+    </update>
+
+    <select id="isDeleteFriend" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM biz_friend_user
+        WHERE `status` = '1' AND is_delete = '1' AND user_id = #{userId} AND friend_id = #{friendId}
+    </select>
+
+    <update id="updateToNormal">
+        update biz_friend_user
+        SET is_delete = '0', modify_time = NOW(), modify_by = #{userId}
+        where `status` = '1' AND is_delete = '1' AND user_id = #{userId} AND friend_id = #{friendId}
+    </update>
+
+    <update id="updateFriend">
+        update biz_friend_user
+        SET is_delete = '1' ,`status` = '0', modify_time = NOW(), modify_by = #{userId}
+        where `status` = '1' AND is_delete = '0' AND user_id = #{userId} AND friend_id = #{friendId}
+    </update>
+</mapper>

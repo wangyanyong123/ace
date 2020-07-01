@@ -1,0 +1,5 @@
+apollo:
+    meta: http://172.17.40.108:64101
+    bootstrap:
+        enabled : true
+        namespaces : ace-spring,ace-cloud,ace-mybatis,ace-merchant

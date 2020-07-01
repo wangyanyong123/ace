@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizReportMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizReport" id="bizReportMap">
+        <result property="id" column="id"/>
+        <result property="postsId" column="posts_id"/>
+        <result property="commentId" column="comment_id"/>
+        <result property="beUserId" column="be_user_id"/>
+        <result property="beReportPerson" column="be_report_person"/>
+        <result property="beReportTel" column="be_report_tel"/>
+        <result property="reportCount" column="report_count"/>
+        <result property="isFeedback" column="is_feedback"/>
+        <result property="isComment" column="is_comment"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <sql id="Base_Column_List" >
+        id, posts_id, comment_id, be_user_id,be_report_person,be_report_tel,report_count,is_feedback
+        ,is_comment,type
+    </sql>
+
+
+    <!--查询评论被举报人信息-->
+    <select id="selectUserByComment" resultType="com.github.wxiaoqi.security.app.vo.report.out.UserInfo">
+        select
+        c.user_id userId,
+        IFNULL(nickname,name) name,
+        mobile_phone tel
+        from
+        biz_comment c
+        INNER JOIN base_app_client_user u on c.user_id=u.id and u.status = '1'
+        where
+        c.status = '1'
+        and show_type = '1'
+        and c.id = #{commentId}
+        and object_id = #{objectId}
+    </select>
+
+    <!--查询帖子被举报人信息-->
+    <select id="selectUserByPosts" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.report.out.UserInfo">
+        select
+        p.user_id userId,
+        IFNULL(nickname,name) name,
+        mobile_phone tel
+        from
+        biz_forum_posts p
+        INNER JOIN base_app_client_user u on p.user_id=u.id and u.status = '1'
+        where
+        p.status = '1'
+        and show_type = '1'
+        and p.id =#{postsId}
+    </select>
+
+    <!--隐藏评论-->
+    <update id="hideComment">
+        UPDATE biz_comment
+        SET  show_type = '0',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		  status = 1
+  		  AND id = #{id}
+    </update>
+
+    <!--隐藏帖子-->
+    <update id="hidePosts">
+        UPDATE biz_forum_posts
+        SET  show_type = '0',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		  status = 1
+  		  AND id = #{id}
+    </update>
+
+    <!--查询是否有举报记录-->
+    <select id="selectReportInfo" resultMap="bizReportMap">
+        select
+        <include refid="Base_Column_List" />
+        from
+        biz_report
+        where
+        status = '1'
+        and type = #{type}
+        <if test="type == 1 ">
+            and posts_id = #{postsId}
+        </if>
+        <if test="type != 1 ">
+            and posts_id = #{postsId}
+            and comment_id = #{commentId}
+        </if>
+    </select>
+
+    <!--判断用户是否有举报行为-->
+    <select id="selectIsReportByUser" resultType="java.lang.String">
+        select
+        r.id
+        from
+        biz_report r
+        INNER JOIN biz_report_person p on r.id=p.report_id and p.status = '1'
+        where
+        r.status = '1'
+        and p.report_person_id = #{userId}
+        and r.type = #{type}
+        <if test="type == 1 ">
+            and r.posts_id = #{postsId}
+        </if>
+        <if test="type != 1 ">
+            and r.posts_id = #{postsId}
+            and r.comment_id = #{commentId}
+        </if>
+    </select>
+
+</mapper>

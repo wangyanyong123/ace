@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserWechatMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserWechat" id="bizUserWechatMap">
+        <result property="id" column="id"/>
+        <result property="appId" column="app_id"/>
+        <result property="appType" column="app_type"/>
+        <result property="userId" column="user_id"/>
+        <result property="openId" column="open_id"/>
+        <result property="unionId" column="union_id"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="modifyBy" column="modify_by"/>
+    </resultMap>
+
+    <select id="existsWithOpenId" resultType="boolean">
+        select count(id) from biz_user_wechat where open_id = #{openId} and status ="1" limit 1
+    </select>
+    <select id="getUserByOpenId" resultType="string">
+        select user_id from biz_user_wechat where open_id = #{openId} and status ="1" limit 1
+    </select>
+    <select id="selectUserBindOpenIdByAppType" resultType="string">
+        select open_id from biz_user_wechat where user_id = #{userId} and app_type = #{appType} and status ="1" limit 1
+    </select>
+    <update id="bindUser">
+        update biz_user_wechat set user_id = #{userId} ,modify_by = #{modifyBy}
+        where open_id = #{openId} and app_type = #{appType} and status ='1'
+    </update>
+
+
+</mapper>

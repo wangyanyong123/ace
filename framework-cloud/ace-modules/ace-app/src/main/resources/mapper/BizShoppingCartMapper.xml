@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizShoppingCartMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizShoppingCart" id="bizShoppingCartMap">
+        <result property="id" column="ID"/>
+        <result property="userId" column="user_Id"/>
+        <result property="companyId" column="company_Id"/>
+        <result property="companyName" column="company_Name"/>
+        <result property="productId" column="product_Id"/>
+        <result property="productName" column="product_Name"/>
+        <result property="productPrice" column="product_price"/>
+        <result property="productNum" column="product_Num"/>
+        <result property="specId" column="spec_Id"/>
+        <result property="specCode" column="spec_Code"/>
+        <result property="specName" column="spec_Name"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="openId" column="open_id"/>
+    </resultMap>
+
+    <!--根据商品id查询所属公司信息-->
+    <select id="selectCompanyInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.CompanyInfo">
+        select
+        product_name productName,
+        t.id companyId,
+        t.name companyName,
+        IFNULL(logo_img,'') logoImg,
+        t.is_invoice isInvoice,
+        t.is_close isClose
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and (t.enable_status = '1' or t.enable_status is null)
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and bp.id = #{id}
+    </select>
+
+    <!--根据规格id查询详情-->
+    <select id="selectSpecInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.SpecInfo">
+        select
+        spec_name specName,
+        price
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--编辑购物车购买数量-->
+    <update id="updateShoppinfBuyNumById">
+        UPDATE biz_shopping_cart
+        SET product_Num = #{productNum},
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+
+    <!--删除购物车记录-->
+    <update id="delShoppinfById">
+        UPDATE biz_shopping_cart
+        SET status = '0',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+        AND id IN
+        <foreach collection="idList" item="id" open="(" close=")"
+                 separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <!--查询用户下购物车商品所属公司列表 -->
+    <select id="selectShoppingCartCompany"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ShoppingVo">
+        select
+        DISTINCT(c.company_Id) companyId,
+        t.name companyName,
+        t.is_invoice isInvoice
+        from
+        biz_shopping_cart c
+        INNER JOIN biz_product_spec s on s.id=c.spec_Id and s.status = '1'
+        INNER JOIN biz_product p on p.id=c.product_Id and p.status = '1' and p.bus_Status = '3'
+        INNER JOIN base_tenant t on c.company_Id=t.id and t.status = '1' and t.enable_status = '1'
+        where
+        c.status = '1'
+        and c.user_Id = #{userId}
+        <if test="projectId != null and projectId != ''">
+            and c.project_id = #{projectId}
+        </if>
+        order by c.create_Time desc
+        <if test="page != null and limit != null">
+             LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectWxShoppingCartCompany"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ShoppingVo">
+        select
+        DISTINCT(c.company_Id) companyId,
+        t.name companyName,
+        t.is_invoice isInvoice
+        from
+        biz_shopping_cart c
+        INNER JOIN biz_product_spec s on s.id=c.spec_Id and s.status = '1'
+        INNER JOIN biz_product p on p.id=c.product_Id and p.status = '1' and p.bus_Status = '3'
+        INNER JOIN base_tenant t on c.company_Id=t.id and t.status = '1' and t.enable_status = '1'
+        where
+        c.status = '1'
+        and c.user_Id = #{userId} and open_id is not null
+        <if test="projectId != null and projectId != ''">
+            and c.project_id = #{projectId}
+        </if>
+        order by c.create_Time desc
+    </select>
+
+    <!--查询公司所属商品信息-->
+    <select id="selectProductInfoByCompanyId"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ProductInfo">
+        select
+        bsc.id,
+        bp.id productId,
+        bp.product_Name productName,
+        bsc.product_Num buyNum,
+        s.price price,
+        bp.product_image productImage,
+        bsc.spec_Id specId,
+        s.spec_name specName,
+        s.spec_image specImage,
+        s.unit,
+        s.lowest_num lowestNum
+        from
+        biz_shopping_cart bsc
+        INNER JOIN biz_product bp on bsc.product_Id=bp.id and bp.status = '1' and bp.bus_Status = '3'
+        INNER JOIN biz_product_spec s on bsc.spec_Id=s.id and s.status = '1'
+        INNER JOIN base_tenant t ON ( bsc.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+        bsc.status = '1'
+        <if test="projectId != null and projectId !=''">
+            and bsc.project_id = #{projectId}
+        </if>
+        and bsc.user_Id = #{userId}
+        and bsc.company_Id = #{companyId}
+    </select>
+    <select id="selectWxProductInfoByCompanyId"
+        resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ProductInfo">
+        select
+        bsc.id,
+        bp.id productId,
+        bp.product_Name productName,
+        bsc.product_Num buyNum,
+        s.price price,
+        bp.product_image productImage,
+        bsc.spec_Id specId,
+        s.spec_name specName,
+        s.spec_image specImage,
+        s.unit,
+        s.lowest_num lowestNum
+        from
+        biz_shopping_cart bsc
+        INNER JOIN biz_product bp on bsc.product_Id=bp.id and bp.status = '1' and bp.bus_Status = '3'
+        INNER JOIN biz_product_spec s on bsc.spec_Id=s.id and s.status = '1'
+        INNER JOIN base_tenant t ON ( bsc.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+        bsc.status = '1' and bsc.open_id is not null
+        <if test="projectId != null and projectId !=''">
+            and bsc.project_id = #{projectId}
+        </if>
+        and bsc.user_Id = #{userId}
+        and bsc.company_Id = #{companyId}
+    </select>
+
+
+    <!--统计购物车金额-->
+    <select id="selectShoppingCartMoneyAndCount" resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ShoppingStatisInfo">
+        select
+        sum(bsc.product_price * bsc.product_Num) total,
+        count(bsc.product_Id) count
+        from
+        biz_shopping_cart bsc
+        INNER JOIN biz_product bp on ( bsc.product_Id=bp.id and bp.status = '1' and bp.bus_Status = '3')
+        INNER JOIN biz_product_spec s on bsc.spec_Id=s.id and s.status = '1'
+        INNER JOIN base_tenant t ON ( bsc.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+        bsc.status = '1'
+        <if test="projectId != null and projectId !=''">
+            and bsc.project_id = #{projectId}
+        </if>
+        and bsc.user_Id = #{userId}
+        <if test="selectIsAll != 1">
+            and bsc.spec_Id in
+            <foreach collection="specIdList" item="specId" open="(" close=")"
+                     separator=",">
+                #{specId}
+            </foreach>
+        </if>
+    </select>
+    <!--统计购物车金额-->
+    <select id="selectWxShoppingCartMoneyAndCount" resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ShoppingStatisInfo">
+        select
+        sum(bsc.product_price * bsc.product_Num) total,
+        count(bsc.product_Id) count
+        from
+        biz_shopping_cart bsc
+        INNER JOIN biz_product bp on ( bsc.product_Id=bp.id and bp.status = '1' and bp.bus_Status = '3')
+        INNER JOIN biz_product_spec s on bsc.spec_Id=s.id and s.status = '1'
+        INNER JOIN base_tenant t ON ( bsc.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+         bsc.user_Id = #{userId} and bsc.open_id is not null
+        and bsc.status = '1'
+        <if test="projectId != null and projectId !=''">
+            and bsc.project_id = #{projectId}
+        </if>
+
+        <if test="selectIsAll != 1">
+            and bsc.spec_Id in
+            <foreach collection="specIdList" item="specId" open="(" close=")"
+                     separator=",">
+                #{specId}
+            </foreach>
+        </if>
+    </select>
+
+    <!--查询购物车数量-->
+    <select id="selectCartCountByUserId" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT c.id)
+        from
+        biz_shopping_cart c
+        INNER JOIN biz_product_spec s on s.id=c.spec_Id and s.status = '1'
+        INNER JOIN biz_product p on ( p.id=c.product_Id and p.status = '1' and p.bus_Status = '3')
+        INNER JOIN base_tenant t ON ( c.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+        c.status = '1'
+        <if test="projectId != null and projectId !=''">
+            and c.project_id = #{projectId}
+        </if>
+        and c.user_id = #{userId}
+    </select>
+    <select id="selectWxCartCountByUserId" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT c.id)
+        from
+        biz_shopping_cart c
+        INNER JOIN biz_product_spec s on s.id=c.spec_Id and s.status = '1'
+        INNER JOIN biz_product p on ( p.id=c.product_Id and p.status = '1' and p.bus_Status = '3')
+        INNER JOIN base_tenant t ON ( c.company_Id = t.id AND t. STATUS = '1' AND t.enable_status = '1')
+        where
+          c.user_id = #{userId} and c.open_id is not null AND c.status = '1'
+        <if test="projectId != null and projectId !=''">
+            and c.project_id = #{projectId}
+        </if>
+
+    </select>
+
+    <!--查询商品是否已加入购物车-->
+    <select id="selectIsCartByProductId" resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ProductInfo">
+        select
+        id,
+        product_Num buyNum
+        from
+        biz_shopping_cart
+        where
+        status = '1'
+        <if test="projectId != null and projectId !=''">
+            and project_id = #{projectId}
+        </if>
+        and spec_Id = #{specId}
+        and user_id = #{userId}
+        limit 1
+    </select>
+    <!--查询商品是否已加入购物车-->
+    <select id="selectWxIsCartByProductId" resultType="com.github.wxiaoqi.security.app.vo.shopping.out.ProductInfo">
+        select
+        id,
+        product_Num buyNum
+        from
+        biz_shopping_cart
+        where
+        user_id = #{userId}
+        and spec_Id = #{specId}
+        and status = '1' and open_id is not null
+        <if test="projectId != null and projectId !=''">
+            and project_id = #{projectId}
+        </if>
+        limit 1
+    </select>
+
+    <select id="selectNameByCompanyId" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        name
+        from
+        base_tenant
+        where
+        status = '1'
+        and tenant_type = '2'
+        and enable_status = '1'
+        and id = #{companyId}
+    </select>
+
+    <select id="selectSpecDataById"
+            resultType="com.github.wxiaoqi.security.app.vo.shopping.out.SpecDataForAddCart">
+        SELECT
+            p.ID productId,p.product_name productName,p.tenant_id tenantId,t.`name` tenantName,
+            spec.ID specId, spec.spec_name specName,spec.price
+        FROM
+            biz_product_spec spec
+        INNER JOIN biz_product p on ( p.id = spec.product_id and p.status = '1' and p.bus_Status = '3')
+        INNER JOIN base_tenant t on t.id = p.tenant_id and t.status = '1' and t.tenant_type = '2'
+
+        where spec.id = #{specId} and spec.status = '1'
+
+    </select>
+
+    <resultMap id="CartTenantInfoResultMap"
+               type="com.github.wxiaoqi.security.app.vo.shopping.out.CartTenantInfoVo">
+
+        <result column="tenant_id" property="tenantId"/>
+        <result column="tenant_name" property="tenantName"/>
+        <result column="is_invoice" property="isInvoice"/>
+        <collection property="productList"
+                    ofType="com.github.wxiaoqi.security.app.vo.shopping.out.CartProductInfo">
+            <result column="product_id" property="productId"/>
+            <result column="product_name" property="productName"/>
+            <result column="product_image" property="productImage"/>
+            <result column="spec_id" property="specId"/>
+            <result column="spec_name" property="specName"/>
+            <result column="spec_image" property="specImage"/>
+            <result column="price" property="price"/>
+            <result column="unit" property="unit"/>
+        </collection>
+    </resultMap>
+    <select id="selectTenantProductInfo" resultMap="CartTenantInfoResultMap">
+        SELECT
+            t.id tenant_id,t.`name` tenant_name,t.is_invoice,
+            spec.product_id,p.product_name,p.product_image,
+            spec.ID spec_id,spec.spec_name,spec.spec_image,spec.price,spec.unit
+        FROM
+            biz_product_spec spec
+        INNER JOIN biz_product p on spec.product_id = p.id and p.status = '1'
+        INNER JOIN base_tenant t on t.id = p.tenant_id and t.status ='1'
+        where spec.id in
+        <foreach collection="specIdList" item="specId" open="(" separator="," close=")">
+            #{specId}
+        </foreach>
+        and spec.status = '1'
+    </select>
+    <update id="updateUserIdByOpenId">
+        update biz_shopping_cart
+        set user_id = #{userId},modify_By =#{userId},modify_time = #{modifyTime}
+        where open_id = #{openId} and status = '1'
+    </update>
+    <select id="selectCartDataByUserId" resultMap="bizShoppingCartMap">
+        select
+         `ID`, `user_Id`, `project_id`, `company_Id`, `company_Name`, `product_Id`,
+         `product_Name`, `product_price`, `product_Num`, `spec_Id`, `spec_Code`, `spec_Name`,
+         `app_type`, `open_id`
+        from biz_shopping_cart
+        where user_id = #{userId} and status = '1'
+    </select>
+
+    <select id="selectByIdList" resultMap="bizShoppingCartMap">
+        select
+         `ID`, `user_Id`, `project_id`, `company_Id`, `company_Name`, `product_Id`,
+         `product_Name`, `product_price`, `product_Num`, `spec_Id`, `spec_Code`, `spec_Name`,
+         `app_type`, `open_id`
+        from biz_shopping_cart
+        where
+            id in
+        <foreach collection="idList" item = "id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+         and status = '1'
+    </select>
+
+</mapper>

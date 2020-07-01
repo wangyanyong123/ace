@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCommunityTopicMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCommunityTopic" id="bizCommunityTopicMap">
+        <result property="id" column="Id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="postImage" column="post_image"/>
+        <result property="showType" column="show_type"/>
+        <result property="isTop" column="is_top"/>
+        <result property="upNum" column="up_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询社区话题列表-->
+    <select id="selectCommunityTopicList" resultType="com.github.wxiaoqi.security.app.vo.topic.out.CommunityTopicVo">
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        IFNULL(u.nickname,u.`name`) userName,
+        u.profile_photo profilePhoto,
+        title,
+        post_image postImage,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        up_num upNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum
+        from
+        biz_community_topic t
+        LEFT JOIN biz_community_topic_project p on t.id=p.community_topic_id and p.status = '1'
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where t.status = '1'  and t.show_type = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        order by t.is_top+0 desc,t.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+       <!---查询社区话题详情-->
+    <select id="selectCommunityTopicInfo"
+            resultType="com.github.wxiaoqi.security.app.vo.topic.out.CommunityTopicInfo">
+        select
+        t.id,
+        t.user_id userId,
+        IFNULL(u.nickname,u.`name`) userName,
+        u.profile_photo profilePhoto,
+        title,
+        content,
+        post_image postImage,
+        t.is_top isTop,
+        t.show_type showType,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        up_num upNum,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp
+        from
+        biz_community_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where t.status = '1' and t.id = #{id}
+    </select>
+
+    <select id="selectUserNameByUserId" parameterType="java.lang.String" resultType="java.lang.String">
+        select name from base_user where id = #{userId}
+    </select>
+
+    <!--查询社区话题点赞数-->
+    <select id="selectUpNumByTopicId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        up_num upNum
+        from
+        biz_community_topic
+        where
+        status = '1'
+        and show_type = '1'
+        and id = #{topicId}
+    </select>
+
+
+    <!--社区话题操作置顶,隐藏-->
+    <update id="updateCommunityTopicStatusById">
+        UPDATE biz_community_topic
+        SET
+        <if test="status == 0">
+            show_type = '0',
+        </if>
+        <if test="status == 1">
+            show_type = '1',
+        </if>
+        <if test="status == 3">
+            is_top = '1',
+        </if>
+        <if test="status == 4">
+            is_top = '0',
+        </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <!--判断用户是否是运营人员-->
+    <select id="selectIsOperationByUserId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select count(id) from base_app_client_user where  is_deleted = '1' and status = '1' and is_operation = '1'  and id =#{userId}
+    </select>
+
+
+</mapper>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserProjectMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserProject" id="bizUserProjectMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="isNow" column="is_now"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <update id="setProjectIsNow">
+        UPDATE biz_user_project
+        SET is_now = '1', modify_time = NOW()
+        where
+        status = '1'
+        and userId = #{userId}
+        order by  modify_time desc ,create_time desc
+        limit 1
+    </update>
+    <update id="changOutByUserId">
+        UPDATE biz_user_project
+        SET is_now = '0', modify_time = NOW(), modify_by = #{userId}
+        where
+        status = '1'
+        and user_id = #{userId}
+        and is_now = '1'
+    </update>
+    <update id="changOut">
+        UPDATE biz_user_project
+        SET is_now = '0', modify_time = NOW(), modify_by = #{userId}
+        where
+        status = '1'
+        and project_id = #{projectId}
+        and user_id = #{userId}
+        and is_now = '1'
+    </update>
+    <update id="changNow">
+        UPDATE biz_user_project
+        SET is_now = '1', modify_time = NOW(), modify_by = #{userId}
+        where
+        status = '1'
+        and project_id = #{projectId}
+        and user_id = #{userId}
+        and is_now = '0'
+    </update>
+
+    <select id="getCurrentProjectInfoById" resultType="com.github.wxiaoqi.security.app.vo.userproject.out.ProjectInfoVo">
+        SELECT bup.id
+            ,bup.project_id projectId
+            ,bcp.project_name projectName
+        FROM biz_user_project bup
+        LEFT JOIN biz_crm_project bcp ON bup.project_id = bcp.project_id AND bcp.`status` = '1'
+        WHERE bup.id = #{id} AND bup.`status` = '1' AND bup.is_now = '1'
+    </select>
+    <select id="getProjectListsByUserId" resultType="com.github.wxiaoqi.security.app.vo.userproject.out.ProjectInfoVo">
+        SELECT bup.id
+            ,bup.project_id projectId
+            ,bcp.project_name projectName
+        FROM biz_user_project bup
+        LEFT JOIN biz_crm_project bcp ON bup.project_id = bcp.project_id AND bcp.`status` = '1'
+        WHERE bup.user_id = #{userId} AND bup.`status` = '1'
+        ORDER BY bup.is_now DESC,bup.modify_time DESC ,bup.create_time DESC
+    </select>
+
+    <select id="getProjectByHouseIdAndUserId" resultMap="bizUserProjectMap">
+        SELECT bup.*
+        FROM biz_user_house buh
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_user_project bup ON bup.project_id = bcp.project_id AND bup.user_id = buh.user_id AND bup.`status` = '1'
+        WHERE buh.`status` = '1' AND buh.house_id = #{houseId} AND buh.user_id = #{userId}
+--         AND buh.is_delete = '0'
+    </select>
+    <select id="getCurrentUserInfos" resultType="com.github.wxiaoqi.security.app.vo.clientuser.out.CurrentUserInfosVo">
+        SELECT bup.project_id projectId
+        ,bcp.project_name projectName
+        ,buh.house_id houseId
+        ,bch.record_house_num houseName
+        ,IFNULL(buh.identity_type,'4') identityType
+        ,bcc.city_id cityId
+        ,bcc.`name` cityName
+        ,bcc.abbreviation
+        ,bcb.`name` blockName
+        ,bc.record_building_name buildingName
+        ,bcu.record_unit_name unitName
+        ,bcf.record_floor_name floorName
+        FROM biz_user_project bup
+        LEFT JOIN biz_user_house buh ON buh.user_id = bup.user_id AND buh.user_id = #{userId} AND buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '1'
+        INNER JOIN biz_crm_project bcp ON bcp.project_id = bup.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_house bch ON  bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bch.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bc ON bc.housing_resources_id = bcu.building_id AND bc.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bc.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bup.user_id = #{userId} AND bup.`status` = '1' AND bup.is_now = '1'
+        ORDER BY buh.id DESC, bch.record_house_num DESC
+        LIMIT 1
+    </select>
+    <select id="getOtherHousesAndProjectDetailInfos" resultType="com.github.wxiaoqi.security.app.vo.userproject.out.OtherHousesAndProjectDetailInfosVo">
+        SELECT * FROM (
+            SELECT bup.id
+            ,NULL houseId
+            ,bcp.project_id projectId
+            ,NULL houseName
+            ,bcc.`name` cityName
+            ,'5' identityType
+            ,bcp.project_name projectName
+            ,NULL buildName
+            ,NULL floorName
+            ,NULL unitName
+            FROM biz_user_project bup
+            LEFT JOIN biz_crm_project bcp ON bcp.project_id = bup.project_id AND bcp.`status` = '1'
+            LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+            WHERE bup.user_id = #{userId} AND bup.`status` = '1' AND bup.is_now = '0'
+            AND bup.project_id NOT IN (
+                SELECT bcp.project_id projectId
+                FROM biz_user_house buh
+                LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+                LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+                LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+                LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+                LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+                LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+                WHERE buh.user_id = #{userId} AND buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '0'
+                UNION ALL
+                SELECT bcp.project_id projectId
+                FROM biz_user_audit bua
+                LEFT JOIN biz_crm_house bch ON bch.house_id = bua.house_id AND bch.`status` = '1'
+                LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+                LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+                LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+                LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+                LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+                WHERE bua.apply_id = #{userId} AND bua.`status` = '1' AND bua.audit_status = '0'
+            )
+            UNION ALL
+            SELECT bua.id
+            ,bua.house_id houseId
+            ,bcp.project_id projectId
+            ,bch.record_house_num houseName
+            ,bcc.`name` cityName
+            ,4 identityType
+            ,bcp.project_name projectName
+            ,bb.record_building_name buildName
+            ,bcf.record_floor_name floorName
+            ,bcu.record_unit_name unitName
+            FROM biz_user_audit bua
+            LEFT JOIN biz_crm_house bch ON bch.house_id = bua.house_id AND bch.`status` = '1'
+            LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+            LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+            LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+            LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+            WHERE bua.apply_id = #{userId} AND bua.`status` = '1' AND bua.audit_status = '0'
+            UNION ALL
+            SELECT buh.id
+            ,buh.house_id houseId
+            ,bcp.project_id projectId
+            ,bch.record_house_num houseName
+            ,bcc.`name` cityName
+            ,IFNULL(buh.identity_type,'5') identityType
+            ,bcp.project_name projectName
+            ,bb.record_building_name buildName
+            ,bcf.record_floor_name floorName
+            ,bcu.record_unit_name unitName
+            FROM biz_user_house buh
+            LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+            LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+            LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+            LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+            LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+            WHERE buh.user_id = #{userId} AND buh.`status` = '1' AND buh.is_delete = '0' AND buh.is_now = '0') a
+        ORDER BY a.identityType ASC,a.cityName ASC,a.projectName,a.houseName  ASC
+    </select>
+</mapper>

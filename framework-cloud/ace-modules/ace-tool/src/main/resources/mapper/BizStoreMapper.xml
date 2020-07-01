@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.store.mapper.BizStoreMapper">
+
+    <update id="updateStore" >
+        UPDATE biz_store BS
+        SET BS.store_num = #{currentNum}
+        WHERE
+        BS.spec_id = #{specId}
+        AND BS.`status` = TRUE
+        AND BS.time_slot =  #{timeSlot}
+    </update>
+    <select id="queryStoreNum" resultType="com.github.wxiaoqi.store.entity.BizStore">
+         SELECT
+            BS.store_num storeNum,
+	        BS.is_limit isLimit
+         FROM
+            biz_store BS
+          WHERE
+            BS.spec_id = #{specId}
+            AND BS.`status` = TRUE
+            AND BS.time_slot =  #{timeSlot}
+    </select>
+
+    <select id="queryGroupSpecId" resultType="String">
+        SELECT
+            s.spec_id
+        FROM
+            biz_store s
+        WHERE
+            s.product_id IN (
+                SELECT DISTINCT
+                    (bp.id)
+                FROM
+                    biz_product bp
+                LEFT JOIN biz_product_classify c ON bp.id = c.product_id
+                AND c. STATUS = '1'
+                INNER JOIN biz_business b ON c.bus_id = b.id
+                AND b. STATUS = '1'
+                INNER JOIN biz_product_project p ON bp.id = p.product_id
+                AND p. STATUS = '1'
+                WHERE
+                    bp. STATUS = '1'
+                AND b.type IN ('2', '4')
+            )
+    </select>
+
+    <select id="getDuplicateStore" resultType="com.github.wxiaoqi.store.entity.BizStore">
+        SELECT
+            s.id,
+            s.tenant_id tenantId,
+            s.product_id productId,
+            s.spec_id specId,
+            s.product_name productName,
+            s.is_limit isLimit,
+            s.store_num storeNum,
+            s.time_slot timeSlot
+         FROM biz_store s
+         WHERE s.`status` = TRUE
+         GROUP BY s.spec_id,s.time_slot
+         HAVING COUNT(*) > 1
+    </select>
+
+    <select id="getDuplicateStoreDetailList" resultType="com.github.wxiaoqi.store.entity.BizStore">
+        SELECT
+            s.id,
+            s.tenant_id tenantId,
+            s.product_id productId,
+            s.spec_id specId,
+            s.product_name productName,
+            s.is_limit isLimit,
+            s.store_num storeNum,
+            s.time_slot timeSlot,
+            s.create_by createBy,
+            s.create_time createTime
+        FROM
+            biz_store s
+        WHERE
+            s.product_id = #{query.productId}
+        AND s.spec_id = #{query.specId}
+        AND s.time_slot = #{query.timeSlot}
+        AND s.`status` = TRUE
+        ORDER BY s.create_time DESC
+    </select>
+
+    <update id="updateDuplicateStore" >
+        UPDATE
+            biz_store s
+        SET s.`status` = FALSE
+        WHERE
+            s.product_id = #{query.productId}
+        AND s.spec_id = #{query.specId}
+        AND s.time_slot = #{query.timeSlot}
+        AND s.`status` = TRUE
+        AND s.id != #{query.id}
+        ORDER BY s.create_time DESC
+    </update>
+</mapper>

@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizReservationMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizReservation" id="bizReservationMap">
+        <result property="id" column="id"/>
+        <result property="companyId" column="company_id"/>
+        <result property="reservationCode" column="reservation_code"/>
+        <result property="name" column="name"/>
+        <result property="reservationLogo" column="reservation_logo"/>
+        <result property="reservationImagetextInfo" column="reservation_imagetext_info"/>
+        <result property="sales" column="sales"/>
+        <result property="reservaStatus" column="reserva_Status"/>
+        <result property="applyTime" column="apply_time"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询服务列表-->
+    <select id="selectReservationList" resultType="com.github.wxiaoqi.security.jinmao.vo.reservat.out.ReservationList">
+        select
+        DISTINCT(r.id),
+        r.reservation_code reservationCode,
+        r.`name`,
+        bc.classify_name classifyName,
+        (select
+        GROUP_CONCAT(pp.project_name) projectName from biz_product_project p
+        INNER JOIN biz_crm_project pp on p.project_id=pp.project_id and pp.status = '1'
+        WHERE p.status = '1' and p.product_id = r.id
+        GROUP BY p.product_id) projectName,
+        IFNULL(DATE_FORMAT(r.apply_time,'%Y-%m-%d %H:%i:%s'),'') applyTime,
+        IFNULL(DATE_FORMAT(r.publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        r.sales,
+        r.reserva_Status reservaStatus
+        from
+        biz_reservation r
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_business_classify bc on bc.id=c.classify_id and bc.status = '1'
+        INNER JOIN biz_product_project p on r.id=p.product_id and p.status = '1'
+        where
+        r.status = '1'
+        <if test="type != 3 ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="reservaStatus != 0 ">
+            and r.reserva_Status = #{reservaStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id = #{classifyId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            r.reservation_code LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY r.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询服务列表数量-->
+    <select id="selectReservationCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(r.id)) total
+        from
+        biz_reservation r
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_product_project p on r.id=p.product_id and p.status = '1'
+        where
+        r.status = '1'
+        <if test="type != 3 ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="reservaStatus != 0 ">
+            and r.reserva_Status = #{reservaStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id = #{classifyId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            r.reservation_code LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY r.create_Time DESC
+    </select>
+
+    <!--查询服务详情-->
+    <select id="selectReservationInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.reservat.out.ReservationInfo">
+        select
+        id,
+        reservation_code reservationCode,
+        `name`,
+        reservation_logo productImage,
+        selection_image selectionImage,
+        reservation_imagetext_info reservationImagetextInfo,
+        limit_Num limitNum,
+        product_Num productNum,
+        reservation_Desc reservationDesc,
+        reservation_Tel reservationTel,
+        data_Scope_Val dataScopeVal,
+        forenoon_Start_Time forenoonStartTime,
+        forenoon_End_Time forenoonEndTime,
+        product_num_forenoon productNumForenoon,
+        afternoon_Start_Time afternoonStartTime,
+        afternoon_End_Time afternoonEndTime,
+        product_num_afternoon productNumAfternoon,
+        supplier,
+        sales_way salesWay
+        from
+        biz_reservation
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+    <!--申请发布,服务状态为待审核-->
+    <update id="updateAuditStatus">
+        UPDATE biz_reservation
+        SET reserva_Status = '2',
+  	         apply_time = NOW(),
+  	         audit_time = NOW(),
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--撤回,服务状态为已撤回-->
+    <update id="updateSoldStatus">
+        UPDATE biz_reservation
+        SET reserva_Status = '5',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+
+    <!--发布,服务状态为已发布-->
+    <update id="updatePutawayStatus">
+        UPDATE biz_reservation
+        SET reserva_Status = '3',
+             publish_time= NOW(),
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--驳回,服务状态为已驳回-->
+    <update id="updateRejectStatus">
+        UPDATE biz_reservation
+        SET reserva_Status = '4',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--根据服务id查询服务状态-->
+    <select id="selectReservaStatusById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        reserva_Status reservaStatus
+        from
+        biz_reservation
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <select id="selectProjectList" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProjectVo">
+        select
+        bpp.project_id projectId,
+        p.project_name projectName
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_project bpp on bp.id=bpp.product_id
+        INNER JOIN biz_crm_project p on bpp.project_id=p.project_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+
+    <select id="selectClassifyListById"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultClassifyVo"
+            parameterType="java.lang.String">
+        select
+        c.classify_id classifyId,
+        bc.classify_name classifyName
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on bc.id = c.classify_id and bc.status = '1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <!--查询商户下的服务范围-->
+    <select id="selectProjectIdById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        p.project_name projectName
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_project bpp on bp.id=bpp.product_id
+        INNER JOIN biz_crm_project p on bpp.project_id=p.project_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <!--查询商户下业务的所属分类名称-->
+    <select id="selectClassifyNameById" resultType="java.lang.String" parameterType="java.lang.String">
+       select
+        bc.classify_name classifyName
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on bc.id = c.classify_id and bc.status = '1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+
+    <!--查询服务审核列表-->
+    <select id="selectResrevationAuditList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.reservat.out.ResrevationAuditVo">
+        select
+        DISTINCT(r.id),
+        r.reservation_code reservationCode,
+        r.`name`,
+        IFNULL(DATE_FORMAT(r.apply_time,'%Y-%m-%d %H:%i:%s'),'') applyTime,
+        IFNULL(DATE_FORMAT(r.publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        IFNULL(DATE_FORMAT(r.audit_time,'%Y-%m-%d %H:%i:%s'),'') auditTime,
+        r.sales,
+        r.reserva_Status reservaStatus,
+        t.name tenantName
+        from
+        biz_reservation r
+        INNER JOIN base_tenant t on r.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type =
+        '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_product_project p on r.id=p.product_id and p.status = '1'
+        where
+        r.status = '1'
+        and r.reserva_Status in ('2','3','4','5')
+        <if test="type != 3 ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="reservaStatus != 0 ">
+            and r.reserva_Status = #{reservaStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id = #{classifyId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            r.reservation_code LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY r.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectResrevationAuditCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(r.id)) total
+        from
+        biz_reservation r
+        INNER JOIN base_tenant t on r.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type =
+        '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_product_project p on r.id=p.product_id and p.status = '1'
+        where
+        r.status = '1'
+        and r.reserva_Status in ('2','3','4','5')
+        <if test="type != 3 ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="reservaStatus != 0 ">
+            and r.reserva_Status = #{reservaStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id = #{classifyId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            r.reservation_code LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY r.create_Time DESC
+    </select>
+
+
+    <!--查询预约服务人员列表-->
+    <select id="selectReservationPersonList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.reservat.out.ReservatPersonVo">
+        select
+        DISTINCT(w.id) woId,
+        r.name,
+        p.id,
+        bc.classify_name classifyName,
+        sw.wo_status dealStatus,
+        p.reservation_num reservationNum,
+        p.contactor_name contactorName,
+        p.contact_tel contactTel,
+        p.address,
+        DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') reservationTime
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1' AND sw.wo_type = '4'
+        INNER JOIN biz_sub_reservation rr on w.id=rr.wo_id and rr.status = '1'
+        INNER JOIN biz_reservation_person p on ( rr.reservation_id=p.id or
+        (sw.user_id=p.user_id and DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s')=DATE_FORMAT(p.create_Time,'%Y-%m-%d
+        %H:%i:%s'))) and p.status = '1'
+        INNER JOIN biz_reservation r on p.reservation_id=r.id
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_business_classify bc on c.classify_id=bc.id and bc.status = '1'
+        INNER JOIN biz_product_project pp on r.id=pp.product_id and pp.status = '1'
+        INNER JOIN base_tenant t on r.company_id=t.id
+        where
+        w.status = '1'
+        <if test="tenantId != null and tenantId != '' ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="dealStatus != null and dealStatus != ''">
+            and sw.wo_status = #{dealStatus}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.reservation_num LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR bc.classify_name LIKE CONCAT('%',#{searchVal},'%')
+            OR p.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR p.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY p.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectReservationPersonCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(w.id)) woId
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1' AND sw.wo_type = '4'
+        INNER JOIN biz_sub_reservation rr on w.id=rr.wo_id and rr.status = '1'
+        INNER JOIN biz_reservation_person p on ( rr.reservation_id=p.id or
+        (sw.user_id=p.user_id and DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s')=DATE_FORMAT(p.create_Time,'%Y-%m-%d
+        %H:%i:%s'))) and p.status = '1'
+        INNER JOIN biz_reservation r on p.reservation_id=r.id and r.status = '1'
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_business_classify bc on c.classify_id=bc.id and bc.status = '1'
+        INNER JOIN biz_product_project pp on r.id=pp.product_id and pp.status = '1'
+        INNER JOIN base_tenant t on r.company_id=t.id
+        where
+        w.status = '1'
+        <if test="tenantId != null and tenantId != '' ">
+            and r.tenant_id = #{tenantId}
+        </if>
+        <if test="dealStatus != null and dealStatus != ''">
+            and sw.wo_status = #{dealStatus}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.reservation_num LIKE CONCAT('%',#{searchVal},'%')
+            OR r.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR bc.classify_name LIKE CONCAT('%',#{searchVal},'%')
+            OR p.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR p.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY p.create_Time DESC
+    </select>
+
+    <!--服务工单操作-->
+    <update id="updateReservatStatus">
+        UPDATE biz_subscribe_wo
+        SET
+        <if test="status == 3">
+            wo_status = '05',
+            process_Id = '781B4324B3C94ED992EAB9DE92B37455',
+            finish_wo_time = NOW(),
+        </if>
+        <if test="status == 4">
+            wo_status = '03',
+            process_Id = '781B4324B3C94ED992EAB9DE92B37444',
+            start_process_time= NOW(),
+        </if>
+        <if test="status == 2">
+            wo_status = '07',
+            process_Id = '',
+            start_process_time= NOW(),
+        </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+    <!-- 查询项目列表-->
+    <select id="selectProjectName" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProjectVo">
+        SELECT
+        project_id projectId,
+        project_name projectName
+        FROM biz_crm_project
+        where
+        status = '1'
+    </select>
+
+
+    <!--查询商户负责人-->
+    <select id="seelctTenameInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.TenameInfo">
+        select contactor_name contactorName, contact_tel contactTel from base_tenant where status = '1' and id = #{tenantId}
+    </select>
+
+
+    <sql id="querySubListByWebWhereCase">
+        <where>
+            <if test="startDate != null and startDate!=''">
+                and DATE_FORMAT(w.create_time,'%Y-%m-%d')&gt;=#{startDate}
+            </if>
+            <if test="endDate != null and endDate!='' ">
+                and DATE_FORMAT(w.create_time,'%Y-%m-%d')&lt;=#{endDate}
+            </if>
+            <if test="startExpectedServiceTime != null">
+                and sw.expected_service_time >= #{startExpectedServiceTime}
+            </if>
+            <if test="endExpectedServiceTime != null">
+                and sw.expected_service_time  <![CDATA[ < ]]> #{endExpectedServiceTime}
+            </if>
+            <if test="projectId != null and projectId!=''">
+                and w.project_Id=#{projectId}
+            </if>
+            <if test="companyId != null and companyId!=''">
+                and sw.company_id=#{companyId}
+            </if>
+            <if test="subStatus != null and subStatus!=''">
+                and sw.subscribe_status=#{subStatus}
+            </if>
+            <if test="searchVal != null and searchVal!=''">
+                and (w.sub_code LIKE CONCAT('%',#{searchVal},'%') or w.title LIKE CONCAT('%',#{searchVal},'%')
+                or w.contact_name LIKE CONCAT('%',#{searchVal},'%') or t.name LIKE CONCAT('%',#{searchVal},'%'))
+            </if>
+            and sw.bus_id in
+            <foreach collection="busIdList" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+            and w.status='1'
+        </where>
+    </sql>
+
+    <!--Web后台查询预约服务订单列表-->
+    <select id="querySubListByWeb" parameterType="map"
+            resultType="com.github.wxiaoqi.security.api.vo.order.out.SubListForWebVo">
+        SELECT w.id,w.sub_code code,w.title,w.description,sw.wo_type woType,w.contact_name contactName,w.contact_tel
+        contactTel,w.delivery_addr deliveryAddr,
+        IFNULL(u.name,'') handleBy,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        IFNULL(DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        IFNULL(DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s'),'') expectedServiceTime,
+        IFNULL(DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s'),'') receiveWoTime,
+        IFNULL(DATE_FORMAT(sw.start_process_time,'%Y-%m-%d %H:%i:%s'),'')
+        startProcessTime,IFNULL(DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s'),'') finishWoTime,
+        w.actual_cost actualCost,w.total_num totalNum,t.name companyName,w.unit unit
+        from biz_subscribe w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        INNER JOIN base_tenant t on sw.company_Id=t.id and t.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        <include refid="querySubListByWebWhereCase"/>
+        order by w.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--Web后台查询预约服务订单列表总数-->
+    <select id="querySubListByWebTotal" parameterType="map" resultType="int">
+        SELECT count(w.id)
+        from biz_subscribe w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        INNER JOIN base_tenant t on sw.company_Id=t.id and t.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        <include refid="querySubListByWebWhereCase"/>
+    </select>
+
+
+    <insert id="insertReservatLog">
+		INSERT INTO `biz_transaction_log` (
+        `ID`,
+        `wo_id`,
+        `curr_step`,
+        `description`,
+        `status`,
+        `time_Stamp`,
+        `create_By`,
+        `create_Time`,
+          modify_By,
+        `modify_Time`,
+        `img_id`,
+        `con_name`,
+        `con_tel`,
+        `appraisal_val`
+        )
+        VALUES
+       (
+        #{id},
+        #{woId},
+        #{currStep},
+        #{description},
+        '1',
+        NOW(),
+        #{createBy},
+        NOW(),
+        null,
+        null,
+        null,
+        #{conName},
+        #{conTel},
+        '-1'
+        )
+	</insert>
+
+</mapper>

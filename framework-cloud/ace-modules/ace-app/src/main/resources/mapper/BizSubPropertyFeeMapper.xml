@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizSubPropertyFeeMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizSubPropertyFee" id="bizSubPropertyFeeMap">
+        <result property="id" column="id"/>
+        <result property="subId" column="sub_Id"/>
+        <result property="shouldId" column="should_id"/>
+        <result property="shouldDate" column="should_date"/>
+        <result property="item" column="item"/>
+        <result property="subNum" column="sub_num"/>
+        <result property="shouldAmount" column="should_amount"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getPropertySub" resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.PropertySubVo" >
+        SELECT sw.id subId,sw.subscribe_status subStatus from biz_subscribe_wo sw
+        INNER JOIN biz_sub_property_fee pf on sw.id = pf.sub_Id and pf.status = '1'
+        where pf.should_id = #{shouldId} AND sw.status = '1'
+    </select>
+
+    <select id="getPropertyBill" resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.ShouldBillOut">
+         SELECT f.item,f.should_amount shouldAmount,s.notice_status noticeStatus,
+        f.should_date shouldDate FROM biz_sub_property_fee f
+        INNER JOIN biz_subscribe s ON s.id = f.sub_id AND s.status = '1'
+          AND s.user_id = #{userId} AND s.project_id = #{projectId} and s.room_id = #{houseId}
+        INNER JOIN biz_subscribe_wo sw on sw.id = s.id AND sw.status = '1'
+				INNER JOIN biz_account_book ab on sw.id=ab.sub_id and ab.status='1' and ab.pay_status='2'
+        where f.status = '1'
+        order by f.should_date desc
+    </select>
+
+    <select id="getPropertyDateList" resultType="com.github.wxiaoqi.security.app.vo.propertybill.ShouldDateList">
+        SELECT should_id shouldId,item,should_amount shouldAmount,should_date shouldDate from biz_sub_property_fee f
+        INNER JOIN biz_account_book b ON b.sub_id = f.sub_id AND b.status ='1'
+        where f.sub_id = #{subId}
+    </select>
+
+    <select id="getBillAccountBook" resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.AccountBook">
+        SELECT pay_status payStatus,pay_type payType,actual_cost payAmount,DATE_FORMAT(pay_date,'%Y-%m-%d %H:%i:%s') chargeTime
+        from biz_account_book where sub_id = #{subId} and status = '1'
+    </select>
+
+
+    <!--查询未开发票账单列表-->
+    <select id="selectInvoiceBillList" resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.InvoiceBillVo">
+        SELECT DISTINCT(s.id),s.sub_code subCode,
+        DATE_FORMAT(ab.pay_date,'%Y-%m-%d %H:%i:%s') payDate, s.actual_cost actualCost
+        FROM biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id = sw.id and sw.status = '1' and IFNULL(wo_type,'') = '' and sw.subscribe_status = '4'  and sw.bus_name = '物业缴费'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id and p.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        INNER JOIN biz_account_book ab on ab.sub_id = s.id AND ab.status = '1'
+        LEFT JOIN base_app_client_user u ON u.id = sw.user_id AND u.status =  '1'
+        WHERE s.status = '1' and (s.invoice_type = '0' or s.invoice_type is null) AND s.user_id = #{userId}
+        <if test="projectId != null and projectId!=''">
+            AND s.project_id =#{projectId}
+        </if>
+        order by s.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询已缴费账单列表-->
+    <select id="selectPayBillList" resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.InvoiceBillVo">
+        SELECT DISTINCT(s.id),s.sub_code subCode,DATE_FORMAT(ab.pay_date,'%Y-%m-%d %H:%i:%s') payDate,
+        s.actual_cost actualCost, IFNULL(s.invoice_type,'0') invoiceType
+        FROM biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id = sw.id and sw.status = '1' and IFNULL(wo_type,'') = '' and sw.subscribe_status = '4'  and sw.bus_name = '物业缴费'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id and p.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        INNER JOIN biz_account_book ab on ab.sub_id = s.id AND ab.status = '1'
+        LEFT JOIN base_app_client_user u ON u.id = sw.user_id AND u.status =  '1'
+        WHERE s.status = '1' and ab.pay_status = '2' AND s.user_id = #{userId}
+        <if test="projectId != null and projectId!=''">
+            AND s.project_id =#{projectId}
+        </if>
+        ORDER BY ab.pay_date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+</mapper>

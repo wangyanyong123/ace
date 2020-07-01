@@ -1,0 +1,2 @@
+store.lock.expire = 10000 #锁设置时间毫秒
+store.times = 5 #锁设置失败重试次数

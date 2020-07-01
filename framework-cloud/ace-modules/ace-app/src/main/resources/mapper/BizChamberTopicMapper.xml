@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizChamberTopicMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizChamberTopic" id="bizChamberTopicMap">
+        <result property="id" column="Id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="topicType" column="topic_type"/>
+        <result property="topicTagId" column="topic_tag_id"/>
+        <result property="content" column="content"/>
+        <result property="topicImage" column="topic_image"/>
+        <result property="title" column="title"/>
+        <result property="selection" column="selection"/>
+        <result property="endtime" column="endTime"/>
+        <result property="showType" column="show_type"/>
+        <result property="isTop" column="is_top"/>
+        <result property="upNum" column="up_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询议事厅话题列表-->
+    <select id="selectChamberTopicList" resultType="com.github.wxiaoqi.security.app.vo.topic.out.ChamberTopicVo">
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        u.profile_photo profilePhoto,
+        u.sex,
+        IFNULL(u.nickname,u.`name`) userName,
+        IFNULL(t.content,t.title) content,
+        topic_type topicType,
+        topic_image topicImage,
+        ct.topic_tag_Name topicTagName,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        t.up_num upNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') >= NOW() then '1'
+        ELSE '2' end as ballotStatus
+        from
+        biz_chamber_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        LEFT JOIN biz_chamber_topic_tag ct on t.topic_tag_id=ct.id and ct.status = '1'
+        where t.status = '1' and t.show_type = '1'
+        <if test="myUserId != null and myUserId != '' ">
+            and t.user_id =#{myUserId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and t.project_id = #{projectId}
+        </if>
+        order by t.is_top+0 desc,t.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询我参与的议事厅话题-->
+    <select id="selectMyplayerTopicList" resultType="com.github.wxiaoqi.security.app.vo.topic.out.ChamberTopicVo">
+        select * from ((
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        u.sex,
+        u.profile_photo profilePhoto,
+        IFNULL(u.nickname,u.`name`) userName,
+        IFNULL(t.content,t.title) content,
+        topic_type topicType,
+        topic_image topicImage,
+        ct.topic_tag_Name topicTagName,
+        t.is_top isTop,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        t.up_num upNum,
+        t.project_id projectId,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') &gt;= NOW() then '1'
+        ELSE '2' end as ballotStatus
+        from
+        biz_chamber_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        LEFT JOIN biz_chamber_topic_tag ct on t.topic_tag_id=ct.id and ct.status = '1'
+        INNER JOIN biz_comment c on t.id=c.object_id and c.status = '1' and c.type = '4' and c.user_id = #{userId}
+        where t.status = '1' and t.show_type = '1'
+        ) UNION
+        (
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        u.sex,
+        u.profile_photo profilePhoto,
+        IFNULL(u.nickname,u.`name`) userName,
+        IFNULL(t.content,t.title) content,
+        topic_type topicType,
+        topic_image topicImage,
+        '' topicTagName,
+        t.is_top isTop,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        t.up_num upNum,
+        t.project_id projectId,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') &gt;= NOW() then '1'
+        ELSE '2' end as ballotStatus
+        from
+        biz_chamber_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        INNER JOIN biz_chamber_topic_vote v on t.id=v.topic_Id and v.status = '1' and v.user_id=#{userId}
+        where t.status = '1' and t.show_type = '1'
+        ))A where 1=1
+        <if test="projectId != null and projectId != '' ">
+            and A.projectId = #{projectId}
+        </if>
+        order by A.isTop+0 desc,A.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询议事厅话题标签列表-->
+    <select id="selectTagList"  parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.topic.out.TagVo">
+        select t.id, topic_tag_Name topicTagName
+        from biz_chamber_topic_tag t
+        inner join biz_chamber_topic_tag_project p on t.id=p.topic_tag_id and p.status = '1'
+        where t.status = '1' and p.project_id = #{projectId} ORDER BY t.view_sort asc, t.create_date desc
+    </select>
+
+
+
+    <!--查询议事厅话题详情-->
+    <select id="selectChamberTopicInfo" resultType="com.github.wxiaoqi.security.app.vo.topic.out.ChamberTopicInfo">
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        u.profile_photo profilePhoto,
+        IFNULL(u.nickname,u.`name`) userName,
+        IFNULL(t.content,t.title) content,
+        topic_type topicType,
+        topic_image topicImage,
+        ct.topic_tag_Name topicTagName,
+        selection,
+        t.is_top isTop,
+        t.show_type showType,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') endTime,
+        t.up_num upNum,
+        (select COUNT(DISTINCT(user_id)) from biz_chamber_topic_vote where status = '1' and topic_Id = #{id}) playerNum,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum,
+        IFNULL((SELECT '1' from biz_chamber_topic_vote v where v.topic_Id=t.id and v.user_id=#{userId} and v.`status`='1' limit 1),'0')  isSelect,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') >= NOW() then '1'
+        ELSE '2' end as ballotStatus
+        from
+        biz_chamber_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        LEFT JOIN biz_chamber_topic_tag ct on t.topic_tag_id=ct.id and ct.status = '1'
+        where t.status = '1' and t.id = #{id}
+    </select>
+
+    <!--查询议事厅话题点赞数-->
+    <select id="selectUpNumByTopicId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        up_num upNum
+        from
+        biz_chamber_topic
+        where
+        status = '1'
+        and show_type = '1'
+        and id = #{topicId}
+    </select>
+
+    <!--议事厅话题操作置顶,隐藏-->
+    <update id="updateChamberTopicStatusById">
+        UPDATE biz_chamber_topic
+        SET
+        <if test="status == 0">
+            show_type = '0',
+        </if>
+        <if test="status == 1">
+            show_type = '1',
+        </if>
+        <if test="status == 3">
+            is_top = '1',
+        </if>
+        <if test="status == 4">
+            is_top = '0',
+        </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+</mapper>

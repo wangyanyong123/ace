@@ -1,0 +1,26 @@
+spring:
+    profiles:
+      active: localhost
+    application:
+        name: ace-jinmao
+
+# 配置swagger
+swagger:
+    enabled: true
+    base-package: com.github.wxiaoqi.security.jinmao
+    title: ace-jinmao
+    version: 1.0.0.SNAPSHOT
+    description: 金茂服务
+    contact:
+        name: jinmao
+
+logging:
+    level:
+#        tk.mybatis: DEBUG
+        com.github.wxiaoqi.security.jinmao: DEBUG
+    file: /mnt/logs/ace-jinmao.log
+    file.max-size: 10MB
+    file.max-history : 365
+    pattern:
+      file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+      console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

@@ -1,0 +1,1 @@
+pns.data.type= FAT #FAT-测试环境；PRO-正式环境；

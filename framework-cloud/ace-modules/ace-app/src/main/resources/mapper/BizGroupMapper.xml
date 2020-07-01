@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizGroupMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizGroup" id="bizGroupMap">
+        <result property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="name" column="name"/>
+        <result property="summary" column="summary"/>
+        <result property="classifyCode" column="classify_code"/>
+        <result property="classifyName" column="classify_name"/>
+        <result property="logoImage" column="logo_image"/>
+        <result property="grade" column="grade"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+    <!--查询小组分类-->
+    <select id="selectGroupClassify" resultType="java.lang.String">
+        SELECT classify_name classifyName from biz_group where id = #{id}
+    </select>
+    <!--App端小组列表-->
+    <select id="selectAppGroupList" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultGroupListVo">
+        SELECT
+        g.id groupId,
+        g.name,
+        g.logo_image logoImage,
+        g.classify_name classifyName
+        FROM biz_group g
+        LEFT JOIN biz_crm_project p on p.project_id = g.project_id AND p.status = '1'
+        WHERE
+        g.status = '1'
+        AND
+        g.enable_status = '2'
+        AND
+        g.project_id = #{projectId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            g.name LIKE CONCAT('%',#{searchVal},'%') or
+            g.classify_name LIKE  CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY g.create_Time DESC
+    </select>
+    <!--APP端小组详情-->
+    <select id="selectAppGroupInfo" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultAppGroupInfoVo">
+        SELECT
+            g.id groupId,
+            g.name name,
+            g.logo_image logoImage,
+            g.grade grade,
+            IFNULL(g.summary,'') summary
+        FROM biz_group g
+        WHERE
+        g.status = '1'
+        AND
+        g.enable_status = '2'
+        AND
+        g.id = #{groupId}
+    </select>
+    <!--获取小组排名-->
+    <select id="getGroupRank" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultGroupRankVo">
+        select
+        id,
+        credits_value creditsValue
+        from
+        biz_group
+        where
+        status = '1'
+        and enable_status = '2'
+        and project_id = #{projectId}
+        ORDER BY credits_value desc ,create_time
+    </select>
+    <!--获取成员数-->
+    <select id="getGroupMemberCount" resultType="java.lang.Integer">
+        SELECT
+	        COUNT(id)
+        FROM biz_group_member m
+        WHERE
+            m.group_id = #{groupId}
+        AND
+            m.status= '1'
+        and
+            m.follow_status = '1'
+    </select>
+    <!--获取打卡数-->
+    <select id="getGroupSignCount" resultType="java.lang.Integer">
+        SELECT
+	      COUNT(sign_date)
+        FROM biz_group g
+        LEFT JOIN biz_group_sign_log l ON g.id = l.group_id AND l.status = '1'
+        WHERE
+          g.id = #{groupId}
+        AND
+          g.status = '1'
+         AND
+        g.enable_status = '2'
+    </select>
+    <!--获取组长数-->
+    <select id="getGroupLeaderCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(l.user_id)
+        FROM biz_group_leader l
+        WHERE
+            l.group_id = #{groupId}
+        AND
+            l.status = '1'
+    </select>
+    <!--加入/取消小组组长-->
+    <update id="updateGroupLeaderStatus">
+        UPDATE
+        biz_group_leader l
+        SET
+        <if test="status == 2">
+            l.status = '0',
+        </if>
+        <if test="status == 1">
+            l.status = '1',
+        </if>
+        modify_Time = NOW()
+        WHERE
+        l.user_id = #{userId}
+        AND
+        l.group_id = #{groupId}
+    </update>
+
+    <!--获取小组成员-->
+    <select id="selectGroupMemberInfo" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultAppMemberVo">
+        SELECT
+            m.user_id userId,
+            u.nickname userName,
+            IFNULL(u.profile_photo,'') userPhoto,
+            m.follow_status followStatus
+        FROM biz_group_member m
+        LEFT JOIN base_app_client_user u on u.id = m.user_id AND u.status = '1' AND u.is_deleted = '1' AND u.is_auth = '1'
+        WHERE
+        m.status = '1'
+        AND
+        m.follow_status = '1'
+        AND
+        m.group_id = #{groupId}
+        ORDER BY m.create_Time DESC
+
+    </select>
+    <!--查询成员打卡情况-->
+    <select id="selectMemberSignInfo" resultType="java.sql.Date">
+        SELECT
+	      DISTINCT(l.sign_date) signDate
+        FROM biz_group_sign_log l
+        INNER  JOIN biz_group_member m ON l.group_id = m.group_id AND m.status = '1' and m.follow_status = '1'
+        WHERE
+            l.status = '1'
+            AND
+            l.sign_date = current_date
+        AND
+        l.user_id = #{userId}
+        and
+        l.group_id = #{groupId}
+    </select>
+    <!--查询成员信息 -->
+    <select id="selectMemberInfo" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultMemberInfo">
+        SELECT
+            m.id,
+            m.user_id userId,
+            m.follow_status followStatus,
+            m.group_id groupId
+        FROM biz_group_member m
+        WHERE
+        m.status = '1' AND m.follow_status = '1'
+        AND
+        m.user_id = #{userId}
+        <if test="groupId != null and groupId != ''">
+            AND
+            m.group_id = #{groupId}
+        </if>
+    </select>
+    <!--获取我的小组-->
+    <select id="getMyGroupList" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultGroupListVo">
+        SELECT
+		g.id groupId,
+		g.name,
+		IFNULL(g.logo_image,'') logoImage,
+		g.classify_name classifyName
+		FROM biz_group g
+		LEFT JOIN biz_crm_project p on p.project_id = g.project_id AND p.status = '1'
+		LEFT JOIN biz_group_member m on g.id = m.group_id AND m.status = '1' AND m.follow_status = '1'
+		WHERE
+		g.status = '1'
+		AND
+		g.enable_status = '2'
+		AND
+		g.project_id = #{projectId}
+		AND
+		m.user_id = #{userId}
+    </select>
+    <!--获取热门小组-->
+    <select id="getHotGroupList" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultGroupListVo">
+        SELECT COUNT(user_id) AS total, g.id groupId, g.name, IFNULL(g.logo_image, '') logoImage, g.classify_name classifyName
+        from biz_group g
+        LEFT JOIN biz_group_member m ON g.id = m.group_id   AND m.follow_status = '1' AND m.status = '1'
+        where  g.enable_status = '2' and g.project_id = #{projectId} and g.status = '1'
+        GROUP BY g.id
+        ORDER BY total DESC,g.create_Time DESC limit 8
+    </select>
+    <!--获取最新小组-->
+    <select id="getNewGroupList" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultGroupListVo">
+        SELECT
+        g.id groupId,
+        g.name,
+        IFNULL(g.logo_image,'') logoImage,
+        g.classify_name classifyName
+        FROM biz_group g
+        LEFT JOIN biz_crm_project p on p.project_id = g.project_id AND p.status = '1'
+        WHERE g.status = '1'
+        AND g.enable_status = '2'
+        AND g.project_id = #{projectId}
+		ORDER BY g.create_Time desc limit 8
+    </select>
+
+
+
+    <!--查询项目下小组积分排名列表-->
+    <select id="selectGroupIntegralList" resultType="com.github.wxiaoqi.security.app.vo.group.out.GroupIntegralVo">
+        select
+        id groupId,
+        name,
+        logo_image logoImage,
+        credits_value creditsValue
+        from
+        biz_group
+        where
+        status = '1'
+        and enable_status = '2'
+        and project_id = #{projectId}
+        ORDER BY credits_value desc, create_time
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询当前社区积分-->
+    <select id="selectCurrentProjectIntegral" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.group.out.ProjectIntegralVo">
+        select
+        p.project_name projectName,
+        SUM(credits_value) creditsValueTotal
+        from
+        biz_crm_project p
+        INNER JOIN biz_group g on p.project_id=g.project_id and g.status = '1' and  g.enable_status = '2'
+        where
+        p.status = '1'
+        and p.project_id = #{projectId}
+    </select>
+
+    <!--查询社区积分排行榜-->
+    <select id="selectAllProjectIntegral" resultType="com.github.wxiaoqi.security.app.vo.group.out.ProjectIntegralVo">
+        SELECT p.project_name projectName, IFNULL(SUM(credits_value),0) creditsValueTotal
+        FROM biz_crm_project p
+        left JOIN biz_group g ON p.project_id = g.project_id AND g.status = '1' AND g.enable_status = '2'
+        WHERE p.status = '1' and city_code!='XNCS'
+        GROUP BY p.project_id
+        ORDER BY creditsValueTotal DESC, projectName
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+</mapper>

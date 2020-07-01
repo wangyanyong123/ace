@@ -1,0 +1,10 @@
+pns.expiration=3600	隐私号绑定有效时间（秒）	 
+pns.record=0	1-需要录音；0-不需要录音 
+pns.filter=PRO #FAT测试环境 PRO正式环境，配置哪个环境回调就处理哪个环境的数据，否则不处理
+pns.area.code=10	X号码所属于区号，产品确认目前都是北京区的号码		 
+pns.ak=dae329c18ef146bf8ba5ecf50566c5bb	百度智慧云AK	 
+pns.sk=a8316f9c33564fae9e7f1c1db9764f6a	百度智慧云SK	 
+pns.axb.binding=http://pns.baidubce.com/cloud/api/v1/axb/binding	AXB场景绑定地址	
+pns.axb.unbinding=http://pns.baidubce.com/cloud/api/v1/axb/unbinding/	AXB场景解绑地址	
+pns.axb.outtransfer.set=http://pns.baidubce.com/cloud/api/v1/axb/outtransfer/set	AXB场景转接号码设置地址	 
+pns.axb.outtransfer.delete=http://pns.baidubce.com/cloud/api/v1/axb/outtransfer/delete	AXB场景转接号码删除地址

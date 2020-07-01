@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizEvaluatePropertyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizEvaluateProperty" id="bizEvaluatePropertyMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="content" column="content"/>
+        <result property="evaluateType" column="evaluate_type"/>
+        <result property="evaluate" column="evaluate"/>
+        <result property="evaluateDate" column="evaluate_date"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询用户是否评价-->
+    <select id="selectIsEvaluatetByUser" resultType="java.lang.Integer">
+        select
+        COUNT(id)
+        from
+        biz_evaluate_property
+        where
+        status = '1'
+        and evaluate_date = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id = #{projectId}
+        and user_id = #{userId}
+    </select>
+
+    <!--查询当前月的评价人数-->
+    <select id="selectEvaluatetCount" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        COUNT(id)
+        from
+        biz_evaluate_property
+        where
+        status = '1'
+        and evaluate_date = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id =  #{projectId}
+    </select>
+
+    <!--查询用户的评价-->
+    <select id="selectEvaluateTypeByUser" resultType="java.lang.String">
+        select
+        evaluate_type
+        from
+        biz_evaluate_property
+        where
+        status = '1'
+        and evaluate_date = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id = #{projectId}
+        and user_id = #{userId}
+        limit 1
+    </select>
+
+    <!--查询总分值-->
+    <select id="selectEvaluateScale" parameterType="java.lang.String"
+        resultType="java.lang.Integer">
+        select
+        IFNULL(sum(evaluate_type*evaluate_sum),0)
+        from
+        biz_evaluate_property_scale
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id = #{projectId}
+    </select>
+
+    <!--查询当前项目是否存在客服,物业人员-->
+    <select id="selectIsCusByProjectId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        COUNT(*)
+        from
+        base_app_server_user u
+        INNER JOIN base_tenant_project p on u.tenant_id=p.tenant_id and p.status = '1'
+        where
+        u.status = '1'
+        and is_active = '1'
+        and (is_service = '1' or is_customer = '1')
+        and enable_status = '1'
+        and p.project_id = #{projectId}
+    </select>
+
+</mapper>

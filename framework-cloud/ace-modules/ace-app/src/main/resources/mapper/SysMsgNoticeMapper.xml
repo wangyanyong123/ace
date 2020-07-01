@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.SysMsgNoticeMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.SysMsgNotice" id="sysMsgNoticeMap">
+        <result property="id" column="id"/>
+        <result property="receiverId" column="receiver_id"/>
+        <result property="msgType" column="msg_type"/>
+        <result property="objectId" column="object_id"/>
+        <result property="isJump" column="is_jump"/>
+        <result property="page" column="page"/>
+        <result property="msgTitle" column="msg_title"/>
+        <result property="msgContent" column="msg_content"/>
+        <result property="isRead" column="is_read"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <select id="getSmsNoticeList" resultType="com.github.wxiaoqi.security.app.vo.smsnotice.SmsNoticeList">
+        SELECT id,receiver_id receiverId,object_id ObjectId,is_jump isJump,msg_type msgType,
+        page,msg_title msgTitle,msg_content msgContent,is_read isRead,DATE_FORMAT(create_time,'%m-%d') noticeTime
+        from sys_msg_notice
+        where status = '1' and receiver_id = #{userId}
+        order by create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <update id="updateSmsNotice" >
+        update sys_msg_notice SET is_read = '1' where id = #{id}
+    </update>
+
+    <select id="getSmsNoticeSign" resultType="java.lang.String">
+        SELECT is_Read isRead  from sys_msg_notice where receiver_id = #{userId}
+    </select>
+</mapper>

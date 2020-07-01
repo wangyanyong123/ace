@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizEvaluatePropertyScaleMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizEvaluatePropertyScale" id="bizEvaluatePropertyScaleMap">
+        <result property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="evaluateType" column="evaluate_type"/>
+        <result property="evaluateScale" column="evaluate_scale"/>
+        <result property="evaluateSum" column="evaluate_sum"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询当前月的物业评价详情-->
+    <select id="selectPropertyInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.property.out.PropertyInfo">
+        select
+        id,
+        evaluate_type evaluateType,
+        evaluate_scale evaluateScale,
+        evaluate_sum evaluateSum
+        from
+        biz_evaluate_property_scale
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id = #{projectId}
+        ORDER BY evaluate_type desc
+    </select>
+
+    <select id="selectPropertyInfoByType"
+            resultType="com.github.wxiaoqi.security.app.vo.property.out.PropertyInfo">
+        select
+        id,
+        evaluate_type evaluateType,
+        evaluate_sum evaluateSum
+        from
+        biz_evaluate_property_scale
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and evaluate_type = #{evaluateType}
+        and project_id = #{projectId}
+    </select>
+
+  <!--查询各星值的百分比-->
+    <select id="selectPropertyScale">
+        select
+        evaluate_scale
+        from
+        biz_evaluate_property_scale
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and evaluate_type = #{evaluateType}
+        and project_id = #{projectId}
+    </select>
+
+    <!--查询该项目的物业评价总数-->
+    <select id="selectEvaluateTotal" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        IFNULL(SUM(evaluate_sum),0)
+        from
+        biz_evaluate_property_scale
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and project_id = #{projectId}
+    </select>
+
+</mapper>

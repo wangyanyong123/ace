@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCouponMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCoupon" id="bizCouponMap">
+        <result property="id" column="id"/>
+        <result property="flowNum" column="flow_num"/>
+        <result property="couponName" column="coupon_name"/>
+        <result property="couponType" column="coupon_type"/>
+        <result property="startUseTime" column="start_use_time"/>
+        <result property="endUseTime" column="end_use_time"/>
+        <result property="amount" column="amount"/>
+        <result property="value" column="value"/>
+        <result property="discountNum" column="discount_num"/>
+        <result property="maxValue" column="max_value"/>
+        <result property="minValue" column="min_value"/>
+        <result property="getLimit" column="get_limit"/>
+        <result property="coverPhoto" column="cover_photo"/>
+        <result property="productCover" column="product_cover"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="useStatus" column="use_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getCouponList" resultType="com.github.wxiaoqi.security.app.vo.coupon.CouponListVo">
+        SELECT DISTINCT(c.id ) couponId, c.coupon_name couponName, c.cover_photo coverPhoto, c.coupon_type couponType,
+        c.amount amount, IFNULL(c.discount_num, '') discountNum, IFNULL(c.max_value, '') masValue, c.min_value minValue,
+        c.value value, DATE_FORMAT(c.start_use_time,'%Y-%m-%d %H:%i') startUseTime,DATE_FORMAT( c.end_use_time,'%Y-%m-%d %H:%i')  endUseTime, c.use_status useStatus, t.name tenantName
+        FROM biz_coupon c
+        INNER JOIN biz_coupon_product pp
+        ON pp.coupon_id = c.id AND pp.status = '1' AND pp.product_id = #{productId}
+        INNER JOIN base_tenant t
+        ON t.id = c.tenant_id AND t.status = '1'
+        WHERE c.status = '1' and (c.use_status = '1' or c.use_status = '2')  and c.end_use_time > NOW()
+        order by c.create_time desc
+    </select>
+
+    <select id="getViableCouponIds" resultType="java.lang.String">
+        SELECT u.id
+        from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id=c.id and c.status='1'
+        INNER JOIN base_tenant t on t.id = c.tenant_id and t.status = '1' AND t.id = #{companyId}
+        where u.status='1'
+        and u.use_status='1'
+        and c.start_use_time &lt;=now() and c.end_use_time &gt;=now()
+        and c.min_value &lt;= #{totalPrice}
+        and u.user_id = #{userId}
+        <if test="couponId != null and couponId != ''">
+            and u.id = #{couponId}
+        </if>
+    </select>
+
+    <select id="getViableCouponList" resultType="com.github.wxiaoqi.security.app.vo.coupon.CouponPriceVo">
+        select a.* from (
+        SELECT u.id id,c.value value,c.discount_num discountNum,c.max_value masValue,c.coupon_type couponType,(case when c.coupon_type = '1' then c.value else (10-c.discount_num)*0.1 end) discountPrice
+        from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id=c.id and c.status='1' and c.product_cover = '1'
+        where u.id in
+        <foreach collection="couponIds" index="index" item="couponId" open="(" close=")" separator=",">
+            #{couponId}
+        </foreach>
+        <if test="useCouponId != null and useCouponId != ''">
+            and u.id = #{useCouponId}
+        </if>
+        UNION all
+        SELECT u.id id,c.value value,c.discount_num discountNum,c.max_value masValue,c.coupon_type couponType,(case when c.coupon_type = '1' then c.value else (10-c.discount_num)*0.1 end) discountPrice
+        from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id=c.id and c.status='1' and c.product_cover = '2'
+        INNER JOIN biz_coupon_product pp on pp.coupon_id = c.id and pp.status = '1'
+        AND pp.product_id in
+        <foreach collection="productIds" index="index" item="productId" open="(" close=")" separator=",">
+            #{productId}
+        </foreach>
+        where u.id in
+        <foreach collection="couponIds" index="index" item="couponId" open="(" close=")" separator=",">
+            #{couponId}
+        </foreach>
+        <if test="useCouponId != null and useCouponId != ''">
+            and u.id = #{useCouponId}
+        </if>
+
+        )a
+    </select>
+
+    <select id="getCouponInfo" resultType="com.github.wxiaoqi.security.app.vo.coupon.CouponListVo">
+        SELECT DISTINCT(u.id)  couponId,c.coupon_name couponName,c.cover_photo coverPhoto,c.coupon_type couponType,
+        IFNULL(c.discount_num,'') discountNum,IFNULL(c.max_value,'') masValue, c.min_value minValue,
+        c.value value,DATE_FORMAT(c.start_use_time,'%Y-%m-%d %H:%i') startUseTime,DATE_FORMAT( c.end_use_time,'%Y-%m-%d %H:%i')  endUseTime,u.use_status useStatus,t.name tenantName
+        from biz_coupon c
+        INNER JOIN biz_coupon_use u on u.coupon_id = c.id and u.use_status = '1'
+        INNER JOIN base_tenant t on t.id = c.tenant_id and t.status = '1'
+        where c.status = '1'  and u.id = #{id}
+    </select>
+
+    <select id="getMyCoupon" resultType="com.github.wxiaoqi.security.app.vo.coupon.CouponListVo">
+        SELECT c.id couponId,c.coupon_name couponName,c.cover_photo coverPhoto,c.coupon_type couponType,IFNULL(c.discount_num,'') discountNum,IFNULL(c.max_value,'') masValue, c.min_value minValue,
+        c.value value,DATE_FORMAT(c.start_use_time,'%Y-%m-%d %H:%i') startUseTime,DATE_FORMAT( c.end_use_time,'%Y-%m-%d %H:%i')  endUseTime,u.use_status useStatus,t.name tenantName
+        from biz_coupon c
+        INNER JOIN biz_coupon_use u on u.coupon_id = c.id
+        INNER JOIN base_tenant t on t.id = c.tenant_id and t.status = '1'
+        where c.status = '1'  and u.user_id = #{userId}
+        <if test="couponStatus !=null and couponStatus != '' ">
+        <choose>
+            <when test="couponStatus == '1' ">
+                and u.use_status in ("1","3")
+            </when>
+            <otherwise>
+                and u.use_status = #{couponStatus}
+            </otherwise>
+        </choose>
+
+        </if>
+        order by c.create_time desc
+    </select>
+
+    <select id="getOneByCouponId" resultType="java.lang.String">
+        SELECT u.id from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id = c.id and c.use_status in ('1','2')
+        where u.status = '1' and u.coupon_id = #{couponId} and u.use_status = '0'
+        LIMIT 1
+    </select>
+    
+    <select id="getSurplusCount" resultType="java.lang.Integer">
+        SELECT count(*) from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id = c.id and c.use_status in ('1','2')
+        where u.status = '1' and u.coupon_id = #{couponId} and u.use_status = '0'
+    </select>
+
+    <select id="getUserCouponCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) from biz_coupon_use u
+        where u.status = '1' and coupon_id = #{couponId} and user_id = #{userId}
+    </select>
+
+    <select id="getPostageInfo" resultType="com.github.wxiaoqi.security.app.vo.postage.PostageVo">
+        SELECT p.start_amount startAmount,p.end_amount endAmount,p.postage postage from base_tenant_postage p
+        where  p.tenant_id = #{tenantId}  and p.status = '1'
+    </select>
+
+    <update id="updateCouponStatusByUser">
+        update biz_coupon_use u
+        set u.use_status = '4'
+        where u.id in
+        <foreach collection="couponIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+
+    <select id="selectMyCouponIds" resultType="java.lang.String">
+        SELECT u.id from biz_coupon_use u
+        INNER JOIN biz_coupon c on u.coupon_id = c.id and c.status = '1'
+        where u.status = '1' and NOW() > DATE_FORMAT(c.end_use_time,'%Y-%m-%d %H:%i') and u.use_status in ('1','0') and u.user_id = #{userId}
+    </select>
+
+    <resultMap id="UserCouponInfo" type="com.github.wxiaoqi.security.app.vo.coupon.UserCouponInfo">
+        <id column="user_coupon_id" property="userCouponId"/>
+        <result column="use_status" property="useStatus"/>
+        <result column="user_id" property="userId"/>
+        <result column="coupon_type" property="couponType"/>
+        <result column="start_use_time" property="startUseTime"/>
+        <result column="end_use_time" property="endUseTime"/>
+        <result column="face_value" property="faceValue"/>
+        <result column="product_cover" property="productCover"/>
+        <result column="discount_num" property="discountNum"/>
+        <result column="max_value" property="maxValue"/>
+        <result column="min_value" property="minValue"/>
+        <result column="tenant_id" property="tenantId"/>
+        <collection property="productIdList" ofType="string" column="productId"/>
+        <collection property="projectIdList" ofType="string" column="projectId"/>
+
+    </resultMap>
+    <select id="getUserCouponInfo" resultMap="UserCouponInfo">
+        SELECT
+            cu.id user_coupon_id,cu.use_status,cu.user_id, c.coupon_type,c.start_use_time,c.value face_value,
+            c.end_use_time,c.product_cover,c.discount_num,c.max_value,c.min_value,c.tenant_id,cpj.project_id,cpd.product_id
+        FROM
+            biz_coupon_use cu
+        INNER JOIN biz_coupon c ON ( cu.coupon_id = c.id AND c.`status` = '1')
+        LEFT JOIN biz_coupon_project cpj on ( c.id = cpj.coupon_id and cpj.`status` = '1')
+        LEFT  JOIN biz_coupon_product cpd on (c.id = cpd.coupon_id and cpd.`status` = '1' )
+        where cu.id = #{userCouponId} and cu.status = '1'
+    </select>
+</mapper>

@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizForumPostsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizForumPosts" id="bizForumPostsMap">
+        <result property="id" column="Id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="postImage" column="post_image"/>
+        <result property="showType" column="show_type"/>
+        <result property="postsType" column="posts_type"/>
+        <result property="isTop" column="is_top"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询帖子列表-->
+    <select id="selectPostsList" resultType="com.github.wxiaoqi.security.app.vo.posts.out.PostsVo">
+        select
+        bfp.id,
+        bfp.user_id userId,
+        bfp.title,
+        bfp.description,
+        post_image postImage,
+        IFNULL(DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.profile_photo profilePhoto,
+        bfp.up_num upNum,
+        ( select IFNULL(view_num,0) from biz_content_reader where status = '1' and content_id = bfp.id) viewNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=bfp.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp
+        from
+        biz_forum_posts bfp
+        INNER JOIN base_app_client_user u on bfp.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        bfp.status = '1'
+        <if test="postsType != 2 ">
+           and bfp.is_top = '0'
+        </if>
+        and bfp.show_type = '1'
+        and bfp.posts_type = #{postsType}
+        and bfp.group_id = #{groupId}
+        order by bfp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询阅读人的头像-->
+    <select id="selectReaderPhoto" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.api.vo.img.ImgInfo">
+        select
+        DISTINCT(u.profile_photo) url
+        from
+        biz_forum_posts bfp
+        INNER JOIN biz_content_reader_detail d on bfp.id=d.content_id and d.status = '1'
+        INNER JOIN base_app_client_user u on d.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        bfp.status = '1'
+        and bfp.show_type = '1'
+        and bfp.id = #{postaId}
+        ORDER BY d.create_Time desc
+        limit 3
+    </select>
+
+    <!--查询置顶帖子列表-->
+    <select id="selectTopPostsList" resultType="com.github.wxiaoqi.security.app.vo.posts.out.PostsVo">
+        select
+        id,
+        user_id userId,
+        title,
+        description,
+        DATE_FORMAT(create_Time,'%m-%d') createTime
+        from
+        biz_forum_posts
+        where
+        status = '1'
+        and is_top = '1'
+        and show_type = '1'
+        and group_id = #{groupId}
+        ORDER BY create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询帖子详情-->
+    <select id="selectPostsInfo" resultType="com.github.wxiaoqi.security.app.vo.posts.out.PostsInfo">
+        select
+        bfp.id,
+        bfp.group_id groupId,
+        bfp.title,
+        bfp.project_id projectId,
+        post_image postImage,
+        bfp.description,
+        IFNULL(DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        bfp.user_id userId,
+        IFNULL(u.nickname,u.`name`) nickName,
+        IFNULL(u.profile_photo,'') profilePhoto,
+        bfp.up_num upNum,
+        bfp.is_top isTop,
+        bfp.show_type showType,
+        bfp.posts_type postsType,
+        IFNULL((select is_comment isForbid
+		from biz_report where status = '1' and is_comment = '0' and be_user_id = #{userId} limit 1),'1') isForbid
+        from
+        biz_forum_posts bfp
+        INNER JOIN base_app_client_user u on bfp.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        bfp.status = '1'
+        and bfp.id = #{id}
+    </select>
+
+    <!--根据帖子id查询所属小组id-->
+    <select id="selectGroupIdById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        group_id groupId
+        from
+        biz_forum_posts
+        where
+        status = '1'
+        and show_type = '1'
+        and id = #{id}
+    </select>
+
+
+    <!--帖子操作置顶,隐藏,精华-->
+    <update id="updatePostsStatusById">
+        UPDATE biz_forum_posts
+        SET
+             <if test="status == 1">
+                 show_type = '0',
+             </if>
+             <if test="status == 2">
+                 posts_type = '2',
+             </if>
+             <if test="status == 3">
+                 is_top = '1',
+             </if>
+             <if test="status == 4">
+                 is_top = '0',
+             </if>
+             <if test="status == 5">
+                 posts_type = '1',
+             </if>
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--查询帖子点赞数-->
+    <select id="selectUpNumByPostsId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        up_num upNum
+        from
+        biz_forum_posts
+        where
+        status = '1'
+        and show_type = '1'
+        and id = #{postsId}
+    </select>
+
+    <!--查询我的帖子-->
+    <select id="selectPostsListByUser" resultType="com.github.wxiaoqi.security.app.vo.topic.out.FamilyPostsVo">
+        select A.id,A.projectId,A.typeStr,A.userId,A.sex,A.userName,A.profilePhoto,A.content,A.postImage,A.createTime,A.imageType,
+        A.videoImage,A.topicType,A.topicTagName,A.groupName,A.viewNum,A.applyNum,A.activityStatus,A.contactorName,A.ballotStatus,A.address,
+        A.personNum,A.summary,A.applyEndTime,A.description,A.upNum,A.isUp,A.commentNum from (
+        (
+        select
+        DISTINCT(p.id) id,
+        p.project_id projectId,
+        '1' typeStr,
+        p.user_id userId,
+        u.sex,
+        IFNULL(u.nickname,u.`name`) userName,
+        u.profile_photo profilePhoto,
+        p.content,p.image_type imageType,p.post_image postImage,p.video_image videoImage,'' topicType,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        '' topicTagName,'' groupName,0  viewNum,0 applyNum,'' activityStatus,'' contactorName,'' ballotStatus,'' address,
+        '' personNum,'' summary,'' applyEndTime,'' description,
+        p.up_num upNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=p.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = p.id) commentNum
+        from
+        biz_family_posts p
+        left JOIN base_app_client_user u ON p.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where p.status = '1' and show_type = '1'
+        )
+        UNION
+        (
+        select
+        DISTINCT(t.id) id,
+        t.project_id projectId,
+        case topic_type when '1' then '2'
+        else '3' end as typeStr,
+        t.user_id userId,
+        u.sex,
+        IFNULL(u.nickname,u.`name`) userName,
+        u.profile_photo profilePhoto,
+        IFNULL(t.content,t.title) content, '' imageType,topic_image postImage,'' videoImage,topic_type topicType,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        ct.topic_tag_Name topicTagName,'' groupName,0  viewNum,0 applyNum,'' activityStatus,'' contactorName,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') >= NOW() then '1'
+        ELSE '2' end as ballotStatus, '' address,
+        '' personNum,'' summary,'' applyEndTime,'' description,t.up_num upNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=t.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum
+        from
+        biz_chamber_topic t
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        LEFT JOIN biz_chamber_topic_tag ct on t.topic_tag_id=ct.id and ct.status = '1'
+        where t.status = '1' and t.show_type = '1'
+        )
+        UNION
+        (
+        select
+        bfp.id,
+        bfp.project_id projectId,
+        '6' typeStr,
+        bfp.user_id userId,
+        u.sex,
+        IFNULL(u.nickname,u.`name`) userName,
+        u.profile_photo profilePhoto,
+        bfp.title content,
+        '' imageType,post_image postImage,'' videoImage,'' topicType,
+        IFNULL(DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        '' topicTagName,'' groupName,
+        ( select IFNULL(view_num,0) from biz_content_reader where status = '1' and content_id = bfp.id) viewNum,
+        0 applyNum,'' activityStatus,'' contactorName,'' ballotStatus,
+        '' address, '' personNum,'' summary,'' applyEndTime, bfp.description,
+        bfp.up_num upNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=bfp.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp,
+        (select COUNT(*) total from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = bfp.id)commentNum
+        from
+        biz_forum_posts bfp
+        INNER JOIN base_app_client_user u on bfp.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        bfp.status = '1' and bfp.show_type = '1'
+        )
+        )A where 1=1 and A.userId = #{userId}
+        ORDER BY a.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectNewPostsListByUser" resultType="com.github.wxiaoqi.security.app.vo.topic.out.FamilyPostsVo">
+        select A.id,A.projectId,A.typeStr,A.userId,A.content,A.postImage,A.createTime,A.imageType,
+        A.videoImage,A.topicType,A.topicTagName,A.groupName,A.viewNum,A.applyNum,A.activityStatus,A.contactorName,A.ballotStatus,A.address,
+        A.personNum,A.summary,A.applyEndTime,A.description,A.upNum,A.commentNum from (
+        (
+        select
+        DISTINCT(p.id) id,
+        p.project_id projectId,
+        '1' typeStr,
+        p.user_id userId,
+        p.content,p.image_type imageType,p.post_image postImage,p.video_image videoImage,'' topicType,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        '' topicTagName,'' groupName,0  viewNum,0 applyNum,'' activityStatus,'' contactorName,'' ballotStatus,'' address,
+        '' personNum,'' summary,'' applyEndTime,'' description,
+        p.up_num upNum,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = p.id) commentNum
+        from
+        biz_family_posts p
+        where p.status = '1' and show_type = '1'
+        )
+        UNION
+        (
+        select
+        DISTINCT(t.id) id,
+        t.project_id projectId,
+        case topic_type when '1' then '2'
+        else '3' end as typeStr,
+        t.user_id userId,
+        IFNULL(t.content,t.title) content, '' imageType,topic_image postImage,'' videoImage,topic_type topicType,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        ct.topic_tag_Name topicTagName,'' groupName,0  viewNum,0 applyNum,'' activityStatus,'' contactorName,
+        case when DATE_FORMAT(t.endTime,'%Y-%m-%d %H:%i:%s') >= NOW() then '1'
+        ELSE '2' end as ballotStatus, '' address,
+        '' personNum,'' summary,'' applyEndTime,'' description,t.up_num upNum,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = t.id) commentNum
+        from
+        biz_chamber_topic t
+        LEFT JOIN biz_chamber_topic_tag ct on t.topic_tag_id=ct.id and ct.status = '1'
+        where t.status = '1' and t.show_type = '1'
+        )
+        UNION
+        (
+        select
+        bfp.id,
+        bfp.project_id projectId,
+        '6' typeStr,
+        bfp.user_id userId,
+        bfp.title content,
+        '' imageType,post_image postImage,'' videoImage,'' topicType,
+        IFNULL(DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        '' topicTagName,'' groupName,
+        ( select IFNULL(view_num,0) from biz_content_reader where status = '1' and content_id = bfp.id) viewNum,
+        0 applyNum,'' activityStatus,'' contactorName,'' ballotStatus,
+        '' address, '' personNum,'' summary,'' applyEndTime, bfp.description,
+        bfp.up_num upNum,
+        (select COUNT(*) total from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = bfp.id)commentNum
+        from
+        biz_forum_posts bfp
+        where
+        bfp.status = '1' and bfp.show_type = '1'
+        )
+        )A where 1=1 and A.userId = #{userId}
+        ORDER BY a.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--删除业主圈帖子-->
+    <update id="delPostsById">
+        UPDATE biz_forum_posts
+        SET
+        status = '0',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <!--删除议事厅帖子-->
+    <update id="delChamberPostsById">
+        UPDATE biz_chamber_topic
+        SET
+        status = '0',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <!--删除家里帖子-->
+    <update id="delFamilyPostsById">
+        UPDATE biz_family_posts
+        SET
+        status = '0',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+
+
+    <!--<select id="selectPostsListByUser" resultType="com.github.wxiaoqi.security.app.vo.posts.out.PostsVo">
+        select
+        bfp.id,
+        bfp.title,
+        bfp.description,
+        post_image postImage,
+        IFNULL(DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.profile_photo profilePhoto,
+        g.name groupName,
+        g.logo_image logoImage,
+        bfp.up_num upNum,
+        ( select IFNULL(view_num,0) from biz_content_reader where status = '1' and content_id = bfp.id) viewNum,
+        IFNULL((SELECT '1' from biz_operating_detail d where d.object_id=bfp.id and d.user_id=#{userId} and d.`status`='1' limit 1),'0')  isUp
+        from
+        biz_forum_posts bfp
+        INNER JOIN base_app_client_user u on bfp.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        INNER JOIN biz_group g on bfp.group_id=g.id and  g.status = '1' and g.enable_status ='2'
+        where
+        bfp.status = '1'
+        and bfp.show_type = '1'
+        and bfp.user_id = #{userId}
+        order by bfp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>-->
+
+
+    <!--判断当前用户是否被禁止评论/发帖-->
+    <select id="selectIsForbidByUser" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        COUNT(id)
+        from
+        biz_report
+        where
+        status = '1'
+        and is_comment = '0'
+        and be_user_id = #{userId}
+    </select>
+
+
+
+
+
+</mapper>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BizReservationOrderMapper">
+
+    <!-- 服务订单列表 -->
+    <select id="queryOrderListPage" resultType="com.github.wxiaoqi.security.merchant.vo.order.reservation.ReservationOrderVO">
+        SELECT
+        o.id orderId,
+        o.order_code orderCode,
+        o.order_status orderStatus,
+        o.refund_status refundStatus,
+        o.comment_status commentStatus,
+        o.title,
+        od.product_name productName,
+        DATE_FORMAT(
+        o.create_time,
+        '%Y-%m-%d %H:%i:%s'
+        ) createTime,
+        od.spec_img specImg,
+        o.contact_tel contactTel,
+        o.contact_name contactName,
+        o.delivery_addr deliveryAddr,
+        (od.total_price-IFNULL(o.discount_price,0)) totalPrice,
+        od.quantity,
+        od.unit
+        FROM
+        biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON od.order_id = o.id
+        AND od.`status` = 1
+        AND o.`status` = 1
+        <include refid="queryOrderListSQL"/>
+        ORDER BY o.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <sql id="queryOrderListSQL">
+        <where>
+            o.tenant_id = #{tenantId}
+            <if test="orderStatus != null" >
+                AND o.order_status = #{orderStatus}
+            </if>
+            <if test="refundStatus != null">
+                AND o.refund_status = #{refundStatus}
+            </if>
+            <if test="commentStatus != null">
+                AND o.comment_status = #{commentStatus}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (o.contact_tel LIKE CONCAT('%',#{keyword},'%') OR o.contact_name LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="queryOrderListCount" resultType="int">
+        SELECT
+        COUNT(*)
+        FROM
+        biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON od.order_id = o.id
+        AND od.`status` = 1
+        AND o.`status` = 1
+        <include refid="queryOrderListSQL"/>
+    </select>
+
+    <select id="queryOrderDetail" resultType="com.github.wxiaoqi.security.merchant.vo.order.reservation.ReservationOrderDetailVO">
+        SELECT
+            o.id orderId,
+            o.order_code orderCode,
+            o.title,
+            od.product_name productName,
+            od.spec_name specName,
+            DATE_FORMAT(
+                o.create_time,
+                '%Y-%m-%d %H:%i:%s'
+            ) createTime,
+            od.spec_img specImg,
+            o.contact_name contactName,
+            o.contact_tel contactTel,
+            o.delivery_addr deliveryAddr,
+            o.invoice_type invoiceType,
+            IFNULL(o.discount_price,0) discountPrice,
+            od.total_price totalPrice,
+            od.quantity,
+            od.sales_price salesPrice,
+            od.unit unit,
+            ow.waiter_tel waitelTel,
+            ow.waiter_name waitelName,
+            DATE_FORMAT(
+                o.reservation_Time,
+                '%Y-%m-%d %H:%i:%s'
+            ) reservationTime,
+            o.remark,
+            o.order_status orderStatus,
+            o.refund_status refundStatus,
+            o.comment_status commentStatus,
+            o.actual_price actualPrice,
+            od.quantity,
+            o.remark,
+            c.tel_b tenantTel,
+            c.tel_x bindTel,
+            c.binding_flag bindFlag
+        FROM
+        	biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON od.order_id = o.id
+        AND od.`status` = 1
+        AND o.`status` = 1
+        LEFT JOIN biz_reservation_order_waiter ow ON ow.order_id = o.id
+        AND ow.`status` = 1
+        LEFT JOIN biz_pns_call c ON o.bind_id = c.bind_id
+        WHERE o.id = #{orderId}
+        AND o.tenant_id = #{tenantId}
+    </select>
+</mapper>

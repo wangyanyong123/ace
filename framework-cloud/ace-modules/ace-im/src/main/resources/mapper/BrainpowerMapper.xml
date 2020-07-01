@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BrainpowerMapper">
+
+
+    <!--获取功能信息-->
+    <select id="getBrainpowerFunctionById" resultType="com.github.wxiaoqi.security.im.tio.msg.BrainMessageOut">
+          SELECT id id,function_point text,description answer,picture picture,jump_link jumpLink,jump_code jumpCode
+          from biz_brainpower_function
+          where status='1' and id=#{functionId}
+    </select>
+
+    <!--获取问题信息-->
+    <select id="getBrainpowerQuestionById" resultType="com.github.wxiaoqi.security.im.tio.msg.BrainMessageOut">
+          SELECT id id,question text,answer answer,picture picture,jump_link jumpLink,jump_code jumpCode
+          from biz_brainpower_question
+          where status='1' and id=#{questionId}
+    </select>
+
+    <!--根据文字模糊匹配功能/问题信息-->
+    <select id="likeBrainpowerByText" resultType="com.github.wxiaoqi.security.im.tio.msg.BrainMessageOut">
+          SELECT id id,function_point text,description answer,picture picture,jump_link jumpLink,jump_code jumpCode
+          from biz_brainpower_function
+          where status='1'
+            AND (
+            function_point LIKE CONCAT('%',#{searchVal},'%')
+            OR description LIKE CONCAT('%',#{searchVal},'%')
+            )
+          UNION ALL
+          SELECT id id,question text,answer answer,picture picture,jump_link jumpLink,jump_code jumpCode
+          from biz_brainpower_question
+          where status='1'
+          AND (
+            question LIKE CONCAT('%',#{searchVal},'%')
+            OR answer LIKE CONCAT('%',#{searchVal},'%')
+            )
+    </select>
+
+    <!--获取置低功能-->
+    <select id="getBottomBrainpowerFunctionList" resultType="com.github.wxiaoqi.security.im.vo.brainpower.out.BrainpowerFunctionVo">
+        SELECT id functionId,function_point functionPoint
+        from biz_brainpower_function
+        where is_show='1' and status='1' and enable_status = '2'
+        order by view_sort asc,create_time desc
+    </select>
+
+    <!--获取问题列表-->
+    <select id="getBrainpowerQuestionList" resultType="com.github.wxiaoqi.security.im.vo.brainpower.out.BrainpowerQuestionVo">
+        SELECT q.id questionId,q.question question
+        from biz_brainpower_question  q
+        INNER JOIN biz_brainpower_function f on q.function_id=f.id and f.status='1'
+        where  q.status='1'
+        <if test="functionIdList != null and functionIdList.size()>0">
+            and f.code in
+            <foreach collection="functionIdList" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <!--获取子问题的换一批问题列表-->
+    <select id="changeBrainpowerQuestion" resultType="com.github.wxiaoqi.security.im.vo.brainpower.out.BrainpowerQuestionVo"
+                parameterType="com.github.wxiaoqi.security.im.vo.brainpower.in.ChangeBrainpowerInVo">
+        SELECT  id questionId,question question
+        from biz_brainpower_question
+        where  status='1' and  enable_status = '2'
+        <if test="questionId != null and questionId != '' ">
+          and
+            (function_id=(SELECT function_id from biz_brainpower_question where id= #{questionId} and status='1' and  enable_status = '2')
+             or function_id=#{questionId})
+            and id != #{questionId}
+        </if>
+        <if test="questionIdList != null and questionIdList.size()>0">
+            and id not in
+            <foreach collection="questionIdList" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+
+</mapper>

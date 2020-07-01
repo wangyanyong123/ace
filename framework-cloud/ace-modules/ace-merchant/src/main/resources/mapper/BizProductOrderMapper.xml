@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BizProductOrderMapper">
+
+    <!-- 商品订单列表 -->
+    <select id="queryOrderListPage" resultType="com.github.wxiaoqi.security.merchant.vo.order.product.ProductOrderVO">
+        SELECT
+        o.id orderId,
+        o.order_code orderCode,
+        o.title,
+        o.order_status orderStatus,
+        o.refund_status refundStatus,
+        o.comment_status commentStatus,
+        DATE_FORMAT(
+        o.create_time,
+        '%Y-%m-%d %H:%i:%s'
+        ) createTime,
+        o.contact_name contactName,
+        o.contact_tel contactTel,
+        o.delivery_addr deliveryAddr,
+        GET_PRICE(od.tenant_id ,od.order_id) totalPrice,
+        GROUP_CONCAT(od.product_name) product_name,
+        GROUP_CONCAT(od.spec_img ORDER BY od.product_name ASC SEPARATOR ',') specImg
+        FROM
+        biz_product_order o
+        INNER JOIN biz_product_order_detail od ON od.order_id = o.id
+        AND o.`status` = 1 AND od.`status` = 1
+        LEFT JOIN biz_order_increment oi ON od.order_id = oi.order_id
+        AND od.tenant_id = oi.tenant_id AND oi.`status` = 1 AND oi.increment_type = 1
+        LEFT JOIN biz_product_order_discount ods ON ods.order_id = od.order_id
+        AND ods.tenant_id = od.tenant_id AND ods.`status` = 1 AND ods.order_relation_type = 1
+        <include refid="queryOrderListSQL"/>
+        GROUP BY od.tenant_id ,od.order_id
+        ORDER BY o.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <sql id="queryOrderListSQL">
+        <where>
+            od.tenant_id = #{tenantId}
+            <if test="detailStatus != null" >
+                AND o.order_status = #{detailStatus}
+            </if>
+            <if test="detailRefundStatus != null">
+                AND o.refund_status = #{detailRefundStatus}
+            </if>
+            <if test="commentStatus != null">
+                AND o.comment_status = #{commentStatus}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (o.contact_tel LIKE CONCAT('%',#{keyword},'%') OR o.contact_name LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+        </where>
+    </sql>
+
+
+    <select id="queryOrderListCount" resultType="int">
+        SELECT COUNT(d.tenant_id) FROM(
+        SELECT
+        od.tenant_id
+        FROM
+        biz_product_order o
+        INNER JOIN biz_product_order_detail od ON od.order_id = o.id
+        AND o.`status` = 1 AND od.`status` = 1
+        LEFT JOIN biz_order_increment oi ON od.order_id = oi.order_id
+        AND od.tenant_id = oi.tenant_id AND oi.`status` = 1 AND oi.increment_type = 1
+        LEFT JOIN biz_product_order_discount ods ON ods.order_id = od.order_id
+        AND ods.tenant_id = od.tenant_id AND ods.`status` = 1 AND ods.order_relation_type = 1
+        <include refid="queryOrderListSQL"/>
+        GROUP BY od.tenant_id ,od.order_id) d
+    </select>
+
+    <!--查询订单详情-->
+    <select id="queryOrderDetail" resultType="com.github.wxiaoqi.security.merchant.vo.order.product.ProductOrderDetailVO">
+        SELECT
+        o.id orderId,
+        o.order_code orderCode,
+        o.title,
+        o.order_status orderStatus,
+        o.refund_status refundStatus,
+        o.comment_status commentStatus,
+        DATE_FORMAT(
+        o.create_time,
+        '%Y-%m-%d %H:%i:%s'
+        ) createTime,
+        o.contact_name contactName,
+        o.contact_tel contactTel,
+        o.delivery_addr deliveryAddr,
+        (
+		SELECT
+			IFNULL(SUM(i.price), 0)
+		FROM
+			biz_order_increment i
+		WHERE
+			i.order_id = #{orderId}
+		AND i.tenant_id = #{tenantId}
+		AND i. STATUS = 1) incrementPrice,
+		(
+            SELECT
+                IFNULL(SUM(c.discount_price), 0)
+            FROM
+                biz_product_order_discount c
+            WHERE
+                c.order_id = #{orderId}
+            AND c.tenant_id = #{tenantId}
+            AND c. STATUS = 1
+	    ) discountPrice,
+	    GET_PRICE(od.tenant_id ,od.order_id) actualPrice,
+	    IFNULL(SUM(od.quantity), 0) quantity,
+       (
+            SELECT
+                IFNULL(r.remark,'')
+            FROM
+                biz_order_remark r
+            WHERE
+                r.order_id = #{orderId}
+            AND r.tenant_id = #{tenantId}
+            AND r.`status` = 1
+        ) remark
+        FROM
+        biz_product_order o
+        INNER JOIN biz_product_order_detail od ON od.order_id = o.id
+        AND o.`status` = 1
+        AND od.`status` = 1
+        WHERE
+        o.id = #{orderId}
+        AND od.tenant_id = #{tenantId}
+        GROUP BY od.tenant_id
+    </select>
+
+    <!--查询订单详情中的商品-->
+    <select id="queryOrderDetailList" resultType="com.github.wxiaoqi.security.merchant.vo.order.product.ProductOrderDetail">
+        SELECT
+            od.id,
+            od.total_price totalPrice,
+            od.quantity,
+            od.spec_img specImg,
+            od.product_name productName,
+            od.spec_name specName,
+            od.sales_price salesPrice,
+            od.unit unit
+        FROM
+        biz_product_order_detail od
+        WHERE
+        od.order_id = #{orderId}
+        AND od.tenant_id = #{tenantId}
+        AND od.`status` = 1
+        ORDER BY od.product_name
+    </select>
+</mapper>

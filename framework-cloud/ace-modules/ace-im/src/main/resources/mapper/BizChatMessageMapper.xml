@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BizChatMessageMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.im.entity.BizChatMessage" id="bizChatMessageMap">
+        <result property="id" column="id"/>
+        <result property="fromUserId" column="from_user_id"/>
+        <result property="toUserId" column="to_user_id"/>
+        <result property="message" column="message"/>
+        <result property="createTime" column="create_time"/>
+        <result property="isRead" column="is_read"/>
+        <result property="msgType" column="msg_type"/>
+        <result property="smallImg" column="small_img"/>
+        <result property="isSend" column="is_send"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="readTime" column="read_time"/>
+        <result property="userType" column="user_type"/>
+        <result property="projectId" column="project_id"/>
+        <result property="houseId" column="house_id"/>
+        <result property="isInteligence" column="is_inteligence"/>
+    </resultMap>
+    <update id="addSolve">
+        UPDATE biz_brainpower_question SET solve_number = cast(solve_number as SIGNED INTEGER) + 1
+        WHERE id = #{id}
+    </update>
+    <update id="addUnSolve">
+        UPDATE biz_brainpower_question SET unsolve_number = cast(unsolve_number as SIGNED INTEGER) + 1
+        WHERE id = #{id}
+    </update>
+    <update id="updateBrainpowerRead">
+        UPDATE biz_chat_message
+        SET is_read = '1',update_time = NOW(), read_time = NOW()
+        WHERE is_send = '1' AND (is_read != 1 OR is_read is null OR is_read = '')
+        AND to_user_id = #{toUserId}
+        <choose>
+            <when test="fromUserId != null and fromUserId != ''">
+                AND (from_user_id = '' or from_user_id = #{fromUserId})
+            </when>
+            <otherwise>
+                AND from_user_id = #{fromUserId}
+            </otherwise>
+        </choose>
+    </update>
+    <select id="getBrainpowerMsgLogList" resultType="com.github.wxiaoqi.security.im.tio.msg.Message">
+        SELECT id as id
+        ,from_user_id as fromUserId
+        ,to_user_id as toUserId
+        ,message as message
+        ,create_time as createTime
+        ,is_read as readFlag
+        ,msg_type as msgType
+        ,small_img as smallImg
+        ,user_type as userType
+        ,project_id as projectId
+        ,house_id as houseId
+        ,is_inteligence as isInteligence
+        FROM biz_chat_message
+        WHERE 1 = 1
+        <choose>
+            <when test="toUserId != null and toUserId != ''">
+                and ((to_user_id = #{toUserId} or to_user_id = '') AND from_user_id = #{fromUserId})
+                OR (to_user_id = #{fromUserId} AND ( from_user_id = #{toUserId} or from_user_id = '' ))
+                AND is_send = '1'
+            </when>
+            <otherwise>
+                and (to_user_id = #{toUserId} AND from_user_id = #{fromUserId}) OR (to_user_id = #{fromUserId} AND from_user_id = #{toUserId}) AND is_send = '1'
+            </otherwise>
+        </choose>
+        ORDER BY create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <update id="updateRead">
+        UPDATE biz_chat_message
+        SET is_read = '1',update_time = NOW(), read_time = NOW()
+        WHERE is_send = '1' AND (is_read != 1 OR is_read is null OR is_read = '')
+        AND to_user_id = #{toUserId}
+        AND from_user_id = #{fromUserId}
+    </update>
+    <select id="getMsgLogList" resultType="com.github.wxiaoqi.security.im.tio.msg.Message">
+        SELECT id as id
+        ,from_user_id as fromUserId
+        ,to_user_id as toUserId
+        ,message as message
+        ,create_time as createTime
+        ,is_read as readFlag
+        ,msg_type as msgType
+        ,small_img as smallImg
+        ,user_type as userType
+        ,project_id as projectId
+        ,house_id as houseId
+        ,is_inteligence as isInteligence
+        FROM biz_chat_message
+        WHERE (to_user_id = #{toUserId} AND from_user_id = #{fromUserId}) OR (to_user_id = #{fromUserId} AND from_user_id = #{toUserId}) AND is_send = '1'
+        ORDER BY create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="isOnhouse" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM biz_user_house buh
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN base_app_housekeeper_area baha ON baha.building_id = bcu.building_id AND baha.`status` = '1' AND baha.user_id = #{fromUserId}
+        WHERE buh.`status` = '1' AND baha.id is not NULL AND buh.is_now = '1' AND buh.is_delete = '0' AND buh.user_id = #{toUserId}
+    </select>
+
+</mapper>

@@ -1,0 +1,1 @@
+INSERT INTO sys_module SET ID='2d01690c852d4f21993189cd56db7f83', pid='4CBAEA0F5D754CACBD7AFD03726A7A5E', `code`='M0512', system='1', `name`='电子通行证', show_type='1', module_type='5', time_Stamp=NOW(), create_By='admin';

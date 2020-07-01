@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizPlanWoEqMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizPlanWoEq" id="bizPlanWoEqMap">
+        <result property="id" column="id"/>
+        <result property="eqId" column="eq_id"/>
+        <result property="eqName" column="eq_name"/>
+        <result property="eqCode" column="eq_code"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="createBy" column="create_By"/>
+    </resultMap>
+
+</mapper>

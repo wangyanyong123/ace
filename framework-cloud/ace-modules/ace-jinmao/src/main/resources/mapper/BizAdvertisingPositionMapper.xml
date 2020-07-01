@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizAdvertisingPositionMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizAdvertisingPosition" id="bizAdvertisingPositionMap">
+        <result property="id" column="ID"/>
+        <result property="projectId" column="project_id"/>
+        <result property="title" column="title"/>
+        <result property="advertisingImg" column="advertising_img"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="busClassify" column="bus_classify"/>
+        <result property="busId" column="bus_id"/>
+        <result property="skipBus" column="skip_bus"/>
+        <result property="skipUrl" column="skip_Url"/>
+        <result property="productId" column="product_id"/>
+    </resultMap>
+    <!--查询广告列表-->
+    <select id="selectAdvertList" resultType="com.github.wxiaoqi.security.jinmao.vo.advertising.out.ResultAdvertList">
+        SELECT
+            DISTINCT (p.id) ,
+            p.title,
+            p.view_sort viewSort,
+            p.tenant_id tenantId,
+            IFNULL(p.skip_bus,'0') skipBus
+        FROM biz_advertising_position p
+        INNER JOIN biz_advertising_project ap on p.id = ap.advert_id AND ap.status = '1'
+        INNER JOIN biz_crm_project cp on ap.project_id = cp.project_id AND cp.status = '1'
+        WHERE
+            p.status = '1'
+        <if test = "projectId != null and projectId !=''">
+            and cp.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            p.title LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY p.view_sort
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <!--查询广告数量-->
+    <select id="selectAdvertCount" resultType="java.lang.Integer">
+        SELECT
+          COUNT(DISTINCT (p.id)) total
+        FROM biz_advertising_position p
+        INNER JOIN biz_advertising_project ap on p.id = ap.advert_id AND ap.status = '1'
+        INNER JOIN biz_crm_project cp on ap.project_id = cp.project_id AND cp.status = '1'
+        WHERE
+        p.status = '1'
+        <if test="projectId != null and projectId != ''">
+            AND
+            cp.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            p.title LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY p.view_sort
+    </select>
+
+    <!--查询广告详情-->
+    <select id="selectAdvertInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.advertising.out.ResultAdvert">
+           SELECT
+        DISTINCT(p.id),
+        p.title,
+        p.advertising_img advertisingImge,
+        IFNULL(p.skip_bus,'0') skipBus,
+        IFNULL(p.skip_url,'') skipUrl,
+        IFNULL(p.bus_classify,'') busClassify,
+        IFNULL(p.product_id,'') productId,
+        pp.product_name productName,
+        p.view_sort viewSort,
+        p.position
+        FROM biz_advertising_position p
+        INNER JOIN biz_advertising_project ap on p.id = ap.advert_id AND ap.status = '1'
+        LEFT JOIN biz_product pp on pp.id = p.product_id AND pp.status = '1'
+        WHERE
+        p.status= '1' and p.id = #{id}
+    </select>
+
+    <select id="getProjectInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultProjectVo.ProjectListVo">
+        select
+        DISTINCT(p.project_id) id,
+        p.project_name projectName
+        from
+        biz_crm_project p
+        <if test="productId != null and productId != ''">
+            INNER JOIN biz_product_project pp on pp.project_id=p.project_id and pp.status = '1'
+            and pp.product_id = #{productId}
+        </if>
+        where p.status = '1'
+    </select>
+
+    <!--查询项目列表-->
+    <select id="selectProjectByAdvertId" resultType="com.github.wxiaoqi.security.jinmao.vo.advertising.out.AdvertProjectInfo">
+        SELECT
+            p.project_id id,
+            p.project_Name projectName
+		FROM biz_crm_project p
+		INNER JOIN biz_advertising_project ap on ap.project_id = p.project_id AND ap.status = '1'
+		WHERE
+			p.status = '1'
+		<if test="id != null and id !=''">
+		AND
+			ap.advert_id = #{id}
+        </if>
+    </select>
+
+    <!--删除项目关联-->
+    <delete id="deleteProjectByAdvertId" >
+        delete from biz_advertising_project where advert_id = #{advertId}
+    </delete>
+
+    <!--删除广告-->
+    <update id="deleteAdvertById">
+        update biz_advertising_position
+        set status = '0',
+            modify_Time = NOW()
+  		where id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizReservationPersonMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <select id="selectReservationByClassifyId" resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationVo">
+        select
+        DISTINCT(bp.id),
+        bp.name,
+        reservation_logo reservationLogo
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.reserva_Status = '3'
+        <if test="projectId != null and projectId != ''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="classifyId != null and classifyId != ''">
+            and bc.id = #{classifyId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_reservation_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询分类下的服务列表-->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizReservationPerson" id="bizReservationPersonMap">
+        <result property="id" column="id"/>
+        <result property="reservationNum" column="reservation_num"/>
+        <result property="reservationId" column="reservation_id"/>
+        <result property="classifyId" column="classify_id"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="address" column="address"/>
+        <result property="remark" column="remark"/>
+        <result property="dealStatus" column="deal_Status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询服务详情-->
+    <select id="selectReservationInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationInfo">
+        select
+        bp.id,
+        bp.name,
+        bc.id classifyId,
+        bp.reservation_logo productImage,
+        bp.selection_image selectionImage,
+        reservation_imagetext_info reservationImagetextInfo
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and reserva_Status = '3'
+        and bp.id = #{id}
+    </select>
+
+
+    <!--查询服务详情(新接口)-->
+    <select id="selectNewReservationInfoById"
+            resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationInfo">
+        select
+        bp.id,
+        bp.name,
+        bc.id classifyId,
+        bp.reservation_logo productImage,
+        bp.selection_image selectionImage,
+        reservation_Desc reservationDesc,
+        reservation_Tel reservationTel,
+        data_Scope_Val dataScopeVal,
+        forenoon_Start_Time forenoonStartTime,
+        forenoon_End_Time forenoonEndTime,
+        bp.product_num_forenoon productNumForenoon,
+        afternoon_Start_Time afternoonStartTime,
+        afternoon_End_Time afternoonEndTime,
+        bp.product_num_afternoon productNumAfternoon,
+        reservation_imagetext_info reservationImagetextInfo,
+        bp.product_Num productNum,
+        bp.limit_Num limitNum,
+        case when bp.product_Num = '-1' then '无上限' else (bp.product_Num-sales) end as stockNum,
+        CASE when bp.product_Num = '-1' then '1'
+        when (bp.product_Num-sales) > 0 then '1'
+        else '2' end as isStock,
+        case when bp.limit_Num = '-1' then '2'
+        when (IFNULL(b.buyNum,0)) &lt; bp.limit_Num then '2' else '1' end as isBuy,
+        case when bp.product_Num = '-1' then -1
+        when (bp.limit_Num-IFNULL(b.buyNum,0)) > 0 then (bp.limit_Num-IFNULL(b.buyNum,0)) else 0 end as buyNum
+        from
+        biz_reservation bp
+        LEFT JOIN (SELECT IFNULL(sum(od.quantity), 0) buyNum,od.product_id FROM biz_reservation_order_detail od
+        INNER JOIN biz_reservation_order o ON o.id = od.order_id
+        AND o.user_id = #{userId}
+        AND o.order_status != 45
+        AND o.refund_status = 0
+        AND o.`status` = TRUE
+        AND od.product_id = #{id}
+        GROUP BY od.product_id) b ON b.product_id = bp.id
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and reserva_Status = '3'
+        and bp.id = #{id}
+    </select>
+
+    <!--查询服务详情(新接口) by 分享-->
+    <select id="selectShareNewReservationInfoById"
+            resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationInfo">
+        select
+        bp.id,
+        bp.name,
+        bc.id classifyId,
+        bp.reservation_logo productImage,
+        bp.selection_image selectionImage,
+        reservation_Desc reservationDesc,
+        reservation_Tel reservationTel,
+        data_Scope_Val dataScopeVal,
+        forenoon_Start_Time forenoonStartTime,
+        forenoon_End_Time forenoonEndTime,
+        afternoon_Start_Time afternoonStartTime,
+        afternoon_End_Time afternoonEndTime,
+        reservation_imagetext_info reservationImagetextInfo,
+        bp.product_Num productNum,
+        bp.limit_Num limitNum,
+        case when bp.product_Num = '-1' then '无上限' else (bp.product_Num-sales) end as stockNum,
+        CASE when bp.product_Num = '-1' then '1'
+        when (bp.product_Num-sales) > 0 then '1'
+        else '2' end as isStock,
+        '2' as isBuy
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        where
+        bp.status = '1'
+        and reserva_Status = '3'
+        and bp.id = #{id}
+    </select>
+
+    <select id="getUserBuyNumById" resultType="java.lang.Integer">
+        select IFNULL(sum(p.sub_num),0)
+        from biz_sub_product p
+        INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1' and w.subscribe_status not in( '3', '7') where
+        p.status = '1'and w.user_id =#{userId} and p.product_Id =#{id}
+    </select>
+
+    <!--根据服务id查询所属公司信息-->
+    <select id="selectCompanyInfoByRId" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.shopping.out.CompanyInfo">
+        select
+        bp.name productName,
+        t.id companyId,
+        t.name companyName,
+        IFNULL(logo_img,'') logoImg,
+        t.is_invoice isInvoice,
+        t.is_close isClose
+        from
+        biz_reservation bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and (t.enable_status = '1' or t.enable_status is null)
+        where
+        bp.status = '1'
+        and bp.reserva_Status = '3'
+        and bp.id = #{id}
+    </select>
+
+
+    <!-- 客户端APP查询我的预约列表-->
+    <select id="getReservationListForApp" parameterType="String" resultType="com.github.wxiaoqi.security.app.vo.reservation.out.SubReservationListVo">
+        SELECT s.id,sw.code code,s.title,sw.subscribe_status subStatus,
+        sw.process_id processId,DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,
+        s.contact_name contactName,s.actual_cost actualCost,s.total_num totalNum,t.name companyName,s.price price,s.unit unit
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id=sw.id and sw.status='1' AND sw.wo_type = '4'
+        LEFT JOIN base_tenant t on sw.company_Id=t.id
+        LEFT JOIN  biz_wo  w on w.id=sw.id and w.status='1'
+        where s.status='1'
+        and sw.user_id=#{userId}
+        <if test="subscribeStatus != null and subscribeStatus!='' " >
+            and sw.subscribe_status=#{subscribeStatus}
+        </if>
+        <if test="commentStatus != null and commentStatus!='' " >
+            and sw.comment_status=#{commentStatus}
+        </if>
+        order by s.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询用户的预约列表-->
+    <select id="selectUserReservation"
+       resultType="com.github.wxiaoqi.security.app.vo.reservation.out.MyReservationVo">
+        select
+        DISTINCT(w.id) woId,
+        p.id id,
+        r.name,
+        DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i') createTime,
+        sw.wo_status dealStatus
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id  and sw.status='1' AND sw.wo_type = '4'
+        INNER JOIN biz_sub_reservation rr on w.id=rr.wo_id and rr.status = '1'
+        INNER JOIN biz_reservation_person p on ( rr.reservation_id=p.id or
+        (sw.user_id=p.user_id and DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s')=DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s'))) and p.status = '1'
+        INNER JOIN biz_reservation r on p.reservation_id=r.id and r.status = '1'
+        where
+        w.status = '1'
+        and p.user_id = #{userId}
+        <if test="dealStatus != null and dealStatus != ''">
+            <if test="dealStatus == '06' ">
+                and sw.wo_status in ('06','07')
+            </if>
+            <if test="dealStatus != '06' and dealStatus != '01'">
+                and sw.wo_status = #{dealStatus}
+            </if>
+            <if test="dealStatus == '01' ">
+                and sw.wo_status in ('01','03')
+            </if>
+        </if>
+        ORDER BY p.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询用户预约详情-->
+    <select id="selectUserReservationInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.reservation.out.MyReservationInfo">
+        select
+        DISTINCT(w.id) woId,
+        p.id id,
+        r.company_id companyId,
+        r.name,
+        r.reservation_logo reservationLogo,
+        DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i') createTime,
+        p.reservation_num reservationNum,
+        p.contactor_name contactorName,
+        p.contact_tel contactTel,
+        p.address,
+        DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i') reservationTime,
+        p.remark,
+        sw.process_id processId
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id  and sw.status='1' AND sw.wo_type = '4'
+        INNER JOIN biz_sub_reservation rr on w.id=rr.wo_id and rr.status = '1'
+        INNER JOIN biz_reservation_person p on ( rr.reservation_id=p.id or
+        (sw.user_id=p.user_id and DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s')=DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s'))) and p.status = '1'
+        INNER JOIN biz_reservation r on p.reservation_id=r.id and r.status = '1'
+        where
+        w.status = '1'
+        and w.id = #{id}
+    </select>
+
+
+    <select id="selectLogoById" parameterType="java.lang.String" resultType="java.lang.String">
+        select reservation_logo from  biz_reservation where id = #{reservationId}
+    </select>
+
+
+    <select id="selectSalesById" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select sales from  biz_reservation where id = #{reservationId}
+    </select>
+
+
+    <select id="selectTenantIdById" parameterType="java.lang.String" resultType="java.lang.String">
+        select company_id from  biz_reservation where id = #{reservationId}
+    </select>
+
+
+
+    <!--查询预约工单详情-->
+    <select id="selectReservationPersonInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservatPersonInfo">
+        select
+        DISTINCT(w.id) woId,
+        r.name,
+        r.id,
+        bc.classify_name classifyName,
+        sw.wo_status dealStatus,
+        p.reservation_num reservationNum,
+        p.contactor_name contactorName,
+        p.contact_tel contactTel,
+        p.address,
+        sw.handle_by handleId,
+        IFNULL(u.name,t.contactor_name) handleName,
+        DATE_FORMAT(sw.start_process_time,'%Y-%m-%d %H:%i:%s') handleTime,
+        DATE_FORMAT(p.reservation_time,'%Y-%m-%d %H:%i:%s') reservationTime,
+        p.remark description,
+        t.name tenantName,
+        sw.process_id processId
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id  and sw.status='1' AND sw.wo_type = '4'
+        INNER JOIN biz_sub_reservation rr on w.id=rr.wo_id and rr.status = '1'
+        INNER JOIN biz_reservation_person p on ( rr.reservation_id=p.id or
+        (sw.user_id=p.user_id and DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s')=DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s'))) and p.status = '1'
+        INNER JOIN biz_reservation r on p.reservation_id=r.id and r.status = '1'
+        INNER JOIN biz_product_classify c on r.id=c.product_id and c.status = '1'
+        INNER JOIN biz_business_classify bc on c.classify_id=bc.id and bc.status = '1'
+        INNER JOIN biz_product_project pp on r.id=pp.product_id and pp.status = '1'
+        INNER JOIN base_tenant t on r.company_id=t.id
+        left JOIN base_app_server_user u on sw.handle_by=u.id and u.status = '1'
+        where
+        w.status = '1'
+        and w.id = #{woId}
+    </select>
+
+
+    <select id="seelctClassifyNameById" parameterType="java.lang.String" resultType="java.lang.String">
+         select classify_name from biz_business_classify where status = '1' and id = #{classifyId}
+    </select>
+
+    <!--查询商户下的服务范围-->
+    <select id="selectProjectIdById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        p.project_name projectName
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_project bpp on bp.id=bpp.product_id
+        INNER JOIN biz_crm_project p on bpp.project_id=p.project_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <!--判断登录的用户是否是系统平台-->
+    <select id="selectSystemByTenantId" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        tenant_type type
+        from
+        base_tenant
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--查询商户负责人-->
+    <select id="seelctTenameInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.reservation.out.TenameInfo">
+        select contactor_name contactorName, contact_tel contactTel from base_tenant where status = '1' and id = #{tenantId}
+    </select>
+
+    <select id="getReservationIndex" resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationVo">
+        select
+        DISTINCT(bp.id),
+        bp.name,
+        reservation_logo reservationLogo,
+        bc.classify_name classifyName,
+        bc.id classifyId
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.reserva_Status = '3'
+        and p.project_id = #{projectId}
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        limit 5
+    </select>
+
+    <select id="getReservationMore" resultType="com.github.wxiaoqi.security.app.vo.reservation.out.ReservationVo">
+        select
+        DISTINCT(bp.id),
+        bp.name,
+        reservation_logo reservationLogo,
+        bc.classify_name classifyName,
+        bc.id classifyId
+        from
+        biz_reservation bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.reserva_Status = '3'
+        and p.project_id = #{projectId}
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+</mapper>

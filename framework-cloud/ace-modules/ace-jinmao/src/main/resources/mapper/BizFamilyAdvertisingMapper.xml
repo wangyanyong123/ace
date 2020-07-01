@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizFamilyAdvertisingMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizFamilyAdvertising" id="bizFamilyAdvertisingMap">
+        <result property="id" column="ID"/>
+        <result property="title" column="title"/>
+        <result property="advertisingImg" column="advertising_img"/>
+        <result property="busClassify" column="bus_classify"/>
+        <result property="skipBus" column="skip_bus"/>
+        <result property="objectId" column="object_id"/>
+        <result property="skipUrl" column="skip_url"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询家里人广告位列表-->
+    <select id="selectFamilyAdList" resultType="com.github.wxiaoqi.security.jinmao.vo.familyad.out.FamilyAdVo">
+       select
+        DISTINCT(a.id),
+        title,
+        skip_bus skipBus,
+        bus_classify busClassify,
+        view_sort viewSort
+        from
+        biz_family_advertising a
+        left JOIN biz_family_advertising_project p on a.id=p.advert_id and p.status = '1'
+        where
+        a.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by view_sort asc,a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询家里人广告位列表数量-->
+    <select id="selectFamilyAdCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(a.id))
+        from
+        biz_family_advertising a
+        left JOIN biz_family_advertising_project p on a.id=p.advert_id and p.status = '1'
+        where
+        a.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by view_sort asc,a.create_Time desc
+    </select>
+
+    <!--查询家里人广告位详情-->
+    <select id="selectFamilyAdInfo" parameterType="java.lang.String" resultType="com.github.wxiaoqi.security.jinmao.vo.familyad.out.FamilyAdInfo">
+        select
+        id,
+        title,
+        advertising_img advertisingImg,
+        skip_bus skipBus,
+        bus_classify busClassify,
+        object_id objectId,
+        skip_url skipUrl,
+        view_sort viewSort
+        from
+        biz_family_advertising
+        where
+        status = '1' and id = #{id}
+    </select>
+
+
+     <!--删除广告位-->
+    <update id="delFamilyAdById">
+        UPDATE
+            biz_family_advertising
+        SET
+            status = '0',
+            modify_By = #{userId},
+            modify_Time = NOW()
+        WHERE
+            status = '1'
+        AND
+            id = #{id}
+    </update>
+
+    <!--查询邻里活动列表-->
+    <select id="selectActivityList" resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.ActivityVo">
+        select
+        DISTINCT(a.id),
+        title,
+        a.type,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        IFNULL(act_cost,0) actCost,
+        address,
+        person_Num personNum,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_activity a
+        where
+        a.status = '1' and a.type = '2' and  a.enable_status = '2'
+        <if test="projectId != null and projectId != '' ">
+            and a.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(a.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(a.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectActivityCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(a.id))
+        from
+        biz_activity a
+        where
+        a.status = '1' and a.type = '2' and  a.enable_status = '2'
+        <if test="projectId != null and projectId != '' ">
+            and a.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(a.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(a.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by a.create_Time desc
+    </select>
+
+
+</mapper>

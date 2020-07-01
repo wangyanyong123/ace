@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BaseAppServerUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BaseAppServerUser" id="baseAppServerUserMap">
+        <result property="id" column="id"/>
+        <result property="mobilePhone" column="mobile_phone"/>
+        <result property="password" column="password"/>
+        <result property="name" column="name"/>
+        <result property="birthday" column="birthday"/>
+        <result property="email" column="email"/>
+        <result property="sex" column="sex"/>
+        <result property="profilePhoto" column="profile_photo"/>
+        <result property="seniorityPhoto" column="seniority_photo"/>
+        <result property="isActive" column="is_active"/>
+        <result property="serviceGroupId" column="service_group_id"/>
+        <result property="isService" column="is_service"/>
+        <result property="isHousekeeper" column="is_housekeeper"/>
+        <result property="isCustomer" column="is_customer"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="isBusiness" column="is_business"/>
+    </resultMap>
+
+    <select id="isHasSupervision" resultType="java.lang.Integer">
+      SELECT COUNT(*) FROM base_property_service_skills WHERE skill_code = 'JN_020003' AND app_server_id = #{userId} AND `status` = '1';
+    </select>
+    <!--据手机号判断用户是否已存在-->
+    <select id="selectUserByPhone"
+            resultMap="baseAppServerUserMap" parameterType="java.lang.String">
+        SELECT
+        *
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and (is_customer = '1' or is_business = '1')
+        and mobile_phone = #{phone}
+    </select>
+
+    <select id="getProjectId" resultType="java.lang.String">
+        SELECT btp.project_id
+        FROM base_app_server_user basu
+        LEFT JOIN base_tenant_project btp ON btp.tenant_id = basu.tenant_id AND btp.`status` = '1'
+        WHERE basu.id = #{userId} AND basu.`status` = '1'
+    </select>
+
+    <select id="getServerUserProject" resultType="com.github.wxiaoqi.security.app.vo.city.out.ProjectInfoVo">
+        SELECT p.project_id projectId,p.project_name projectName FROM base_app_server_user_tenant_id u
+        INNER JOIN base_tenant t on t.id = u.tenant_id and t.status = '1'
+        LEFT JOIN base_tenant_project tp ON tp.tenant_id = u.tenant_id AND tp.`status` = '1'
+        INNER JOIN biz_crm_project p on p.project_id = tp.project_id and p.status = '1'
+        WHERE u.id = #{userId} AND u.`status` = '1'
+        <if test="tenantId !=null and tenantId != ''">
+           and u.tenant_id = #{tenantId}
+        </if>
+    </select>
+
+    <select id="selectAppUserSkills" resultType="String" parameterType="String" >
+        SELECT sw.skill_code
+        from base_app_server_user u
+        INNER JOIN base_property_service_skills sw on u.id=sw.app_server_id and sw.`status`='1'
+        where u.status='1' and u.id=#{userId}
+    </select>
+
+
+    <select id="selectAppUserList" resultType="com.github.wxiaoqi.security.api.vo.user.ServerUserInfo" parameterType="java.util.List" >
+        SELECT u.id userId,u.name userName,u.mobile_phone phone,u.profile_photo profilePhoto
+        from base_app_server_user u
+        where u.status='1' and u.enable_status='1' and u.is_active='1'
+          and u.id in
+        <foreach collection="userIdList" index="index" item="item" open="(" separator="," close=")">
+          #{item}
+        </foreach>
+        order by create_Time
+    </select>
+
+    <select id="getUserNameById" resultType="com.github.wxiaoqi.security.app.vo.clientuser.out.UserVo">
+       SELECT id,CASE WHEN IFNULL(`name`, '')='' THEN mobile_phone  ELSE `name` END AS name,mobile_Phone mobilePhone
+        FROM base_app_server_user
+        WHERE id =#{userId}
+    </select>
+
+
+    <select id="selectCompanyNameById" resultType="java.lang.String" parameterType="java.lang.String">
+        select
+        t.name companyName
+        from
+        base_app_server_user u
+        LEFT JOIN base_tenant t on t.id=u.tenant_id and t.status='1'
+        where
+        u.status = '1'
+        and u.id = #{userId}
+    </select>
+
+    <select id="getUserInfo" resultMap="baseAppServerUserMap" parameterType="java.lang.String">
+     SELECT
+        *
+        FROM
+        base_app_server_user
+        WHERE
+        status = '1'
+        and id = #{userId}
+    </select>
+
+
+    <!--查询当前用户所属角色-->
+    <select id="selectRoleTypeByUser" parameterType="java.lang.String"
+            resultType="java.lang.String">
+        select
+        t.tenant_type tenantType
+        from
+        base_user u
+        LEFT JOIN base_tenant t on u.tenant_id=t.id and t.status ='1'
+        where
+        u.status ='1'
+        and u.id = #{userId}
+    </select>
+</mapper>

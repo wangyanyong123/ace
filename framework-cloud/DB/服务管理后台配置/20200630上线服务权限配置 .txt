@@ -1,0 +1,3 @@
+﻿添加服务权限
+1.ace-merchant 添加 ace-app
+

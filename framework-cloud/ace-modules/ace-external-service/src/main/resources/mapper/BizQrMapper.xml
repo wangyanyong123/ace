@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.external.mapper.BizQrMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.external.entity.BizQr" id="bizQrMap">
+        <result property="id" column="id"/>
+        <result property="qrType" column="qr_type"/>
+        <result property="qrNum" column="qr_num"/>
+        <result property="qrVal" column="qr_val"/>
+        <result property="effTime" column="eff_time"/>
+        <result property="loseTime" column="lose_time"/>
+        <result property="validTims" column="valid_tims"/>
+        <result property="useTimes" column="use_times"/>
+        <result property="surTimes" column="sur_times"/>
+        <result property="preUseTime" column="pre_use_time"/>
+        <result property="goUrl" column="go_url"/>
+        <result property="goType" column="go_type"/>
+        <result property="goPara" column="go_para"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_stamp"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="qrStatus" column="qr_status"/>
+        <result property="privateNum" column="private_num"/>
+        <result property="privateVal" column="private_val"/>
+        <result property="privateIssuedTime" column="private_issued_time"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="tel" column="tel"/>
+    </resultMap>
+    <update id="deleteByUserId">
+        UPDATE biz_qr SET `status` = '0',modify_time = NOW(),modify_by = #{modifyUserId}
+        WHERE qr_type in ('2','1') AND `status` = '1'  AND NOW() BETWEEN eff_time AND lose_time AND create_by = #{userId}
+    </update>
+    <select id="isHasEffectivePassQr" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM biz_qr WHERE qr_type in ('2','1') AND `status` = '1'  AND NOW() BETWEEN eff_time AND lose_time AND create_by = #{userId}
+    </select>
+    <select id="isHasEffectiveTempPassQr" resultMap="bizQrMap">
+        SELECT bq.*
+        FROM biz_qr bq
+        LEFT JOIN biz_qr_enclosed bqe ON bqe.qr_id = bq.id AND bqe.`status` = '1'
+        WHERE bq.qr_type = '1'
+        AND bq.`status` = '1'
+        AND bq.sur_Times > 0
+        AND NOW() BETWEEN bq.eff_time AND bq.lose_time
+        AND bq.tel = #{tel} AND bq.create_by = #{userId}
+        AND bqe.id is not NULL
+        AND bqe.enclosed_id = #{enclosedId}
+        LIMIT 1
+    </select>
+    <select id="isHasEffectiveFormalPassQr" resultMap="bizQrMap">
+        SELECT * FROM biz_qr WHERE qr_type = '2' AND `status` = '1'  AND NOW() BETWEEN eff_time AND lose_time AND user_id = #{userId} AND create_by = #{userId}
+    </select>
+    <select id="isHasHouse" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM biz_user_house
+        WHERE is_delete = '0' AND `status` = '1' AND user_id = #{userId}
+    </select>
+    <select id="getQrByVal" parameterType="String" resultType="com.github.wxiaoqi.security.external.vo.BizQrVo">
+		SELECT id, qr_type ,qr_val, private_issued_time,
+		private_val , use_times,create_by FROM biz_qr WHERE
+		qr_val = #{qrVal}
+	</select>
+    <select id="getAllEncloseList" resultType="java.lang.String">
+        SELECT T2.ID
+        FROM (
+        SELECT
+        @r AS _id,
+        (SELECT @r := enclosed_PID FROM biz_enclosed WHERE ID = _id) AS parent_id,
+        @l := @l + 1 AS lvl
+        FROM
+        (SELECT @r := #{enclosedId}, @l := -1) vars,
+        biz_enclosed h
+        WHERE @r &lt;&gt; -1) T1
+        JOIN biz_enclosed T2
+        ON T1._id = T2.id
+        ORDER BY T1.lvl DESC;
+    </select>
+    <select id="getUserEnclosedList" resultType="com.github.wxiaoqi.security.external.vo.UserEnclosedVo">
+        SELECT DISTINCT bcu.unit_id unitId ,be.ID enclosedId ,be.enclosed_PID enclosedPid
+        FROM biz_user_house buh
+        INNER JOIN base_app_client_user bacu ON bacu.id = buh.user_id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        INNER JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        INNER JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        INNER JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        INNER JOIN biz_enclosed be ON be.ID = bcu.enclosed_id AND be.`status` = '1'
+        WHERE buh.`status` = '1' AND buh.is_delete = '0' AND be.ID is not null AND buh.user_id = #{userId}
+    </select>
+    <select id="getNConventionalPassExamine" resultType="com.github.wxiaoqi.security.external.vo.QrExamineBean">
+            select bq.id
+                ,bq.qr_type qrType
+                ,bq.qr_num qrNum
+                ,bq.qr_val qrVal
+                ,bq.eff_time effTime
+                ,bq.lose_time loseTime
+                ,bq.valid_tims validTims
+                ,bq.use_times useTimes
+                ,bq.sur_times surTimes
+                ,bq.pre_use_time preUseTime
+                ,bq.private_num privateNum
+                ,bq.private_val privateVal
+                ,bq.private_issued_time privateIssuedTime
+                ,bq.`status`
+                ,bq.create_by createBy
+            from biz_qr bq
+            INNER JOIN biz_user_project bup ON bup.user_id = bq.user_id AND bup.`status` = '1'
+            inner join biz_enclosed be on be.project_Id = bup.project_id AND be.`status` = '1'
+            inner join biz_facilities bf on bf.enclosed_id = be.ID AND bf.`status` = '1'
+            where bq.user_id=#{userId} and bf.facilities_code=#{machineCode} and (bq.qr_type='1' or bq.qr_type='2')
+                  bf.enclosed_id in <foreach collection="idList" item="id" open="(" close=")"
+                             separator=",">
+                        #{id}
+                    </foreach>
+            order by bq.qr_type desc
+	</select>
+
+    <select id="getQrByQrVal" resultType="com.github.wxiaoqi.security.external.vo.QrExamineBean">
+        select id
+        ,qr_type qrType
+        ,qr_num qrNum
+        ,qr_val qrVal
+        ,eff_time effTime
+        ,lose_time loseTime
+        ,valid_tims validTims
+        ,use_times useTimes
+        ,sur_times surTimes
+        ,pre_use_time preUseTime
+        ,private_num privateNum
+        ,private_val privateVal
+        ,private_issued_time privateIssuedTime
+        ,`status`
+        ,create_by createBy
+        from biz_qr
+        where qr_val=#{qrVal} and qr_type='1' and `status` = '1' and sur_times > 0 and NOW() BETWEEN eff_time and lose_time
+    </select>
+
+    <select id="getQrByUserId" resultType="com.github.wxiaoqi.security.external.vo.QrExamineBean">
+        select id
+        ,qr_type qrType
+        ,qr_num qrNum
+        ,qr_val qrVal
+        ,eff_time effTime
+        ,lose_time loseTime
+        ,valid_tims validTims
+        ,use_times useTimes
+        ,sur_times surTimes
+        ,pre_use_time preUseTime
+        ,private_num privateNum
+        ,private_val privateVal
+        ,private_issued_time privateIssuedTime
+        ,`status`
+        ,create_by createBy
+        from biz_qr
+        where user_id=#{userId} and qr_type='2' and `status` = '1' and NOW() BETWEEN eff_time and lose_time
+    </select>
+    <update id="updateByUserId" parameterType="com.github.wxiaoqi.security.external.entity.BizQr">
+        update biz_qr
+        <set>
+            use_times = (case when ifnull(sur_times,0)&lt;=0 then use_times else
+            use_times + 1 end),
+            sur_times = (case when ifnull(sur_times,0)&lt;=0
+            then sur_times else sur_times - 1 end)
+            <if test="qrNum != null">
+                ,qr_num = #{qrNum},
+            </if>
+            <if test="preUseTime != null">
+                pre_use_time = #{preUseTime},
+            </if>
+            <if test="modifyBy != null">
+                modify_by = #{modifyBy},
+            </if>
+            <if test="modifyTime != null">
+                modify_time = #{modifyTime}
+            </if>
+        </set>
+        where user_id=#{userId} and status='1' and (qr_type='1' or qr_type='2') and now() between eff_time and lose_time
+    </update>
+    <select id="getQrInfoByUserId" resultMap="bizQrMap">
+        SELECT bq.id,
+            bq.qr_type,
+            bq.qr_num,
+            bq.qr_val,
+            bq.eff_time,
+            bq.lose_time,
+            bq.valid_tims,
+            bq.private_num,
+            bq.private_val
+        FROM
+        biz_qr bq
+        inner JOIN base_app_client_user bacu ON bacu.id = bq.user_id and bacu.`status`= '1'
+        where NOW() BETWEEN eff_time and lose_time and ((qr_type='1' and sur_times>0) or qr_type='2') and bq.status='1'
+        <if test="userId != null">
+            and bq.user_id=#{userId}
+        </if>
+        ORDER BY qr_type DESC,bq.create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="getInfoByUserId" resultMap="bizQrMap">
+        SELECT *
+        FROM biz_qr
+        where NOW() BETWEEN eff_time and lose_time and qr_type='2' and status='1' and user_id=#{userId} and create_by = #{userId}
+        LIMIT 1
+    </select>
+
+    <update id="updateQrByUserId" parameterType="com.github.wxiaoqi.security.external.entity.BizQr">
+        UPDATE biz_qr
+        SET qr_val=#{qrVal}, modify_time = NOW()
+        <if test="userId != null">
+            , modify_by=#{userId}
+        </if>
+        WHERE 1=1
+        and status='1' and (qr_Type = '2' or qr_Type = '1' )
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
+    </update>
+</mapper>

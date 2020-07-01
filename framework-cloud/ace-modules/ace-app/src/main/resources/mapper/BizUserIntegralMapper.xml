@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserIntegralMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserIntegral" id="bizUserIntegralMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="signPoints" column="sign_points"/>
+        <result property="taskPoints" column="task_points"/>
+        <result property="consumePoints" column="consume_points"/>
+        <result property="totalPoints" column="total_points"/>
+        <result property="signCount" column="sign_count"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+
+    <update id="updateTotalIntegral">
+        update biz_user_integral set total_points = #{totalIntegral} where user_id = #{userId} and status= '1'
+    </update>
+
+    <select id="getUserSignStatus" resultType="java.lang.Integer">
+        select count(1) from biz_user_sign_log where user_id = #{userId} and sign_date = curdate() and status = '1'
+    </select>
+
+    <select id="getUserSignLog" resultType="java.lang.String">
+        select sign_date from biz_user_sign_log where status = '1' date_sub(curdate(), INTERVAL 7 DAY) &lt;= date(sign_date) ORDER BY sign_date desc;
+    </select>
+
+    <select id="getUserInteral" resultType="com.github.wxiaoqi.security.app.vo.intergral.in.UserSignIn">
+        select id,sign_count signCount,sign_points signPoints,consume_points consumePoints,task_points taskPoints,last_sign_date lastSignDate,resign_card resignCount
+        from biz_user_integral where user_id = #{userId} and status = '1'
+    </select>
+
+    <select id="getUserLastSign" resultType="java.util.Date">
+        select last_sign_date lastSignDate from biz_user_integral where user_id = #{userId} and status = '1'
+    </select>
+
+    <select id="getNextSingInfo" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.NextSignInfo">
+        SELECT integral,sign_day signDay from biz_user_sign_rule where status = '1' and sign_day &gt; #{signCount} ORDER BY sign_type,sign_day,integral asc limit 1
+    </select>
+
+    <select id="getSevenSignInfo" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.SignInfo">
+        SELECT sign_day day,integral,sign_type signType  from biz_user_sign_rule where status = '1' and sign_day &lt;=7 or ( sign_type ='1' and status = '1' ) ORDER BY sign_type,sign_day,integral asc
+    </select>
+
+    <select id="getRandomTask" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.RandomTaskVo">
+        SELECT id,integral from biz_task_intergral_rule where status = '1' ORDER BY  RAND() limit 5
+    </select>
+
+
+    <select id="getTodayTask" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.DailyTask">
+        SELECT distinct(r.task_code) taskCode,r.task_name taskName,r.integral taskIntegral,'0' isFinish from biz_user_task_daily  d
+        INNER JOIN biz_task_intergral_rule r on r.id = d.task_id and r.status = '1'
+        where d.date = #{today} and d.status = '1' order by d.create_time desc limit 5
+    </select>
+
+    <select id="getUserTaskLog" resultType="java.lang.String">
+        SELECT task_in_records taskCode from biz_user_task_log where task_date = #{today} and status = '1' and user_id = #{userId}
+    </select>
+
+    <select id="getTaskStatus" resultType="java.lang.Integer">
+        SELECT count(1) from biz_user_task_log where task_date = #{today} and status = '1' and user_id = #{userId} and task_in_records = #{taskCode}
+    </select>
+
+    <select id="getAllSignRule" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.SignInfo">
+        SELECT integral,ifnull(sign_day,'0') day from biz_user_sign_rule where status = '1' ORDER BY sign_day
+    </select>
+
+    <select id="getTaskIntegral" resultType="java.lang.Integer">
+        SELECT integral from biz_task_intergral_rule where task_code = #{taskCode}
+    </select>
+
+    <select id="getIntegralLog" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.IntegralDetailVo">
+        select a.logName,a.logDate,a.integral from
+        (
+        SELECT case sign_type when '0' then  CONCAT('每日签到','：',sl.sign_date) when '1' then CONCAT('补签签到','：',sl.sign_date) end logName,DATE_FORMAT(sl.create_Time,'%Y-%m-%d %H:%i:%s') logDate,CONCAT('+',sl.sign_point) integral from base_app_client_user u
+        INNER JOIN biz_user_sign_log sl on sl.user_id  = u.id AND sl.status = '1'
+        where u.status = '1' and u.id = #{userId}
+		union ALL
+        SELECT CONCAT('完成任务',': ',r.task_name) logName,DATE_FORMAT(tl.create_Time,'%Y-%m-%d %H:%i:%s') logDate,CONCAT('+',tl.task_points) integral from base_app_client_user u
+        INNER JOIN biz_user_task_log tl on tl.user_id = u.id and tl.status = '1'
+        INNER JOIN biz_task_intergral_rule r on tl.task_in_records = r.task_code and r.status = '1'
+        where u.status = '1' and u.id = #{userId}
+        union all
+	    SELECT CONCAT('积分兑换',': ',p.product_name) logName,DATE_FORMAT(cl.create_Time,'%Y-%m-%d %H:%i:%s') logDate,CONCAT('-',cl.cash_integral) integral from base_app_client_user u
+        INNER JOIN biz_cash_product cl on cl.user_id  = u.id
+        INNER JOIN biz_integral_product p on p.id = cl.product_id and p.status = '1'
+        where u.status = '1' and u.id = #{userId}
+        ) a
+        ORDER BY a.logDate desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getIntegralCalendar" resultType="com.github.wxiaoqi.security.app.vo.intergral.CalendarSign">
+        SELECT sign_date signDate,sign_type signType from biz_user_sign_log
+        where user_id = #{userId} and DATE_FORMAT(sign_date,'%Y-%m') = #{time} and status = '1'
+        GROUP BY sign_date
+        ORDER BY sign_date desc
+    </select>
+
+    <update id="updateSignCount">
+        update biz_user_integral set sign_count = #{signCount} and sign_points = #{signPoint} where user_id = #{userId}
+    </update>
+
+    <select id="getResignCardCount" resultType="java.lang.Integer">
+        SELECT count(cp.id) from biz_cash_product cp
+        INNER JOIN biz_integral_product p ON p.id = cp.product_id and p.status = '1' and p.product_classify = '2'
+        where cp.user_id = #{userId} and cp.status  = '1'
+    </select>
+
+    <select id="getResignCard" resultType="java.lang.String">
+        SELECT cp.id from biz_cash_product cp
+        INNER JOIN biz_integral_product p ON p.id = cp.product_id and p.status = '1' and p.product_classify = '2'
+        where cp.user_id = #{userId} and cp.status  = '1' LIMIT 1
+    </select>
+
+    <select id="getResignCardId" resultType="java.lang.String">
+        SELECT p.id from biz_integral_product p
+        INNER JOIN biz_product_project pp on pp.product_id = p.id and pp.status = '1'
+        where pp.project_id = #{projectId} and product_classify = '2' and bus_Status = '2'
+    </select>
+</mapper>

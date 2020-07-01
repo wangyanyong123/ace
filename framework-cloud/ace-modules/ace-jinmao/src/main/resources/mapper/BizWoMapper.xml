@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizWoMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizWo" id="bizWoMap">
+        <result property="id" column="id"/>
+        <result property="woCode" column="wo_code"/>
+        <result property="woType" column="wo_type"/>
+        <result property="busId" column="bus_id"/>
+        <result property="busName" column="bus_name"/>
+        <result property="flowId" column="flow_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="projectId" column="project_id"/>
+        <result property="landId" column="land_id"/>
+        <result property="buildId" column="build_id"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="roomId" column="room_id"/>
+        <result property="addr" column="addr"/>
+        <result property="oneCategoryCode" column="one_category_code"/>
+        <result property="oneCategoryName" column="one_category_name"/>
+        <result property="twoCategoryCode" column="two_category_code"/>
+        <result property="twoCategoryName" column="two_category_name"/>
+        <result property="threeCategoryCode" column="three_category_code"/>
+        <result property="threeCategoryName" column="three_category_name"/>
+        <result property="contactUserId" column="contact_user_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="publishUserId" column="publish_user_id"/>
+        <result property="publishName" column="publish_name"/>
+        <result property="publishTel" column="publish_tel"/>
+        <result property="handleChannel" column="handle_channel"/>
+        <result property="comeFrom" column="come_from"/>
+        <result property="dealType" column="deal_type"/>
+        <result property="woStatus" column="wo_status"/>
+        <result property="expectedServiceTime" column="expected_service_time"/>
+        <result property="processId" column="process_Id"/>
+        <result property="companyId" column="company_id"/>
+        <result property="handleBy" column="handle_by"/>
+        <result property="acceptBy" column="accept_by"/>
+        <result property="receiveWoTime" column="receive_wo_time"/>
+        <result property="startProcessTime" column="start_process_time"/>
+        <result property="finishWoTime" column="finish_wo_time"/>
+        <result property="imgId" column="img_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询工单列表-->
+    <select id="selectWoListByUserId" parameterType="map" resultType="com.github.wxiaoqi.security.api.vo.order.out.WoListVo">
+        SELECT id,title,description,wo_status woStatus,DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,img_id imgId
+        from biz_wo
+        where status='1'
+        and contact_user_id=#{userId}
+        and bus_id=#{busId}
+        order by create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询投诉、报修工单列表-->
+    <select id="queryIncidentList" parameterType="map" resultType="com.github.wxiaoqi.security.api.vo.order.out.WoListForWebVo">
+        SELECT w.id,w.wo_code woCode,w.title,sw.wo_type woType,w.contact_name contactName,w.contact_tel contactTel,w.addr,sw.wo_status woStatus,w.description,IFNULL(u.name,'') handleBy,
+        IFNULL(DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,IFNULL(DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s'),'') receiveWoTime,
+        IFNULL(DATE_FORMAT(sw.start_process_time,'%Y-%m-%d %H:%i:%s'),'') startProcessTime,IFNULL(DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s'),'') finishWoTime
+        from biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        where w.status='1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endTime != null and endTime!='' " >
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&lt;=#{endTime}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and w.project_Id=#{projectId}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (w.wo_code LIKE CONCAT('%',#{searchVal},'%') or w.title LIKE CONCAT('%',#{searchVal},'%')
+            or w.contact_name LIKE CONCAT('%',#{searchVal},'%') or w.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        and sw.bus_id in
+        <foreach collection="busIdList" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        order by w.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询城市/小区下的工单类型数量-->
+    <select id="getIncidentTypeCount" resultType="com.github.wxiaoqi.security.jinmao.vo.wo.incidenttype.IncidentTypeCount">
+        SELECT a.*,SUM(a.repairCount+a.cmplainCount+a.planCount) total from
+        (SELECT c.city_id cityId,c.name cityName,p.project_id projectId,p.project_name projectName,SUM(case w.incident_type when 'repair' then 1 else 0 end) repairCount,
+        SUM(case w.incident_type when 'cmplain' then 1 else 0 end) cmplainCount,SUM(case w.incident_type when 'plan' then 1 else 0 end) planCount
+        from biz_wo w  INNER JOIN biz_crm_project p on p.project_id = w.project_id and p.status = '1'
+        INNER JOIN biz_crm_city c on c.city_id = p.city_id and c.status = '1'
+        WHERE w.status = '1' and DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN  #{startTime} and #{endTime}
+        AND IFNULL(w.create_Time,'') &lt;&gt; '' and IFNULL(w.incident_type,'') &lt;&gt; '' and w.incident_type &lt;&gt;  'decorete'
+        <if test = "cityId != null and cityId != ''and (projectId == null or projectId == '')">
+            and w.project_id  in
+            (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        GROUP BY c.name,p.project_name)a GROUP BY a.cityName,a.projectName
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getIncidentTypeTotal" resultType="java.lang.Integer">
+        SELECT count(*) from
+        (SELECT c.name cityName,p.project_id projectId,p.project_name projectName,SUM(case when w.incident_type =  'repair' and  IFNULL(w.one_category_code,'') &lt;&gt; ''  then 1 else 0 end) repairCount,
+        SUM(case when w.incident_type = 'cmplain' and  IFNULL(w.three_category_code,'') &lt;&gt; ''   then 1 else 0 end) cmplainCount,
+        SUM(case when w.incident_type = 'plan' and  IFNULL(w.three_category_code,'') &lt;&gt; ''  then 1 else 0 end) planCount
+        from biz_wo w  INNER JOIN biz_crm_project p on p.project_id = w.project_id and p.status = '1'
+        INNER JOIN biz_crm_city c on c.city_id = p.city_id and c.status = '1'
+        WHERE w.status = '1' and DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN  #{startTime} and #{endTime}
+        AND IFNULL(w.create_Time,'') &lt;&gt; '' and IFNULL(w.incident_type,'') &lt;&gt; ''and w.incident_type &lt;&gt;  'decorete'
+        <if test = "cityId != null and cityId != ''and (projectId == null or projectId == '')">
+            and w.project_id  in
+            (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        GROUP BY c.name,p.project_name)a
+    </select>
+
+    <select id="getClassifyTypeCount" parameterType="map" resultType="com.github.wxiaoqi.security.jinmao.vo.wo.typeclassify.ClassifyTypeCount">
+        SELECT x.* FROM ( SELECT * FROM
+        (SELECT '报修' type,w.one_category_name name,COUNT(*) sum, w.one_category_code code FROM biz_wo w
+        WHERE DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test = "cityId != null and cityId != ''and ( projectId == null or projectId == '')">
+            and w.project_id  in
+            (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        and w.incident_type = 'repair' AND w.one_category_code in
+        ( SELECT val FROM biz_dict WHERE pid= 'repair' and status='1' order by val) group by w.one_category_name
+        UNION ALL SELECT * from (SELECT '报修' t,name,0 s,'' c from biz_dict where status = '1' and pid = 'repair')a
+        ) a GROUP BY a.name
+        UNION all SELECT * FROM
+        (SELECT '投诉' type,w.three_category_name name,COUNT(*) sum, w.three_category_code code FROM biz_wo w
+        WHERE DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test = "cityId != null and cityId != ''and ( projectId == null or projectId == '')">
+            and w.project_id  in
+            (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        and w.incident_type = 'cmplain' AND w.three_category_code in
+        ( SELECT val FROM biz_dict WHERE pid= 'cmplain' and status='1' ORDER BY val) group by w.three_category_name
+        UNION ALL SELECT * from (SELECT '投诉' t,name,0 s,'' c from biz_dict where status = '1' and pid = 'cmplain')b
+        ) b GROUP BY b.name
+        UNION SELECT * FROM
+        (SELECT '计划' type,w.three_category_name name,COUNT(*) sum, w.three_category_code code FROM biz_wo w
+        WHERE DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test = "cityId != null and cityId != ''and ( projectId == null or projectId == '')">
+            and w.project_id  in
+            (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        and w.incident_type = 'plan' AND w.three_category_code in
+        (SELECT val FROM biz_dict WHERE pid= 'plan' and status='1' order by val)  group by w.three_category_name
+        union all SELECT * from (SELECT '计划' t,name,0 s,'' c from biz_dict where status = '1' and pid = 'plan')c
+        )c GROUP BY c.name ) x
+        <if test="incidentType != null and incidentType != ''">
+            where x.type = #{incidentType}
+        </if>
+        <if test="classifyType != null and classifyType != ''">
+            and x.name = #{classifyType}
+        </if>
+        ORDER BY x.type,x.sum desc;
+    </select>
+
+    <select id="getWoAgingCount" resultType="com.github.wxiaoqi.security.jinmao.vo.wo.woaging.WoAgingCount">
+    SELECT a.cityName,a.projectId,a.projectName,
+        (case a.type when 'createToReceive' then '下单到接单' when 'receiveToFinish' then '接单到完成' ELSE '下单到完成'end) type,
+        a.lessThanFive,a.fiveToFifteen,a.fifToThirty,a.thdToSixty,a.oneToTwo,a.moreThanTwo  from(
+        SELECT c.name cityName,p.project_id projectId,p.project_name projectName,'createToReceive' as type,p.project_name+1 num,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &lt;=5 then 1 else 0 end) lessThanFive,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &gt;5 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &lt;=15 then 1 else 0 end) fiveToFifteen,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &gt;15 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &lt;= 30 then 1 else 0 end) fifToThirty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &gt;30 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &lt;=60 then 1 else 0 end) ThdToSixty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &gt;60 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &lt;=120 then 1 else 0 end) oneToTwo,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.receive_wo_time) &gt;120 then 1 else 0 end) moreThanTwo
+        FROM biz_subscribe_wo sw
+        INNER JOIN biz_wo w on w.id = sw.id and w.status = '1' and w.incident_type &lt;&gt; 'decorete'
+        <if test="incidentType !=null and incidentType != ''">
+            and w.incident_type = #{incidentType}
+        </if>
+        INNER JOIN biz_crm_project p on p.project_id = sw.project_id and p.status = '1'
+        INNER JOIN biz_crm_city c on c.city_id = p.city_id and c.status = '1'
+        WHERE sw.status = '1'
+        AND DATE_FORMAT(sw.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="cityId != null and cityId != '' and (projectId == null or projectId == '')">
+            and sw.project_id in (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and sw.project_id = #{projectId}
+        </if>
+        GROUP BY  c.name,p.project_name,type UNION
+        SELECT c.name cityName,p.project_id projectId,p.project_name projectName,'receiveToFinish' as type,p.project_name+2 num,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &lt;=5 then 1 else 0 end) lessThanFive,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &gt;5 AND TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &lt;=15 then 1 else 0 end) fiveToFifteen,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &gt;15 AND TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &lt;= 30 then 1 else 0 end) fifToThirty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &gt;30 AND TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &lt;=60 then 1 else 0 end) ThdToSixty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &gt;60 AND TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &lt;=120 then 1 else 0 end) oneToTwo,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.receive_wo_time,sw.finish_wo_time) &gt;120 then 1 else 0 end) moreThanTwo
+        FROM biz_subscribe_wo sw
+        INNER JOIN biz_wo w on w.id = sw.id and w.status = '1' and w.incident_type &lt;&gt; 'decorete'
+        <if test="incidentType !=null and incidentType != ''">
+            and w.incident_type = #{incidentType}
+        </if>
+        INNER JOIN biz_crm_project p on p.project_id = sw.project_id and p.status = '1'
+        INNER JOIN biz_crm_city c on c.city_id = p.city_id and c.status = '1'
+        WHERE sw.status = '1'
+        AND DATE_FORMAT(sw.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="cityId != null and cityId != '' and (projectId == null or projectId == '')">
+            and sw.project_id in (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and sw.project_id = #{projectId}
+        </if>
+        GROUP BY  c.name,p.project_name,type UNION
+        SELECT c.name cityName,p.project_id projectId,p.project_name projectName,'createToFinish' as type,p.project_name+3 num,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &lt;=5 then 1 else 0 end) lessThanFive,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &gt;5 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &lt;=15 then 1 else 0 end) fiveToFifteen,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &gt;15 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &lt;= 30 then 1 else 0 end) fifToThirty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &gt;30 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &lt;=60 then 1 else 0 end) ThdToSixty,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &gt;60 AND TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &lt;=120 then 1 else 0 end) oneToTwo,
+        SUM(case when TIMESTAMPDIFF(MINUTE,sw.create_Time,sw.finish_wo_time) &gt;120 then 1 else 0 end) moreThanTwo
+        FROM biz_subscribe_wo sw
+        INNER JOIN biz_wo w on w.id = sw.id and w.status = '1' and w.incident_type &lt;&gt; 'decorete'
+        <if test="incidentType !=null and incidentType != ''">
+            and w.incident_type = #{incidentType}
+        </if>
+        INNER JOIN biz_crm_project p on p.project_id = sw.project_id and p.status = '1'
+        INNER JOIN biz_crm_city c on c.city_id = p.city_id and c.status = '1'
+        WHERE sw.status = '1'
+        AND DATE_FORMAT(sw.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="cityId != null and cityId != '' and (projectId == null or projectId == '')">
+            and sw.project_id in (SELECT p.project_id from biz_crm_city c
+            INNER JOIN biz_crm_project p on p.city_id = c.city_id where  c.city_id = #{cityId})
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and sw.project_id = #{projectId}
+        </if>
+        GROUP BY  c.name,p.project_name,type
+    )a ORDER BY a.cityName,a.projectName,a.num
+
+    </select>
+
+    <select id="getWoTypeCountByProperty" resultType="com.github.wxiaoqi.security.jinmao.vo.wo.date.WoOnDateCount">
+        SELECT a.*,SUM(a.repairCount+a.cmplainCount+a.planCount) total from
+        (SELECT p.project_id projectId,p.project_name projectName,DATE_FORMAT(w.create_time,'%Y-%m-%d') date,SUM(case w.incident_type when 'repair' then 1 else 0 end) repairCount,
+        SUM(case w.incident_type when 'cmplain' then 1 else 0 end) cmplainCount,SUM(case w.incident_type when 'plan' then 1 else 0 end) planCount
+        from biz_wo w  INNER JOIN biz_crm_project p on p.project_id = w.project_id and p.status = '1'
+        WHERE w.status = '1' and DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="projectId!=null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+         AND IFNULL(w.create_Time,'') &lt;&gt; '' and IFNULL(w.incident_type,'') &lt;&gt; '' and w.incident_type &lt;&gt; 'decorete'
+        GROUP BY DATE_FORMAT(w.create_time,'%Y-%m-%d'),p.project_name)a GROUP BY a.date,a.projectName order by a.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getWoTypeByPropertyTotal" resultType="java.lang.Integer">
+        SELECT COUNT(date)from
+        (SELECT p.project_id projectId,p.project_name projectName,DATE_FORMAT(w.create_time,'%Y-%m-%d') date,SUM(case w.incident_type when 'repair' then 1 else 0 end) repairCount,
+        SUM(case w.incident_type when 'cmplain' then 1 else 0 end) cmplainCount,SUM(case w.incident_type when 'plan' then 1 else 0 end) planCount
+        from biz_wo w  INNER JOIN biz_crm_project p on p.project_id = w.project_id and p.status = '1'
+        WHERE w.status = '1' and DATE_FORMAT(w.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="projectId!=null and projectId != ''">
+            and w.project_id = #{projectId}
+        </if>
+        AND IFNULL(w.create_Time,'') &lt;&gt; '' and IFNULL(w.incident_type,'') &lt;&gt; '' and w.incident_type &lt;&gt; 'decorete'
+        GROUP BY DATE_FORMAT(w.create_time,'%Y-%m-%d'))a
+    </select>
+
+    <select id="getClassifyName" resultType="java.lang.String">
+        SELECT name FROM biz_dict where pid= #{type} and status = '1';
+    </select>
+
+
+    <select id="getWoAgingListByMinute" parameterType="map" resultType="com.github.wxiaoqi.security.jinmao.vo.wo.woaging.WoAgingList">
+    SELECT w.wo_code woCode,case when w.incident_type = 'cmplain' then '投诉' when w.incident_type = 'repair' then '报修' ELSE '计划' end as incidentType,
+    w.title,u.name handleBy,DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s') createTime,IFNULL(DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s'),'') receiveTime,
+    IFNULL(DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s'),'') finishTime,sw.wo_status woStatus from biz_wo w
+    INNER JOIN biz_subscribe_wo sw on sw.id = w.id and sw.status = '1'
+    left JOIN base_app_server_user u on sw.handle_by = u.id and u.status = '1'
+    where w.status = '1' and w.incident_type &lt;&gt; 'decorete'   AND DATE_FORMAT(sw.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+    <if test="agingType == 'createToReceive'.toString()">
+        <if test="minute != null and minute == '5'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 5
+        </if>
+        <if test="minute != null and minute == '15'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 15
+        </if>
+        <if test="minute != null and minute == '30'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 30
+        </if>
+        <if test="minute != null and minute == '60'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 60
+        </if>
+        <if test="minute != null and minute == '1'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 120
+        </if>
+        <if test="minute != null and minute == '2'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 120
+        </if>
+    </if>
+    <if test="agingType == 'createToFinish'.toString()">
+        <if test="minute != null and minute == '5'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 5
+        </if>
+        <if test="minute != null and minute == '15'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 15
+        </if>
+        <if test="minute != null and minute == '30'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 30
+        </if>
+        <if test="minute != null and minute == '60'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 60
+        </if>
+        <if test="minute != null and minute == '1'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 120
+        </if>
+        <if test="minute != null and minute =='2'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 120
+        </if>
+    </if>
+    <if test="agingType == 'receiveToFinish'">
+        <if test="minute != null and minute == '5'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 5
+        </if>
+        <if test="minute != null and minute == '15'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 15
+        </if>
+        <if test="minute != null and minute == '30'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 30
+        </if>
+        <if test="minute != null and minute == '60'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 60
+        </if>
+        <if test="minute != null and minute == '1'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 120
+        </if>
+        <if test="minute != null and minute == '2'.toString()">
+            and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 120
+        </if>
+    </if>
+    <if test="type != null and type != ''">
+        and w.incident_type = #{type}
+    </if>
+    and sw.project_id = #{projectId}
+    order by sw.create_time desc
+    <if test="page != null and limit != null">
+        LIMIT #{page},#{limit}
+    </if>
+    </select>
+
+    <select id="getWoAgingListCount" resultType="java.lang.Integer">
+        SELECT count(*) from biz_wo w
+        INNER JOIN biz_subscribe_wo sw on sw.id = w.id and sw.status = '1'
+        left JOIN base_app_server_user u on sw.handle_by = u.id and u.status = '1'
+        where w.status = '1' and w.incident_type &lt;&gt; 'decorete'   AND DATE_FORMAT(sw.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="agingType == 'createToReceive'.toString()">
+            <if test="minute != null and minute == '5'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 5
+            </if>
+            <if test="minute != null and minute == '15'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 15
+            </if>
+            <if test="minute != null and minute == '30'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 30
+            </if>
+            <if test="minute != null and minute == '60'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 60
+            </if>
+            <if test="minute != null and minute == '1'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &lt;= 120
+            </if>
+            <if test="minute != null and minute == '2'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.receive_wo_time) &gt; 120
+            </if>
+        </if>
+        <if test="agingType == 'createToFinish'.toString()">
+            <if test="minute != null and minute == '5'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 5
+            </if>
+            <if test="minute != null and minute == '15'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 15
+            </if>
+            <if test="minute != null and minute == '30'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 30
+            </if>
+            <if test="minute != null and minute == '60'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 60
+            </if>
+            <if test="minute != null and minute == '1'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &lt;= 120
+            </if>
+            <if test="minute != null and minute =='2'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.create_Time, sw.finish_wo_time) &gt; 120
+            </if>
+        </if>
+        <if test="agingType == 'receiveToFinish'">
+            <if test="minute != null and minute == '5'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 5
+            </if>
+            <if test="minute != null and minute == '15'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 5 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 15
+            </if>
+            <if test="minute != null and minute == '30'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 15 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 30
+            </if>
+            <if test="minute != null and minute == '60'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 30 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 60
+            </if>
+            <if test="minute != null and minute == '1'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 60 and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &lt;= 120
+            </if>
+            <if test="minute != null and minute == '2'.toString()">
+                and TIMESTAMPDIFF(MINUTE, sw.receive_wo_time, sw.finish_wo_time) &gt; 120
+            </if>
+        </if>
+        <if test="type != null and type != ''">
+            and w.incident_type = #{type}
+        </if>
+        and sw.project_id = #{projectId}
+    </select>
+</mapper>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCrmCityMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCrmCity" id="bizCrmCityMap">
+        <result property="cityId" column="city_id"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="cCode" column="c_code"/>
+        <result property="name" column="name"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="modifiedOn" column="modified_on"/>
+    </resultMap>
+    <select id="getByIds" resultMap="bizCrmCityMap">
+        select * from biz_crm_city
+        where 1=1 and
+        city_id in
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+    <select id="getCityListByName" resultType="com.github.wxiaoqi.security.app.vo.city.out.CityInfoVo">
+        select city_id cityId ,`name` cityName, c_code cCode
+        from biz_crm_city
+        where `status` = '1'
+        <if test="cityName != null">
+            and `name` like CONCAT('%',#{cityName},'%')
+        </if>
+    </select>
+
+    <select id="getCityListById" resultType="com.github.wxiaoqi.security.app.vo.city.out.CityProjectInfoVo">
+        select city_id cityId ,`name` cityName
+        from biz_crm_city
+        where `status` = '1'
+        <if test="cityId!=null">
+            and city_id = #{cityId}
+        </if>
+    </select>
+    <select id="getCityListExcludeXNById" resultType="com.github.wxiaoqi.security.app.vo.city.out.CityProjectInfoVo">
+        select city_id cityId ,`name` cityName
+        from biz_crm_city
+        where `status` = '1' AND city_code != 'XNCS'
+        <if test="cityId!=null">
+            and city_id = #{cityId}
+        </if>
+    </select>
+    <select id="isNeedExclude" resultType="java.lang.Integer">
+        SELECT COUNT(*) from biz_user_group WHERE user_id = #{userId} AND `status` = '1'
+    </select>
+</mapper>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizBusinessMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizBusiness" id="bizBusinessMap">
+        <result property="id" column="ID"/>
+        <result property="busCode" column="bus_Code"/>
+        <result property="busName" column="bus_Name"/>
+        <result property="flowId" column="flow_Id"/>
+        <result property="createType" column="create_type"/>
+        <result property="description" column="description"/>
+        <result property="viewType" column="view_Type"/>
+        <result property="viewSort" column="view_Sort"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="type" column="type"/>
+    </resultMap>
+
+    <sql id="Base_Column_List" >
+        ID, bus_Code, bus_Name, flow_Id
+    </sql>
+
+    <select id="selectAllBusinessList" resultMap="bizBusinessMap" parameterType="Map" >
+        select
+        <include refid="Base_Column_List" />
+        from biz_business
+        where status='1'
+        <if test="id != null" >
+            AND id=#{id}
+        </if>
+    </select>
+
+    <!--查询业务列表-->
+    <select id="selectBusinessList" resultType="com.github.wxiaoqi.security.jinmao.vo.Business.OutParam.ResultBusinessVo">
+        select
+        id,
+        bus_Code busCode,
+        bus_Name busName,
+        create_type createType,
+        description,
+        view_Sort viewSort,
+        type,img_url imgUrl
+        from
+        biz_business
+        where
+        status = '1'
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            bus_Code LIKE CONCAT('%',#{searchVal},'%')
+            OR bus_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_Sort,create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询业务列表数量-->
+    <select id="selectBusinessCount" resultType="java.lang.Integer">
+        select
+        count(*) total
+        from
+        biz_business
+        where
+        status = '1'
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            bus_Code LIKE CONCAT('%',#{searchVal},'%')
+            OR bus_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_Sort,create_Time DESC
+    </select>
+
+
+    <!--删除业务-->
+    <update id="delBusinessInfo">
+         UPDATE biz_business
+        SET status = '0', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        AND id = #{id}
+    </update>
+
+
+    <!--查询业务详情-->
+    <select id="selectBusinessInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Business.OutParam.ResultBusinessInfoVo">
+        select
+        id,
+        bus_Code busCode,
+        bus_Name busName,
+        create_type createType,
+        description,
+        view_Sort viewSort,
+        type,
+        img_url imgUrl
+        from
+        biz_business
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+</mapper>

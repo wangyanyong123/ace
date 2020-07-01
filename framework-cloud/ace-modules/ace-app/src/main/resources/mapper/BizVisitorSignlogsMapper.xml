@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizVisitorSignlogsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizVisitorSignlogs" id="bizVisitorSignlogsMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="houseId" column="house_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="visitorName" column="visitor_name"/>
+        <result property="visitorPhone" column="visitor_phone"/>
+        <result property="visitorSex" column="visitor_sex"/>
+        <result property="visitorNum" column="visitor_num"/>
+        <result property="visitTime" column="visit_time"/>
+        <result property="visitAddr" column="visit_addr"/>
+        <result property="visitReason" column="visit_reason"/>
+        <result property="isDrive" column="is_drive"/>
+        <result property="licensePlate" column="license_plate"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--获取访客记录列表-->
+    <select id="getVisitLogList" resultType="com.github.wxiaoqi.security.app.vo.visitor.out.VisitListVo">
+        SELECT
+            id,
+            visitor_name name,
+            DATE_FORMAT(visit_time,'%Y-%m-%d %H:%i') visitTime
+        FROM biz_visitor_signlogs
+        where status = '1' AND project_id = #{projectId} and user_id = #{userId}
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--获取访客记录详情-->
+    <select id="getVisitLogInfo" resultType="com.github.wxiaoqi.security.app.vo.visitor.out.VisitInfoVo">
+        SELECT
+            visitor_name name,
+            DATE_FORMAT(visit_time,'%Y-%m-%d %H:%i') visitTime,
+            visit_addr visitAddr,
+            visitor_phone phone,
+            qrVal,
+            visit_photo visitPhoto
+        FROM biz_visitor_signlogs
+        where status = '1' AND id = #{id}
+    </select>
+
+    <!--获取当前地址城市-->
+    <select id="getVisitAddress" resultType="java.lang.String">
+        SELECT c.name FROM biz_crm_city c
+        LEFT JOIN biz_crm_project p on c.city_id = p.city_id AND p.status = '1'
+        WHERE c.status = '1' AND p.project_name = #{projectName}
+    </select>
+
+    <select id="getEncloseId" resultType="java.lang.String">
+        SELECT id from biz_enclosed e
+        LEFT JOIN biz_crm_unit u ON u.enclosed_id = e.id AND u.status = '1'
+        where e.status = '1' AND u.unit_id = #{unitId}
+    </select>
+
+    <select id="getUnitId" resultType="java.lang.String">
+        SELECT u.unit_id unitId FROM biz_crm_unit u
+        LEFT JOIN biz_crm_floor f on f.unit_id = u.unit_id AND f.status = '1'
+        LEFT JOIN biz_crm_house h ON h.floor_id = f.floor_id AND h.status = '1'
+        WHERE u.status = '1' AND h.house_id= #{houseId}
+    </select>
+</mapper>

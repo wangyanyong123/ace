@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizProductRecommendMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizProductRecommend" id="bizProductRecommendMap">
+        <result property="id" column="ID"/>
+        <result property="productId" column="product_id"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="projectId" column="project_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询商品推荐-->
+    <select id="selectRecommendProduct" resultType="com.github.wxiaoqi.security.app.vo.recommend.out.RecommendProductVo" >
+        select * from (
+        (SELECT
+        DISTINCT(p.id),
+        p.product_name productName,
+        p.product_image productImage,
+        s.price price,
+        s.unit unit,
+        r.view_sort viewSort,
+        r.create_time createTime,
+        '1' productType,
+        r.img_url recommendImgUrl,
+        b.type
+        FROM biz_product p
+        INNER JOIN biz_product_recommend r on p.id = r.product_id and r.status = '1'
+        LEFT JOIN biz_product_spec s on p.id = s.product_id and s.status = '1' and s.sort = '1'
+        INNER JOIN biz_product_project pp ON p.id = pp.product_id AND pp.status = '1'
+        INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1'
+        and
+        p.bus_Status= '3' and (b.type = '1' or DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; p.end_Time)
+        <if test="projectId != null and projectId !=''">
+            AND  r.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and EXISTS (select id from biz_product_delivery d where p.ID = d.product_id  and
+            d.city_code in
+            <foreach collection="cityCodeList" item='cityCode' open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            and d.status = '1'
+            )
+        </if>
+
+        ORDER BY r.view_sort ASC)
+        union all
+        (SELECT
+        DISTINCT(p.id),
+        p.name productName,
+        p.reservation_logo productImage,
+        s.price price,
+        s.unit unit,
+        r.view_sort viewSort,
+        r.create_time createTime,
+        '2' productType,
+        r.img_url recommendImgUrl,
+        '1' type
+        FROM biz_reservation p
+        INNER JOIN biz_product_recommend r on p.id = r.product_id and r.status = '1'
+        LEFT JOIN biz_product_spec s on p.id = s.product_id and s.status = '1' and s.sort = '1'
+        INNER JOIN biz_product_project pp ON p.id = pp.product_id AND pp.status = '1'
+        WHERE
+        p.status = '1'
+        and
+        p.reserva_Status= '3'
+        <if test="projectId != null and projectId !=''">
+            AND r.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and EXISTS (select id from biz_product_delivery d where p.ID = d.product_id  and
+            d.city_code in
+            <foreach collection="cityCodeList" item='cityCode' open="(" separator="," close=")">
+                #{cityCode}
+            </foreach>
+            and d.status = '1'
+            )
+        </if>
+        ORDER BY r.view_sort ASC))A
+        ORDER BY A.viewSort ASC, A.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <!--查询服务推荐-->
+    <select id="selectRecommendReservationList" resultType="com.github.wxiaoqi.security.app.vo.recommend.out.RecommendProductVo" >
+
+        SELECT
+        DISTINCT(p.id),
+        p.name productName,
+        p.reservation_logo productImage,
+        s.price price,
+        s.unit unit,
+        r.view_sort viewSort,
+        r.create_time createTime,
+        '2' productType,
+        r.img_url recommendImgUrl,
+        '1' type
+        FROM biz_reservation p
+        INNER JOIN biz_product_recommend r on p.id = r.product_id and r.status = '1'
+        LEFT JOIN biz_product_spec s on p.id = s.product_id and s.status = '1' and s.sort = '1'
+        INNER JOIN biz_product_project pp ON p.id = pp.product_id AND pp.status = '1'
+        WHERE
+        p.status = '1'  and p.reserva_Status= '3'
+        <if test="projectId != null and projectId !=''">
+            AND  r.project_id = #{projectId}
+        </if>
+        <if test="busId != null and busId != ''">
+            and b.id = #{busId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and EXISTS (select id from biz_reservation_delivery d where p.id = d.product_id  and
+            d.city_code in
+            <foreach collection="cityCodeList" item='cityCode' open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            and d.status = '1'
+            )
+        </if>
+        ORDER BY r.view_sort ASC, r.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <!--只查询查询商品推荐-->
+    <select id="selectRecommendProductList" resultType="com.github.wxiaoqi.security.app.vo.recommend.out.RecommendProductVo" >
+        SELECT
+        DISTINCT(p.id),
+        p.product_name productName,
+        p.product_image productImage,
+        s.price price,
+        s.unit unit,
+        r.view_sort viewSort,
+        r.create_time createTime,
+        '1' productType,
+        r.img_url recommendImgUrl,
+        b.type
+        FROM biz_product p
+        INNER JOIN biz_product_recommend r on p.id = r.product_id and r.status = '1'
+        LEFT JOIN biz_product_spec s on p.id = s.product_id and s.status = '1' and s.sort = '1'
+        INNER JOIN biz_product_project pp ON p.id = pp.product_id AND pp.status = '1'
+        INNER  JOIN biz_product_classify c ON c.product_id = p.id AND c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id AND b.status = '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' and  p.bus_Status= '3'
+        and (b.type = '1' or DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; p.end_Time)
+        <if test="projectId != null and projectId !=''">
+            AND  r.project_id = #{projectId}
+        </if>
+        <if test="busId != null and busId != ''">
+            and b.id = #{busId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and EXISTS (select id from biz_product_delivery d where p.ID = d.product_id  and
+            d.city_code in
+            <foreach collection="cityCodeList" item='cityCode' open="(" separator="," close=",">
+                #{cityCode}
+            </foreach>
+            and d.status = '1'
+            )
+        </if>
+        ORDER BY r.view_sort ASC,r.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <!--获取商品标签-->
+    <select id="getRecProductLabel" resultType="java.lang.String">
+        SELECT label from biz_product_label where product_id = #{productId} and status = '1'
+    </select>
+</mapper>

@@ -1,0 +1,12 @@
+-- tool 项目下 微信相关配置
+wechat.app.app-id: 123456
+wechat.app.secret: 123456
+wechat.h5.app-id: wx843e70ee902e3381
+wechat.h5.secret: e4ea1dc99f0ec164c08c54953c2a5903
+wechat.small.app-id: wxad16fe3be0853d77
+wechat.small.secret: 912b594f0894b76faa9a80c91b57b142
+wechat.pay.pay-sign-key: 1464f618cc374ae890ad262b431b5e66
+wechat.pay.mch-id: 1580296531
+wechat.pay.certificate-key: 1580296531
+wechat.pay.certificate-file: /opt/jmdeploy/wechat/apiclient_cert.p12
+wechat.pay.notify-url: https://api.jinmaowy.com/api/tool/wechatPay/paynotify

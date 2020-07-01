@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.pay.mapper.SettlementMapper">
+
+
+    <!--通过属性获取支付宝配置信息-->
+    <select id="selectALiByPropertyKey" parameterType="java.lang.String"  resultType="map">
+        SELECT alipay_account_no as accountNo, alipay_account_name as accountName,
+			alipay_partner as partner, alipay_key as alipayKey, rsa,ali_public_key aliPublicKey,
+			app_id appId,app_rsa2 appRsa2,app_ali_public_key appAliPublicKey
+        FROM biz_settlement_ali
+        WHERE `${property}` = #{value} and `status` = 1
+        order by create_Time desc
+        limit 1
+    </select>
+
+    <!--通过属性获取微信配置信息-->
+    <select id="selectWechatByPropertyKey" parameterType="java.lang.String"  resultType="map">
+        SELECT wechat_appid as appId, wechat_code as code, wechat_certificate as certificate,
+			wechat_fee as fee, wechat_account as account, wechat_key as wechatKey
+		FROM biz_settlement_wechat
+		WHERE `${property}` = #{value} and `status` = 1
+        order by create_Time desc
+        limit 1
+    </select>
+
+</mapper>

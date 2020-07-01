@@ -1,0 +1,28 @@
+spring:
+    profiles:
+      active: localhost
+    application:
+        name: ace-im
+
+
+# 配置swagger
+swagger:
+    enabled: true
+    base-package: com.github.wxiaoqi.security.im
+    title: ace-im
+    version: 1.0.0.SNAPSHOT
+    description: 即时通信服务
+    contact:
+        name: admin
+
+
+logging:
+    level:
+#        tk.mybatis: DEBUG
+        com.github.wxiaoqi.security.im: DEBUG
+    file: /mnt/logs/ace-im.log
+    file.max-size: 10MB
+    file.max-history : 365
+    pattern:
+      file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+      console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

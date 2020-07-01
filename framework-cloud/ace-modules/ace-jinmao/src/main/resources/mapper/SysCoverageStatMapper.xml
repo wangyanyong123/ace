@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.SysCoverageStatMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.SysCoverageStat" id="sysCoverageStatMap">
+        <result property="id" column="ID"/>
+        <result property="day" column="day"/>
+        <result property="projectCode" column="project_Code"/>
+        <result property="projectName" column="project_Name"/>
+        <result property="sumUserNum" column="sum_user_Num"/>
+        <result property="sumHouseNum" column="sum_house_Num"/>
+        <result property="addUserNum" column="add_user_Num"/>
+        <result property="addHouseNum" column="add_house_Num"/>
+        <result property="status" column="STATUS"/>
+        <result property="timeStamp" column="TIME_STAMP"/>
+        <result property="createBy" column="CREATE_BY"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="modifyBy" column="MODIFY_BY"/>
+        <result property="modifyTime" column="MODIFY_TIME"/>
+    </resultMap>
+
+    <!--查询统计数据列表-->
+    <select id="selectCoverageStatList" resultType="com.github.wxiaoqi.security.jinmao.vo.CoverageStat.CoverageStatVo">
+        select
+        DATE_FORMAT(day,'%Y-%m-%d') day,project_code projectCode,
+        project_Name projectName, sum_user_Num sumUserNum,sum_house_Num sumHouseNum,
+        add_user_Num addUserNum,add_house_Num addHouseNum
+        from
+        sys_coverage_stat
+        where status = '1'
+        <if test="dayTime !=null and dayTime != ''">
+            and DATE_FORMAT(day,'%Y-%m-%d') = #{dayTime}
+        </if>
+        order by day desc,project_code
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectCoverageStatCount" resultType="java.lang.Integer">
+        select
+        count(*)
+        from
+        sys_coverage_stat
+        where status = '1'
+        <if test="dayTime !=null and dayTime != ''">
+            and DATE_FORMAT(day,'%Y-%m-%d') = #{dayTime}
+        </if>
+    </select>
+
+    <!--查询每天覆盖率统计-->
+    <select id="selectCoverageStatByProject" resultType="com.github.wxiaoqi.security.jinmao.vo.CoverageStat.CoverageStatVo">
+        SELECT aa.project_name projectName,
+        aa.total sumUserNum,
+        cc.total sumHouseNum,
+        ifnull(bb.total,'0') addUserNum,
+        ifnull(dd.total,'0') addHouseNum
+        from (
+        SELECT cp.project_code,cp.project_name,COUNT(uh.id) total
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch on ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf on cf.floor_id = ch.floor_id
+        LEFT JOIN biz_crm_unit cu on cu.unit_id = cf.unit_id
+        LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id
+        LEFT JOIN biz_crm_block bcb on bcb.block_id = cb.block_id
+        LEFT JOIN biz_crm_project cp ON cp.project_id = bcb.project_id
+        WHERE uh.`status` = '1' AND uh.is_delete = '0'
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')&lt;=#{currTime}
+        GROUP BY cp.project_code,cp.project_name
+        ) aa LEFT JOIN
+        (SELECT cp.project_code,cp.project_name,COUNT(uh.id) total
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch on ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf on cf.floor_id = ch.floor_id
+        LEFT JOIN biz_crm_unit cu on cu.unit_id = cf.unit_id
+        LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id
+        LEFT JOIN biz_crm_block bcb on bcb.block_id = cb.block_id
+        LEFT JOIN biz_crm_project cp ON cp.project_id = bcb.project_id
+        WHERE uh.`status` = '1' AND uh.is_delete = '0'
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')>#{lastTime}
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')&lt;=#{currTime}
+        GROUP BY cp.project_code,cp.project_name) bb on aa.project_code=bb.project_code
+        LEFT JOIN
+        (SELECT b.project_code,b.project_name ,count(b.houseId) total
+        from (
+        SELECT DISTINCT uh.house_id houseId,cp.project_code,cp.project_name
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch on ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf on cf.floor_id = ch.floor_id
+        LEFT JOIN biz_crm_unit cu on cu.unit_id = cf.unit_id
+        LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id
+        LEFT JOIN biz_crm_block bcb on bcb.block_id = cb.block_id
+        LEFT JOIN biz_crm_project cp ON cp.project_id = bcb.project_id
+        WHERE uh.`status` = '1' AND uh.is_delete = '0'
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')&lt;=#{currTime}
+        ) b GROUP BY b.project_code,b.project_name) cc on aa.project_code=cc.project_code
+        LEFT JOIN
+        (SELECT b.project_code,b.project_name ,count(b.houseId) total
+        from (
+        SELECT DISTINCT uh.house_id houseId,cp.project_code,cp.project_name
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch on ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf on cf.floor_id = ch.floor_id
+        LEFT JOIN biz_crm_unit cu on cu.unit_id = cf.unit_id
+        LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id
+        LEFT JOIN biz_crm_block bcb on bcb.block_id = cb.block_id
+        LEFT JOIN biz_crm_project cp ON cp.project_id = bcb.project_id
+        WHERE uh.`status` = '1' AND uh.is_delete = '0'
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')>#{lastTime}
+        and DATE_FORMAT(uh.create_time,'%Y%m%d%H')&lt;=#{currTime}
+        ) b GROUP BY b.project_code,b.project_name) dd on aa.project_code=dd.project_code
+        where aa.project_code not in('XNCS-XNXM','XNCS-XNXM2')
+        order by aa.project_code
+    </select>
+
+</mapper>

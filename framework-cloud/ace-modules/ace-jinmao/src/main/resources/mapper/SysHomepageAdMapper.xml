@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.SysHomepageAdMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.SysHomepageAd" id="sysHomepageAdMap">
+        <result property="id" column="ID"/>
+        <result property="title" column="title"/>
+        <result property="businessType" column="business_Type"/>
+        <result property="androidImg" column="android_Img"/>
+        <result property="iosImg" column="ios_Img"/>
+        <result property="beginTime" column="begin_Time"/>
+        <result property="endTime" column="end_Time"/>
+        <result property="stopTime" column="stop_Time"/>
+        <result property="isPublish" column="is_Publish"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询app广告业列表-->
+    <select id="selectAdHomePageList" resultType="com.github.wxiaoqi.security.jinmao.vo.adHomePage.out.AdHomePageVo">
+        select
+        DISTINCT(a.id),
+        title,
+        DATE_FORMAT(begin_Time,'%Y-%m-%d %H:%i:%s') beginTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s') endTime,
+        sort,
+        is_Publish isPublish,
+        stop_Time stopTime
+        from
+        sys_homepage_ad a
+        where
+        a.status = '1'
+        <if test="isPublish != 0 ">
+            and is_Publish = #{isPublish}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            AND p.project_id = #{projectId}
+        </if>
+        ORDER BY sort ASC,a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    
+    <select id="selectAdOverdue" resultType="java.lang.String">
+        select
+        DISTINCT(id)
+        from
+        sys_homepage_ad
+        where
+        status = '1' and NOW() &gt; DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s')
+    </select>
+
+    <update id="updateAdHomeStatus">
+        update sys_homepage_ad set is_Publish = '4' where id in
+        <foreach collection="adList" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </update>
+
+    <select id="selectAdHomePageCount" resultType="java.lang.Integer">
+        select
+          count(DISTINCT(a.id))
+        from
+        sys_homepage_ad a
+        where
+        a.status = '1'
+        <if test="isPublish != 0 ">
+            and is_Publish = #{isPublish}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            AND p.project_id = #{projectId}
+        </if>
+        ORDER BY sort ASC,a.create_Time desc
+    </select>
+
+
+    <!--根据广告id查询所属项目-->
+    <select id="selectProjectNameByAdId" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        pp.project_name
+        from
+        sys_homepage_ad_project ap
+        INNER JOIN biz_crm_project pp on ap.project_id = pp.project_id and pp.status = '1'
+        where
+        ap.status = '1'
+        and ap.ad_id = #{adId}
+    </select>
+
+
+    <select id="selectAdHomePageInfo" parameterType="java.lang.String"
+       resultType="com.github.wxiaoqi.security.jinmao.vo.adHomePage.out.AdHomePageInfo">
+        select
+        id,
+        title,
+        DATE_FORMAT(begin_Time,'%Y-%m-%d %H:%i:%s') beginTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s') endTime,
+        sort,
+        android_Img androidImage,
+        ios_Img iosImage,
+        is_Publish isPublish,
+        stop_Time stopTime
+        from
+        sys_homepage_ad
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+    <select id="selectAdProjectVo" resultType="com.github.wxiaoqi.security.jinmao.vo.adHomePage.out.AdProjectInfo"
+        parameterType="java.lang.String">
+        select
+        ap.project_id id,
+        pp.project_name projectName
+        from
+        sys_homepage_ad_project ap
+        INNER JOIN biz_crm_project pp on ap.project_id = pp.project_id and pp.status = '1'
+        where
+        ap.status = '1'
+        and ap.ad_id = #{adId}
+    </select>
+
+    <delete id="delAdProjectByAdId" parameterType="java.lang.String">
+        delete from sys_homepage_ad_project where ad_id = #{id}
+    </delete>
+
+
+
+    <update id="operatingAdById">
+        UPDATE sys_homepage_ad
+        SET <if test="pStatus == 0">
+                status = #{pStatus},
+            </if>
+            <if test="pStatus == 2">
+                is_Publish = #{pStatus},
+            </if>
+            <if test="pStatus == 3">
+                is_Publish = #{pStatus},
+            </if>
+            modify_Time = NOW(), modify_By =#{userId}
+        <where>
+            status = '1'
+            and id=#{id}
+        </where>
+    </update>
+
+
+    <select id="getAppHomepageAdList" resultType="com.github.wxiaoqi.security.jinmao.vo.adHomePage.out.AdHomePageInfo">
+        SELECT DISTINCT(a.id), android_Img androidImage,
+        ios_Img iosImage, stop_Time stopTime
+        FROM sys_homepage_ad a
+        WHERE a.status = '1' AND is_Publish = '2' AND end_Time > NOW()
+        ORDER BY sort ASC, a.create_time desc
+        LIMIT #{num}
+    </select>
+
+
+</mapper>

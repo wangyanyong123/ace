@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizPlanWoRelationMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizPlanWoRelation" id="bizPlanWoRelationMap">
+        <result property="id" column="id"/>
+        <result property="woId" column="wo_id"/>
+        <result property="roomId" column="room_id"/>
+        <result property="eqId" column="eq_id"/>
+        <result property="pmpId" column="pmp_id"/>
+        <result property="isComplete" column="is_complete"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getPlanWoVoByWoId" resultType="com.github.wxiaoqi.security.api.vo.order.out.PlanWoVo">
+        SELECT ch.record_house_name recordHouseName
+        ,pwe.eq_name eqName
+        ,pwp.pmp_type pmpType
+        ,pwp.pmp_name pmpName
+        FROM biz_plan_wo_relation pwr
+        LEFT JOIN biz_crm_house ch on ch.house_id = pwr.room_id AND ch.`status` = '1'
+        LEFT JOIN biz_plan_wo_eq pwe on pwe.eq_id = pwr.eq_id
+        LEFT JOIN biz_plan_wo_pmp pwp ON pwp.pmp_id = pwr.pmp_id
+        WHERE pwr.wo_id = #{woId};
+    </select>
+
+    <select id="getPlanWoContentByWoId" resultType="com.github.wxiaoqi.security.app.vo.plan.PlanWoDetail">
+        SELECT pwr.id
+        ,pwr.wo_id woId
+        ,pwr.pmp_id pmpId
+        ,ch.record_house_code houseCode
+        ,ch.record_house_name houseName
+        ,pwe.eq_name eqName
+        ,pwp.pmp_type pmpType
+        ,pwp.pmp_name pmpName
+        ,pwr.is_complete isComplete
+        ,pwe.eq_id eqId
+        ,pwe.eq_code eqCode
+        FROM biz_plan_wo_relation pwr
+        LEFT JOIN biz_crm_house ch on ch.house_id = pwr.room_id AND ch.`status` = '1'
+        LEFT JOIN biz_plan_wo_eq pwe on pwe.eq_id = pwr.eq_id
+        LEFT JOIN biz_plan_wo_pmp pwp ON pwp.pmp_id = pwr.pmp_id
+        WHERE pwr.wo_id = #{woId};
+    </select>
+
+    <update id="updateByIds" parameterType="java.util.List">
+        update biz_plan_wo_relation set is_complete = '1',modify_By = #{userId},modify_Time = NOW()
+        where id in
+        <foreach collection="list" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </update>
+</mapper>

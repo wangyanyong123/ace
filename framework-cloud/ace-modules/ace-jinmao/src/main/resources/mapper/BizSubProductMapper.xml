@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizSubProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizSubProduct" id="bizSubProductMap">
+        <result property="id" column="id"/>
+        <result property="subId" column="sub_Id"/>
+        <result property="productId" column="product_Id"/>
+        <result property="productName" column="product_Name"/>
+        <result property="specId" column="spec_id"/>
+        <result property="specName" column="spec_name"/>
+        <result property="subNum" column="sub_num"/>
+        <result property="price" column="price"/>
+        <result property="unit" column="unit"/>
+        <result property="cost" column="cost"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="imgId" column="img_id"/>
+    </resultMap>
+
+
+    <!--查询商品销售明细列表-->
+    <select id="selectAccountDetailList" resultType="com.github.wxiaoqi.security.jinmao.vo.account.AccountDetailVo">
+        select
+        DISTINCT(bp.id),
+        product_code productCode,
+        bp.product_name productName,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        t.`name` tenantName,
+        s.price,
+        (select count(*) from biz_sub_product bsp
+         INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+         where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID)
+         and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+         and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}) sales,
+        IFNULL((select SUM(bsp.cost) from biz_sub_product bsp
+         INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+         where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID )
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}),0) orderCost
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ORDER BY publish_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+     <!--导出商品销售明细列表-->
+    <select id="selectExportAccountDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.account.AccountDetailVo">
+        select
+        DISTINCT(bp.id),
+        product_code productCode,
+        bp.product_name productName,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        CASE WHEN bp.bus_Status = '2' THEN '待审核'
+        WHEN bp.bus_Status = '3' THEN '已发布'
+        WHEN bp.bus_Status = '4' THEN '已驳回'
+        WHEN bp.bus_Status = '5' THEN '已下架'
+        END AS busStatus,
+        t.`name` tenantName,
+        s.price,
+        (select count(*) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID)
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}) sales,
+        IFNULL((select SUM(bsp.cost) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID )
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}),0) orderCost
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ORDER BY publish_time DESC
+    </select>
+
+
+
+    <select id="selectAccountDetailCount" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT bp.id,s.price,(select count(*) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID))) total
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ORDER BY publish_time DESC
+    </select>
+
+
+
+
+    <!--查询商品所属业务的销量比以及订单总金额占比-->
+    <select id="selectBusInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        select bb.bus_Name name,IFNULL(b.salesTotal,0) salesTotal,IFNULL(b.oderCostTotal,0) oderCostTotal from
+        biz_business bb
+        LEFT JOIN (
+        select a.busName name,IFNULL(sum(a.sales),0) salesTotal,IFNULL(sum(a.orderCost),0) oderCostTotal from (
+        select
+        DISTINCT(bp.id),
+        product_code productCode,
+        bp.product_name productName,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        t.`name` tenantName,
+        b.bus_Name busName,
+        s.price,
+        (select count(*) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID)
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}) sales,
+        IFNULL((select SUM(bsp.cost) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID )
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}),0) orderCost
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ) a
+        GROUP BY a.busName
+        )b on b.name=bb.bus_Name
+        where
+        bb.status = '1'
+        and bb.wo_type = '3'
+    </select>
+
+
+
+
+    <!--查询商品分类的销量比与订单总金额比-->
+    <select id="selectClassifyInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        select bc.classify_name name,IFNULL(b.salesTotal,0) salesTotal,IFNULL(b.oderCostTotal,0) oderCostTotal from
+        biz_business_classify bc
+        LEFT JOIN (
+        select a.classifyId ,sum(a.sales) salesTotal,sum(a.orderCost) oderCostTotal from (
+        select
+        DISTINCT(bp.id),
+        c.classify_id classifyId,
+        product_code productCode,
+        bp.product_name productName,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        t.`name` tenantName,
+        b.bus_Name busName,
+        s.price,
+        (select count(*) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID)
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}) sales,
+        IFNULL((select SUM(bsp.cost) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID )
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}),0) orderCost
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ) a
+        GROUP BY a.classifyId
+        )b on b.classifyId=bc.id
+        where
+        bc.status = '1'
+        and  bc.bus_status = '1'
+        and  bc.bus_id = '426fb699f74342c89212107e3883fb05'
+    </select>
+
+
+    <!--查询项目销量与订单总金额的占比-->
+    <select id="selectProjectInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        select cp.project_name name,IFNULL(b.salesTotal,0) salesTotal,IFNULL(b.oderCostTotal,0) oderCostTotal from
+        biz_crm_project cp
+        LEFT JOIN (
+        select a.projectId,sum(a.sales) salesTotal ,sum(a.orderCost) oderCostTotal from (
+        select
+        DISTINCT(bp.id),
+        pp.project_id projectId,
+        product_code productCode,
+        bp.product_name productName,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        t.`name` tenantName,
+        b.bus_Name busName,
+        s.price,
+        (select count(*) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID)
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}) sales,
+        IFNULL((select SUM(bsp.cost) from biz_sub_product bsp
+        INNER JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id
+        where bsp.status = '1' and wo.subscribe_status = '4' and (bsp.product_Id =bp.id and bsp.spec_id=s.ID )
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}),0) orderCost
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ) a
+        GROUP BY a.projectId
+        ) b on b.projectId=cp.project_id
+        where
+        cp.status = '1'
+    </select>
+
+
+    <!--查询起止时间销量与订单总金额的占比-->
+    <select id="selectTimeInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        SELECT DATE_FORMAT(temp.date,'%Y-%m-%d') name,
+        IFNULL(u.total,0) salesTotal,
+        IFNULL(u.orderCost,0) oderCostTotal
+        from(
+        SELECT
+        DATE_FORMAT(adddate(#{startTime}, numlist.id),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        adddate(#{startTime}, numlist.id) &lt; date_add(#{startTime},interval 2 month)) temp
+        LEFT JOIN
+        (
+        select a.time,count(a.id) total,sum(A.orderCost) orderCost from (
+        select
+        DISTINCT(bsp.id) id,
+        bsp.cost orderCost,
+        DATE_FORMAT(finish_wo_time,'%Y-%m-%d') time
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        left JOIN biz_sub_product bsp on (bp.ID=bsp.product_id and s.id=bsp.spec_id) and bsp.status = '1'
+        LEFT JOIN biz_subscribe_wo wo on bsp.sub_Id=wo.id  and wo.subscribe_status = '4'
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN biz_product_project pp on pp.product_id=bp.id
+        where
+        bp.status = '1'
+        and bp.bus_Status != '1'
+        and publish_time != ''
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR bp.product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.`name` LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and pp.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(finish_wo_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        ) a
+        GROUP BY a.time ) u on temp.date = u.time
+        where 1=1 and DATE_FORMAT(date,'%Y-%m%-%d') &lt;= #{endTime}
+        order by temp.date;
+    </select>
+
+
+
+
+    <!--查询商家对账列表-->
+    <select id="selectCheckAccountList" resultType="com.github.wxiaoqi.security.jinmao.vo.account.CheckAccountVo">
+        select
+        s.bill_number billNumber,
+        t.name tenantName,
+        s.balance_money balanceMoney,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        tc.account_number accountNumber,
+        s.balance_status balanceStatus
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1'
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=s.tenant_id and tc.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and s.tenant_id = #{tenantId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        ORDER BY s.bill_number DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--导出商家对账列表-->
+    <select id="selectExportCheckAccount" resultType="com.github.wxiaoqi.security.jinmao.vo.account.CheckAccountVo">
+        select
+        s.bill_number billNumber,
+        t.name tenantName,
+        s.balance_money balanceMoney,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        tc.account_number accountNumber,
+        CASE WHEN s.balance_status = '0' THEN '待确认'
+        WHEN s.balance_status = '1' THEN '待支付'
+        WHEN s.balance_status = '2' THEN '已结算'
+        END AS balanceStatus
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1'
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=s.tenant_id and tc.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and s.tenant_id = #{tenantId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        ORDER BY s.bill_number DESC
+    </select>
+
+
+    <select id="selectCheckAccountCount" resultType="java.lang.Integer">
+        select
+        count(*)
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1'
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=s.tenant_id and tc.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and s.tenant_id = #{tenantId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        ORDER BY s.bill_number DESC
+    </select>
+
+
+
+    <!--查询周期结算金额占比-->
+    <select id="selectSettlementInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        SELECT temp.date name,
+        IFNULL(u.salesTotal,0) salesTotal
+        from(
+        SELECT DATE_FORMAT(adddate(CONCAT( #{startTime},'-01'), interval numlist.id month),'%Y-%m') AS 'date' FROM
+        (
+        SELECT * from
+        (SELECT n1.i + n10.i * 10 AS id FROM biz_num n1 CROSS JOIN biz_num AS n10) a
+        where a.id &lt;=11
+        ) AS numlist
+        WHERE adddate(CONCAT( #{startTime},'-01'), interval numlist.id month) &lt;= CONCAT( #{endTime},'-01')) temp
+        left JOIN
+        (
+        select A.time,sum(A.balanceMoney) salesTotal from (
+        select
+        s.bill_number billNumber,
+        t.name tenantName,
+        s.balance_money balanceMoney,
+        DATE_FORMAT(settlement_cycle_start,'%Y-%m') time,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        tc.account_number accountNumber,
+        s.balance_status balanceStatus
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1'
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=s.tenant_id and tc.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and s.tenant_id = #{tenantId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        ORDER BY s.bill_number DESC
+        )A
+        GROUP BY A.time
+        ) u on temp.date = u.time
+        where 1=1 and temp.date &lt;= #{endTime}
+        order by temp.date;
+    </select>
+
+    <!--查询结算状态占比-->
+    <select id="selectBalanceStatusInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.account.BusInfo">
+        select temp.balanceStatus name,
+        IFNULL(u.balanceMoney,0) salesTotal
+        from(
+        select  '待确认'  balanceStatus
+        UNION
+        select  '待支付'  balanceStatus
+        UNION
+        select '已结算'  balanceStatus) temp
+        LEFT JOIN(
+        select A.balanceStatus,sum(A.balanceMoney) balanceMoney from (
+        select
+        s.bill_number billNumber,
+        t.name tenantName,
+        s.balance_money balanceMoney,
+        DATE_FORMAT(settlement_cycle_start,'%Y-%m') time,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        tc.account_number accountNumber,
+        CASE WHEN s.balance_status = '0' THEN '待确认'
+        WHEN s.balance_status = '1' THEN '待支付'
+        WHEN s.balance_status = '2' THEN '已结算'
+        END AS balanceStatus
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1'
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=s.tenant_id and tc.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and s.tenant_id = #{tenantId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        ORDER BY s.bill_number DESC
+        )A
+        GROUP BY A.balanceStatus
+        ) u on temp.balanceStatus=u.balanceStatus
+    </select>
+
+    <select id="selectReservationInfoBySubId" resultType="java.util.Map">
+        select sp.product_name productName, sp.spec_name specName, sp.sub_num subNum, sp.price, r.supplier, r.sales_way salesWay
+        from biz_sub_product sp
+        INNER JOIN biz_reservation r on sp.product_id=r.id
+        where sp.sub_id=#{subId}
+    </select>
+
+    <select id="selectProductInfoBySubId" resultType="java.util.Map">
+        select sp.product_name productName, sp.spec_name specName, sp.sub_num subNum, sp.price, p.supplier, p.sales_way salesWay
+        from biz_sub_product sp
+        INNER JOIN biz_product p on sp.product_id=p.id
+        where sp.sub_id=#{subId}
+    </select>
+
+</mapper>

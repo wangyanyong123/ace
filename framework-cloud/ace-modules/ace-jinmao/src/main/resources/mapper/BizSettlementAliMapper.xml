@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizSettlementAliMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizSettlementAli" id="bizSettlementAliMap">
+        <result property="id" column="ID"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="alipayAccountNo" column="alipay_account_no"/>
+        <result property="alipayAccountName" column="alipay_account_name"/>
+        <result property="alipayPartner" column="alipay_partner"/>
+        <result property="alipayKey" column="alipay_key"/>
+        <result property="rsa" column="rsa"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="isPayInMall" column="is_PayInMall"/>
+
+    </resultMap>
+
+    <!--根据租户id查询支付宝账号详情-->
+    <select id="selectAilInfo"
+       resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.ResultAilVo">
+        SELECT
+        id,
+        tenant_id tenantId,
+        alipay_account_no alipayAccountNo,
+        alipay_account_name alipayAccountName,
+        alipay_partner alipayPartner,
+        alipay_key alipayKey,
+        rsa,
+        ali_public_key aliPublicKey,
+        app_ali_public_key appAliPublicKey,
+        app_rsa2 appRsa,
+        app_id appId
+        FROM
+        biz_settlement_ali
+        WHERE
+        status = '1'
+        <if test="id != '1'.toString()">
+            and tenant_id = #{id}
+        </if>
+        <if test="id == '1'.toString()">
+           and is_payInMall = #{id}
+        </if>
+
+    </select>
+
+    <update id="updateByPrimarySelective" parameterType="com.github.wxiaoqi.security.jinmao.entity.BizSettlementAli" >
+        update biz_settlement_ali
+        <set >
+            <if test="id != null" >
+                ID = #{id},
+            </if>
+            <if test="alipayAccountNo != null" >
+                alipay_account_no = #{alipayAccountNo},
+            </if>
+            <if test="alipayAccountName != null" >
+                alipay_account_name = #{alipayAccountName},
+            </if>
+            <if test="alipayPartner != null" >
+                alipay_partner = #{alipayPartner},
+            </if>
+            <if test="alipayKey != null" >
+                alipay_key = #{alipayKey},
+            </if>
+            <if test="rsa != null" >
+                rsa = #{rsa},
+            </if>
+            <if test="aliPublicKey != null" >
+                ali_public_key = #{aliPublicKey},
+            </if>
+            <if test="status != null" >
+                status = #{status},
+            </if>
+            <if test="timeStamp != null" >
+                time_Stamp = #{timeStamp},
+            </if>
+            <if test="createBy != null" >
+                create_By = #{createBy},
+            </if>
+            <if test="createTime != null" >
+                create_Time = #{createTime},
+            </if>
+            <if test="modifyBy != null" >
+                modify_By = #{modifyBy},
+            </if>
+            <if test="modifyTime != null" >
+                modify_Time = #{modifyTime},
+            </if>
+        </set>
+        where tenant_id = #{tenantId}
+    </update>
+</mapper>

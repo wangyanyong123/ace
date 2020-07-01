@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizCommentMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizComment" id="bizCommentMap">
+        <result property="id" column="Id"/>
+        <result property="objectId" column="object_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="pid" column="pid"/>
+        <result property="type" column="type"/>
+        <result property="pic" column="pic"/>
+        <result property="content" column="content"/>
+        <result property="showType" column="show_type"/>
+        <result property="upNum" column="up_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询评论列表-->
+    <select id="selectCommentList" resultType="com.github.wxiaoqi.security.jinmao.vo.fosts.out.CommentVo">
+        select * from (
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '一级' type,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        '4' sort2
+        from
+        biz_comment c
+        INNER JOIN base_app_client_user u on c.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid = '-1'
+        and c.object_id = #{postsId}
+        ORDER BY c.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+        )
+        UNION
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '二级' type,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort2
+        from
+        biz_comment c
+        INNER JOIN biz_comment p on c.pid=p.id
+        INNER JOIN base_app_client_user u on c.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid != ''
+        and c.pid != '-1'
+        and c.object_id = #{postsId}
+        ORDER BY pid,c.create_Time desc
+        ) )A
+        ORDER BY A.sort desc,sort2 desc
+    </select>
+
+
+    <select id="selectCommentCount" resultType="java.lang.Integer">
+        select count(*) from (
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '一级' type,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        '4' sort2
+        from
+        biz_comment c
+        INNER JOIN base_app_client_user u on c.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid = '-1'
+        and c.object_id = #{postsId}
+        ORDER BY c.create_Time desc
+      )
+        UNION
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '二级' type,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort2
+        from
+        biz_comment c
+        INNER JOIN biz_comment p on c.pid=p.id
+        INNER JOIN base_app_client_user u on c.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid != ''
+        and c.pid != '-1'
+        and c.object_id = #{postsId}
+        ORDER BY pid,c.create_Time desc
+        ) )A
+        ORDER BY A.sort desc,sort2 desc
+    </select>
+
+
+    <!--隐藏与显示评论-->
+    <update id="updateCommentStatusById">
+        UPDATE biz_comment
+        SET
+        <if test="status == 0">
+            show_type = '0',
+        </if>
+        <if test="status == 1">
+            show_type = '1',
+        </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+</mapper>

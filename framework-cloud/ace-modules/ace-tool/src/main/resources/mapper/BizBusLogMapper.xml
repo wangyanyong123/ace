@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.log.mapper.BizBusLogMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.log.entity.BizBusLog" id="bizBusLogMap">
+        <result property="id" column="id"/>
+        <result property="busName" column="bus_name"/>
+        <result property="ip" column="ip"/>
+        <result property="opt" column="opt"/>
+        <result property="uri" column="uri"/>
+        <result property="params" column="params"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+    </resultMap>
+
+    <select id="getBusLogs" resultType="com.github.wxiaoqi.security.common.vo.log.LogInfoVo">
+        SELECT l.id ,l.bus_name busName ,l.ip,l.opt,l.uri,l.params,l.create_time createTime,l.create_by createBy,
+        CASE
+        WHEN u.id is not null THEN u.`name`
+        WHEN c.id is not null THEN c.nickname
+        WHEN s.id is not null THEN s.`name`
+        END userName,
+        CASE
+        WHEN u.id is not null THEN u.username
+        WHEN c.id is not null THEN c.mobile_phone
+        WHEN s.id is not null THEN s.mobile_phone
+        END account
+        FROM biz_bus_log l
+        LEFT JOIN base_app_client_user c ON c.id = l.create_by
+        LEFT JOIN base_app_server_user s ON s.id = l.create_by
+        LEFT JOIN base_user u ON u.id = l.create_by
+        WHERE 1=1
+        <if test="busName != null">
+            and l.bus_name =#{busName}
+        </if>
+        <if test="opt != null">
+            and l.opt =#{opt}
+        </if>
+        <if test="uri">
+            and l.uri = #{uri}
+        </if>
+        <if test="ip != null">
+            and l.ip =#{ip}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="userName != null and userName != '' ">
+            AND (
+            u.`name` = #{userName}
+            or
+            c.nickname = #{userName}
+            or
+            s.`name` = #{userName}
+            )
+        </if>
+        <if test="account != null and account != '' ">
+            AND (
+            u.username = #{account}
+            or
+            c.mobile_phone = #{account}
+            or
+            s.`mobile_phone` = #{account}
+            )
+        </if>
+        ORDER BY l.create_time DESC
+        LIMIT #{page},#{limit}
+    </select>
+    <select id="getBusLogsTotal" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM biz_bus_log l
+        LEFT JOIN base_app_client_user c ON c.id = l.create_by
+        LEFT JOIN base_app_server_user s ON s.id = l.create_by
+        LEFT JOIN base_user u ON u.id = l.create_by
+        WHERE 1=1
+        <if test="busName != null">
+            and l.bus_name =#{busName}
+        </if>
+        <if test="opt != null">
+            and l.opt =#{opt}
+        </if>
+        <if test="uri">
+            and l.uri = #{uri}
+        </if>
+        <if test="ip != null">
+            and l.ip =#{ip}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="userName != null and userName != '' ">
+            AND (
+            u.`name` = #{userName}
+            or
+            c.nickname = #{userName}
+            or
+            s.`name` = #{userName}
+            )
+        </if>
+        <if test="account != null and account != '' ">
+            AND (
+            u.username = #{account}
+            or
+            c.mobile_phone = #{account}
+            or
+            s.`mobile_phone` = #{account}
+            )
+        </if>
+    </select>
+</mapper>

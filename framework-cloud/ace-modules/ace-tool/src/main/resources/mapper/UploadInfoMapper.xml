@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.oss.mapper.UploadInfoMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.oss.entity.UploadInfo" id="uploadInfoMap">
+        <result property="id" column="id"/>
+        <result property="type" column="type"/>
+        <result property="fileType" column="file_type"/>
+        <result property="realFileName" column="real_file_name"/>
+        <result property="size" column="size"/>
+        <result property="fileName" column="file_name"/>
+        <result property="fileDesc" column="file_desc"/>
+        <result property="system" column="system"/>
+        <result property="status" column="status"/>
+        <result property="loadstatus" column="loadStatus"/>
+        <result property="natrualPath" column="natrual_path"/>
+        <result property="largePath" column="large_path"/>
+        <result property="mediumPath" column="medium_path"/>
+        <result property="thumbnailPath" column="thumbnail_path"/>
+        <result property="crtTime" column="crt_time"/>
+        <result property="crtUserId" column="crt_user_id"/>
+        <result property="updTime" column="upd_time"/>
+        <result property="updUserId" column="upd_user_id"/>
+        <result property="storageType" column="storage_type"/>
+        <result property="isMove" column="is_move"/>
+    </resultMap>
+
+</mapper>

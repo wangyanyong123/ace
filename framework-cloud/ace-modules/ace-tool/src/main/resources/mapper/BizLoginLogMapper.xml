@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.log.mapper.BizLoginLogMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.log.entity.BizLoginLog" id="bizLoginLogMap">
+        <result property="id" column="id"/>
+        <result property="logName" column="log_name"/>
+        <result property="userType" column="user_Type"/>
+        <result property="ip" column="ip"/>
+        <result property="os" column="os"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+    </resultMap>
+
+    <select id="getUserInfoById" resultType="com.github.wxiaoqi.log.vo.UserInfoVo">
+            SELECT *
+            FROM (
+            SELECT mobile_phone account,nickname name,mobile_phone phone,profile_photo photo,sex,email,DATE_FORMAT(crt_time,'%Y-%m-%d %H:%i:%s') createTime,'1' userType FROM base_app_client_user WHERE id = #{userId}
+            UNION ALL
+            SELECT mobile_phone account,`name`, mobile_phone phone,profile_photo photo,sex,email,DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') createTime,'2' userType from base_app_server_user WHERE id = #{userId}
+            UNION ALL
+            SELECT username account ,name ,mobile_phone phone,NULL photo,sex,email,DATE_FORMAT(crt_time,'%Y-%m-%d %H:%i:%s') createTime ,'3' userType FROM base_user WHERE id = #{userId}
+            ) a
+            LIMIT 1
+    </select>
+
+    <select id="getLoginLogs" resultType="com.github.wxiaoqi.security.common.vo.log.LogInfoVo">
+        SELECT l.log_name logName,l.ip,l.create_time createTime,l.create_by userId,l.user_type userType,
+        CASE
+            WHEN l.user_type = '1' THEN u.`name`
+            WHEN l.user_type = '2' THEN c.nickname
+            WHEN l.user_type = '3' THEN s.`name`
+        END userName,
+        CASE
+            WHEN l.user_type = '1' THEN u.username
+            WHEN l.user_type = '2' THEN c.mobile_phone
+            WHEN l.user_type = '3' THEN s.mobile_phone
+        END account
+        FROM biz_login_log l
+        LEFT JOIN base_app_client_user c ON c.id = l.create_by
+        LEFT JOIN base_app_server_user s ON s.id = l.create_by
+        LEFT JOIN base_user u ON u.id = l.create_by
+        WHERE 1=1
+        <if test="logName != null">
+            and l.log_name =#{logName}
+        </if>
+        <if test="userType != null">
+            and l.user_type =#{userType}
+        </if>
+        <if test="ip != null">
+            and l.ip =#{ip}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="userName != null and userName != '' ">
+            AND (
+                u.`name` = #{userName}
+                or
+                c.nickname = #{userName}
+                or
+                s.`name` = #{userName}
+            )
+        </if>
+        <if test="account != null and account != '' ">
+            AND (
+                u.username = #{account}
+                or
+                c.mobile_phone = #{account}
+                or
+                s.`mobile_phone` = #{account}
+            )
+        </if>
+        ORDER BY l.create_time DESC
+        LIMIT #{page},#{limit}
+    </select>
+
+    <select id="getLoginLogsTotal" resultType="java.lang.Integer"  >
+        SELECT count(*) FROM biz_login_log l
+        LEFT JOIN base_app_client_user c ON c.id = l.create_by
+        LEFT JOIN base_app_server_user s ON s.id = l.create_by
+        LEFT JOIN base_user u ON u.id = l.create_by
+        WHERE 1=1
+        <if test="logName != null">
+            and l.log_name =#{logName}
+        </if>
+        <if test="userType != null">
+            and l.user_type =#{userType}
+        </if>
+        <if test="ip != null">
+            and l.ip =#{ip}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(l.create_time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+        </if>
+        <if test="userName != null and userName != '' ">
+            AND (
+            u.`name` = #{userName}
+            or
+            c.nickname = #{userName}
+            or
+            s.`name` = #{userName}
+            )
+        </if>
+        <if test="account != null and account != '' ">
+            AND (
+            u.username = #{account}
+            or
+            c.mobile_phone = #{account}
+            or
+            s.`mobile_phone` = #{account}
+            )
+        </if>
+    </select>
+
+    <select id="getCertifiedUser" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        SELECT ifnull(sum(a.certifiedCount),'0') certifiedCount  from (
+        SELECT COUNT(uh.user_id) certifiedCount
+        FROM biz_user_house uh
+        LEFT JOIN biz_crm_house ch on ch.house_id = uh.house_id
+        LEFT JOIN biz_crm_floor cf on cf.floor_id = ch.floor_id
+        LEFT JOIN biz_crm_unit cu on cu.unit_id = cf.unit_id
+        LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id
+        LEFT JOIN biz_crm_block bcb on bcb.block_id = cb.block_id
+        inner JOIN biz_crm_project cp ON cp.project_id = bcb.project_id
+        WHERE uh.`status` = '1' AND uh.is_delete = '0'
+        <if test="projectId !=null and projectId != ''">
+            and cp.project_id = #{projectId}
+        </if>
+        and DATE_FORMAT(uh.create_time,'%Y-%m-%d') &lt;= #{endTime}
+        GROUP BY uh.user_id
+        ) a
+    </select>
+
+    <select id="getLivenessByYear" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        select temp.date time,IFNULL(d4.liveCount,0) liveCount from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id year),'%Y') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id year),'%Y') &lt;= date_format(#{endTime}, '%Y')) temp
+        LEFT JOIN(
+        <if test="projectId == ''">
+            SELECT b.time,SUM(b.liveCount) liveCount from (
+        </if>
+        SELECT a.countTime time,COUNT(a.userId) liveCount,a.projectName projectName from (
+        SELECT DATE_FORMAT(l.create_time,'%Y') countTime,l.create_by userId,p.project_name projectName from biz_login_log l
+        INNER JOIN biz_crm_project p on p.project_id = l.project_id
+        INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime} and u.is_auth = '1'
+        where l.os  = '2' and l.user_type = '2'
+        and DATE_FORMAT(l.create_time,'%Y-%m-%d')  BETWEEN  #{startTime} and #{endTime}
+        <if test="projectId !=null and projectId != ''">
+            and l.project_id = #{projectId}
+        </if>
+        GROUP BY l.create_by
+        ORDER BY p.project_name
+        ) a GROUP BY a.countTime,a.projectName order by a.countTime desc
+        <if test="projectId == ''">
+            ) b GROUP BY b.time  order by b.time desc
+        </if>
+        ) d4 on d4.time=temp.date
+        ORDER BY temp.date desc
+    </select>
+
+
+    <select id="getLivenessBySeason" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        <!--select temp.date year,IFNULL(d4.liveCount,0) liveCount,IFNULL(d4.time,0) time from-->
+        <!--(SELECT-->
+        <!--DATE_FORMAT(adddate(#{startTime}, interval numlist.id year),'%Y') AS 'date'-->
+        <!--FROM-->
+        <!--(-->
+        <!--SELECT-->
+        <!--n1.i + n10.i * 10 + n100.i * 100 AS id-->
+        <!--FROM-->
+        <!--biz_num n1-->
+        <!--CROSS JOIN biz_num AS n10-->
+        <!--CROSS JOIN biz_num AS n100-->
+        <!--) AS numlist-->
+        <!--WHERE-->
+        <!--DATE_FORMAT(adddate(#{startTime}, interval numlist.id year),'%Y') &lt;= date_format(#{endTime}, '%Y')) temp-->
+        <!--LEFT JOIN(-->
+        <!--SELECT-->
+        <!--CONCAT(YEAR(l.create_time),'年第',QUARTER(l.create_time),'季度') as time,-->
+        <!--count(DISTINCT(l.create_by)) count-->
+        <!--from biz_login_log l-->
+        <!--INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') <= #{endTime} and u.is_auth = '1'-->
+        <!--where l.os  = '2' and l.user_type = '2'-->
+        <!--and DATE_FORMAT(l.create_time,'%Y-%m-%d')  BETWEEN  #{startTime} and #{endTime}-->
+        <!--GROUP BY time-->
+        <!--<if test="projectId == ''">-->
+            <!--SELECT b.year,b.time,SUM(b.liveCount) liveCount from (-->
+        <!--</if>-->
+        <!--SELECT a.year,a.countTime time,COUNT(a.userId) liveCount from (-->
+        <!--SELECT DATE_FORMAT(l.create_time,'%Y') year,QUARTER(create_time) countTime,-->
+        <!--l.create_time,-->
+        <!--l.create_by userId from biz_login_log l-->
+        <!--INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime} and u.is_auth = '1'-->
+        <!--where l.os  = '2' and l.user_type = '2'-->
+        <!--and DATE_FORMAT(l.create_time,'%Y-%m-%d')  BETWEEN  #{startTime} and #{endTime}-->
+        <!--<if test="projectId !=null and projectId != ''">-->
+            <!--and l.project_id = #{projectId}-->
+        <!--</if>-->
+        <!--GROUP BY l.create_by,QUARTER(create_time)-->
+        <!--ORDER BY countTime desc-->
+        <!--) a GROUP BY a.countTime order by a.year,a.countTime desc-->
+        <!--<if test="projectId == ''">-->
+            <!--) b GROUP BY b.time  order by b.year,b.time desc-->
+        <!--</if>-->
+        <!--) d4 on d4.year=temp.date-->
+        <!--ORDER BY temp.date desc-->
+        select c.quarter time,IFNULL(b.count,0) liveCount from ((
+        select CONCAT(YEAR(a.date),'年第',QUARTER(a.date),'季度') quarter from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) a
+        GROUP BY quarter) c
+        )LEFT JOIN
+        (
+        SELECT
+        CONCAT(YEAR(l.create_time),'年第',QUARTER(l.create_time),'季度') as time,
+        count(DISTINCT(l.create_by)) count
+        from biz_login_log l
+        INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime} and u.is_auth = '1'
+        where l.os  = '2' and l.user_type = '2'
+        and DATE_FORMAT(l.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="projectId !=null and projectId != ''">
+        and l.project_id = #{projectId}
+        </if>
+        GROUP BY time
+        ) b on c.quarter=b.time order by c.quarter desc
+    </select>
+
+    <select id="getLivenessByMouth" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        select temp.date time,IFNULL(d4.liveCount,0) liveCount from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m') &lt;= date_format(#{endTime}, '%Y-%m')) temp
+        LEFT JOIN(
+            SELECT DATE_FORMAT(l.create_time,'%Y-%m') time,COUNT(DISTINCT(l.create_by)) liveCount from biz_login_log l
+            INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime} and u.is_auth = '1'
+            where l.os  = '2' and l.user_type = '2'
+            and DATE_FORMAT(l.create_time ,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+            <if test="projectId !=null and projectId != ''">
+                and l.project_id = #{projectId}
+            </if>
+            GROUP BY time
+            ORDER BY time
+        ) d4 on d4.time=temp.date
+        ORDER BY temp.date desc
+
+    </select>
+
+    <select id="getLivenessByWeek" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        select
+        case when d4.time is not null then d4.time else
+        CONCAT(date_format(from_unixtime(unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (temp.us-1)* 7 * 24 * 60 * 60 - (
+        weekday(from_unixtime( unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (temp.us-1)* 7 * 24 * 60 * 60 ) ) * 24 * 60 * 60 ) ), '%Y-%m-%d'),'~'
+        ,date_format(date_add(from_unixtime(unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (temp.us-1)* 7 * 24 * 60 * 60 - (
+        weekday(from_unixtime( unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (temp.us-1)* 7 * 24 * 60 * 60 ) ) * 24 * 60 * 60 ) ),INTERVAL 6 DAY), '%Y-%m-%d'))
+        end as time,
+        IFNULL(d4.count,0) liveCount
+        from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y年%u周') AS 'date',DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%u') AS us
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%u') &lt;= date_format(#{endTime}, '%u')
+        and DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y')  &lt;= date_format(#{endTime}, '%Y') ) temp
+        LEFT JOIN(
+        SELECT count(DISTINCT(l.create_by)) count,DATE_FORMAT(l.create_time,'%Y年%u周') as w,
+        CONCAT(date_format(from_unixtime(unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (DATE_FORMAT(l.create_time,'%u')-1)* 7 * 24 * 60 * 60 - (
+        weekday(from_unixtime( unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (DATE_FORMAT(l.create_time,'%u')-1)* 7 * 24 * 60 * 60 ) ) * 24 * 60 * 60 ) ), '%Y-%m-%d'),'~'
+        ,date_format(date_add(from_unixtime(unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (DATE_FORMAT(l.create_time,'%u')-1)* 7 * 24 * 60 * 60 - (
+        weekday(from_unixtime( unix_timestamp( MAKEDATE( YEAR ( NOW( ) ), 1 ) ) + (DATE_FORMAT(l.create_time,'%u')-1)* 7 * 24 * 60 * 60 ) ) * 24 * 60 * 60 ) ),INTERVAL 6 DAY), '%Y-%m-%d')) time
+        from biz_login_log l
+        INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime}
+        where l.os  = '2' and l.user_type = '2'
+        and DATE_FORMAT(l.create_time,'%Y-%m-%d') BETWEEN #{startTime} and #{endTime}
+        <if test="projectId !=null and projectId != ''">
+            and l.project_id = #{projectId}
+        </if>
+        GROUP BY w
+        ORDER BY w asc
+        )d4 on d4.w=temp.date
+        ORDER BY temp.date desc
+    </select>
+
+    <select id="getLivenessByDay" resultType="com.github.wxiaoqi.log.vo.liveness.UserLiveness">
+        SELECT a.countTime time,COUNT(a.userId) liveCount,a.projectName projectName from (
+        SELECT DATE_FORMAT(l.create_time,'%Y-%m-%d') countTime,l.create_by userId,p.project_name projectName from biz_login_log l
+        INNER JOIN biz_crm_project p on p.project_id = l.project_id
+        INNER JOIN base_app_client_user u on u.id = l.create_by and DATE_FORMAT(u.crt_time,'%Y-%m-%d') &lt;= #{endTime} and u.is_auth = '1'
+        where l.os  = '2' and l.user_type = '2'
+        <if test="startTime != null and startTime != ''" >
+           and  DATE_FORMAT(l.create_time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != ''" >
+           and DATE_FORMAT(l.create_time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="projectId !=null and projectId != ''">
+            and l.project_id = #{projectId}
+        </if>
+        GROUP BY countTime,l.create_by
+        ORDER BY countTime,projectName
+        ) a GROUP BY a.countTime
+        <if test="projectId !=null and projectId != ''">
+        ,a.projectName
+        </if>
+        order by a.countTime desc
+    </select>
+
+</mapper>

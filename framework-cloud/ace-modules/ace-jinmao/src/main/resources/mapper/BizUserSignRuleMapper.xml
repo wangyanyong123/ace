@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizUserSignRuleMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizUserSignRule" id="bizUserSignRuleMap">
+        <result property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="integral" column="integral"/>
+        <result property="signType" column="sign_type"/>
+        <result property="signDay" column="sign_day"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <select id="getSignList" resultType="com.github.wxiaoqi.security.jinmao.vo.sign.out.SignList">
+          SELECT id,code,integral,case sign_type when '1' then '正常签到' when '2'then '连续签到' end signType,sign_day signDay from  biz_user_sign_rule where status = '1'
+        <if test="signType !=null and signTyp !=''">
+            and sign_type = #{signType}
+        </if>
+        <if test="searchVal != null and searchVal !=''">
+            and (code like CONCAT('%',#{searchVal},'%')
+            or sign_day like CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by sign_type,sign_day asc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getSignListTotal" resultType="java.lang.Integer">
+          SELECT count(id) from  biz_user_sign_rule where status = '1'
+          <if test="signType !=null and signTyp !=''">
+              and sign_type = #{signType}
+          </if>
+          <if test="searchVal != null and searchVal !=''">
+              and (code like CONCAT('%',#{searchVal},'%')
+                or sign_day like CONCAT('%',#{searchVal},'%')
+              )
+          </if>
+    </select>
+
+    <select id="getSignType" resultType="java.lang.Integer">
+          SELECT count(1) from biz_user_sign_rule where status = '1' and sign_type = '1'
+    </select>
+
+    <select id="getSignDay" resultType="java.lang.Integer">
+        SELECT count(1) from biz_user_sign_rule where status = '1' and sign_day = #{signDay}
+    </select>
+
+    <update id="deleteById">
+         update biz_user_sign_rule set status = '0' where id = #{id}
+    </update>
+
+
+    <!--按日统计签到人数-->
+    <select id="selectStatSignByDay" resultType="com.github.wxiaoqi.security.jinmao.vo.sign.out.StatDataVo">
+        select temp.date,'日' dataType,IFNULL(d2.createTime,temp.date) createTime,IFNULL(d2.count,0) count from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select '日' dataType,
+        date_format(sign_date, '%Y-%m-%d') createTime,
+        count(user_id) count
+        from biz_user_sign_log
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(sign_date,'%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(sign_date,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        GROUP BY date_format(sign_date, '%Y-%m-%d')
+        ) d2 on d2.createTime=temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--按周统计签到数-->
+    <select id="selectStatSignByWeek" resultType="com.github.wxiaoqi.security.jinmao.vo.sign.out.StatDataVo">
+        select DISTINCT(temp.date),'周' dataType,CONCAT(date_format(temp.date, '%Y-%m-%d'),'~',date_format(date_add(temp.date,INTERVAL 1 WEEK), '%Y-%m-%d')) createTime,
+        IFNULL(sum(d3.count),0) count
+        from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select '周' dataType,
+        date_format(sign_date, '%Y-%m-%d') time,
+        CONCAT(date_format(sign_date, '%Y-%m-%d'),'-',date_format(date_add(sign_date,INTERVAL 1 WEEK), '%Y-%m-%d')) createTime,
+        count(user_id) count
+        from biz_user_sign_log
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(sign_date,'%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(sign_date,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        GROUP BY date_format(sign_date, '%Y-%m-%d')
+        ORDER BY sign_date
+        ) d3 on (d3.time >= temp.date and d3.time &lt; date_format(date_add(temp.date,INTERVAL 1 WEEK), '%Y-%m-%d'))
+        GROUP BY temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--按月统计签到数-->
+    <select id="selectStatSignByMouth" resultType="com.github.wxiaoqi.security.jinmao.vo.sign.out.StatDataVo">
+        select temp.date,'月' dataType,IFNULL(d4.createTime,temp.date) createTime,IFNULL(d4.count,0) count from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select '月' dataType,
+        date_format(sign_date, '%Y-%m') createTime,
+        count(user_id) count
+        from biz_user_sign_log
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(sign_date,'%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(sign_date,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        GROUP BY date_format(sign_date, '%Y-%m')
+        ORDER BY sign_date
+        ) d4 on d4.createTime=temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+</mapper>

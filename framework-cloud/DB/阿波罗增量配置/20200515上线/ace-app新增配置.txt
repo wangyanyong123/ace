@@ -1,0 +1,2 @@
+spring.holiday.time.begin = 2020-01-20 00:00  #春节开始时间
+spring.holiday.time.end = 2020-02-05 23:59 #春节结束时间

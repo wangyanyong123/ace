@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.pay.mapper.AccountBookMapper">
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.pay.entity.BizAccountBook" id="bizAccountBookMap">
+        <result property="id" column="ID"/>
+        <result property="subId" column="sub_id"/>
+        <result property="busType" column="bus_type"/>
+        <result property="payId" column="pay_Id"/>
+        <result property="actualId" column="actual_Id"/>
+        <result property="accountPid" column="account_pid"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="payType" column="pay_type"/>
+        <result property="payDate" column="pay_date"/>
+        <result property="appId" column="app_id"/>
+        <result property="settleAccount" column="settle_account"/>
+        <result property="actualCost" column="actual_cost"/>
+        <result property="payFailRemark" column="pay_fail_remark"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--根据实际支付id获取账单信息-->
+    <select id="selectAccountBookByActualId" parameterType="java.lang.String"  resultType="map">
+        SELECT b.pay_id payId,b.actual_Id actualId,b.account_pid accountPid,b.pay_status payStatus,
+        b.refund_status refundStatus,b.actual_cost actualCost,b.pay_type payType,b.app_id appId
+        from biz_account_book b
+        where  b.status='1' and (b.actual_Id=#{actualId} or b.account_pid=#{actualId})
+        limit 1
+    </select>
+
+
+    <select id="selectALiByByActualId" parameterType="java.lang.String"  resultType="map">
+        SELECT ali.alipay_account_no as accountNo, ali.alipay_account_name as accountName,
+          ali.alipay_partner as partner, ali.alipay_key as alipayKey, ali.rsa,ali.ali_public_key aliPublicKey
+          ,ali.app_rsa2 appRsa2,ali.app_id appId,ali.app_ali_public_key appAliPublicKey
+        from biz_account_book b
+        LEFT JOIN biz_settlement_ali ali ON ali.alipay_partner = b.settle_account AND ali.`status` = 1
+        where  b.status='1' and (b.actual_Id=#{actualId} or b.account_pid=#{actualId})
+        order by ali.create_Time desc
+        limit 1
+    </select>
+
+    <select id="getNumByOutRequestNo" resultType="java.lang.Integer">
+        SELECT count(*)
+        from biz_account_book
+        where  status='1' and out_request_no = #{outRequestNo}
+    </select>
+
+    <!-- 根据accountId更新payid -->
+    <update id="updatePayIdByActualId" parameterType="map">
+		update biz_account_book set pay_id = #{payId} where actual_Id = #{actualId}
+	</update>
+
+    <!-- 根据accountPid更新payid -->
+    <update id="updatePayIdByActualPid" parameterType="map">
+		update biz_account_book set pay_id = #{payId} where account_pid = #{actualId}
+	</update>
+
+    <update id="updateRefundStatusByActualId" parameterType="map">
+		update biz_account_book
+        <set >
+            <if test="refundStatus != null" >
+                refund_status = #{refundStatus},
+            </if>
+            <if test="refundAmount != null" >
+                refund_amount = #{refundAmount},
+            </if>
+            <if test="refundReason != null" >
+                refund_reason = #{refundReason},
+            </if>
+            <if test="refundFailReason != null" >
+                refund_fail_reason = #{refundFailReason},
+            </if>
+            <if test="outRequestNo != null" >
+                out_request_no = #{outRequestNo},
+            </if>
+        </set>
+		where actual_Id = #{actualId}
+	</update>
+
+    <!-- 根据accountId更新payid -->
+    <update id="updatePayIdAndAppIdByActualId" parameterType="map">
+		update biz_account_book set pay_id = #{payId},app_id = #{appId} where actual_Id = #{actualId}
+	</update>
+    <!-- 根据accountPid更新payid -->
+    <update id="updatePayIdAndAppIdByActualPid" parameterType="map">
+		update biz_account_book set pay_id = #{payId} ,app_id = #{appId} where account_pid = #{actualId}
+	</update>
+
+    <select id="getAccountBookStatusInfoBySubId" resultType="map">
+        SELECT
+            ab.sub_id subId,ab.pay_status payStatus,ab.actual_cost  actualCost,wo.subscribe_status subscribeStatus
+        from biz_account_book ab
+        inner join biz_subscribe_wo wo on wo.id = ab.sub_id
+        where ab.sub_id = #{subId} and ab.status = '1' and wo.status = '1' limit 1
+    </select>
+    <select id="selectByActualId" resultMap="bizAccountBookMap">
+        select
+            `ID`, `sub_id`, `bus_type`, `pay_Id`, `actual_Id`, `account_pid`, `pay_status`, `pay_type`,
+            `pay_date`, `app_id`, `settle_account`, `pay_fail_remark`, `actual_cost`, `refund_status`,
+             `refund_amount`, `refund_fail_reason`, `refund_reason`, `out_request_no`
+         from biz_account_book
+         where (actual_Id = #{actualId} or account_pid= #{actualId}) and status = '1' limit 1
+    </select>
+    <select id="selectBySubId" resultMap="bizAccountBookMap">
+        select
+            ID,sub_id,bus_type,actual_Id,account_pid,actual_cost,pay_status,pay_type,pay_date,app_id,settle_account,`status`
+         from biz_account_book
+         where sub_id = #{subId} and status = '1' limit 1
+    </select>
+
+    <select id="getActualCostByActualId" resultType="bigDecimal">
+        select SUM(IFNULL(actual_cost,0)) from biz_account_book
+         where (actual_Id = #{actualId} or account_pid = #{actualId})  and status = '1'
+    </select>
+    <select id="getBusTypeByActualId" resultType="int">
+        select bus_type from biz_account_book where (actual_Id = #{actualId} or account_pid = #{actualId}) limit 1
+    </select>
+</mapper>

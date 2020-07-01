@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizSensitiveWordsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizSensitiveWords" id="bizSensitiveWordsMap">
+        <result property="id" column="Id"/>
+        <result property="words" column="words"/>
+        <result property="sensitiveStatus" column="sensitive_Status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询敏感词列表-->
+    <select id="selectSensitiveList" resultType="com.github.wxiaoqi.security.jinmao.vo.sensitive.out.SensitiveVo">
+        select
+        id,
+        words,
+        CASE WHEN sensitive_Status = '1' THEN '已启用'
+        WHEN sensitive_Status = '2' THEN '已禁用'
+        END AS sensitiveStatus,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_sensitive_words
+        where
+        status = '1'
+        <if test="sensitiveStatus != 0 ">
+            and sensitive_Status = #{sensitiveStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND words LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectAllSensitive" resultType="java.lang.String">
+        select
+        words
+        from
+        biz_sensitive_words
+        where
+        status = '1'
+    </select>
+
+
+
+    <select id="selectSensitiveCount" resultType="java.lang.Integer">
+        select
+        count(*)
+        from
+        biz_sensitive_words
+        where
+        status = '1'
+        <if test="sensitiveStatus != 0 ">
+            and sensitive_Status = #{sensitiveStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND words LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY create_Time DESC
+    </select>
+
+
+    <select id="selectExportSensitiveList" resultType="com.github.wxiaoqi.security.jinmao.vo.sensitive.out.SensitiveVo">
+        select
+        id,
+        words,
+        CASE WHEN sensitive_Status = '1' THEN '已启用'
+        WHEN sensitive_Status = '2' THEN '已禁用'
+        END AS sensitiveStatus,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_sensitive_words
+        where
+        status = '1'
+        <if test="sensitiveStatus != 0 ">
+            and sensitive_Status = #{sensitiveStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND words LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY create_Time DESC
+    </select>
+
+    <!--查询敏感词详情-->
+    <select id="selectSensitiveInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.sensitive.in.SaveSensitiveParam">
+        select
+        id,
+        words
+        from
+        biz_sensitive_words
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--敏感词操作(0-删除,1-已启用,2-禁用)-->
+    <update id="updateSensitiveStatus">
+        UPDATE biz_sensitive_words
+        SET
+        <if test="status == 0">
+            status = '0',
+        </if>
+        <if test="status != 0">
+            sensitive_Status = #{status},
+        </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+</mapper>

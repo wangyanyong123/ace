@@ -1,0 +1,743 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProduct" id="bizProductMap">
+        <result property="id" column="ID"/>
+        <result property="companyId" column="company_id"/>
+        <result property="productCode" column="product_code"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="productSummary" column="product_summary"/>
+        <result property="productAfterSale" column="product_after_sale"/>
+        <result property="productImagetextInfo" column="product_imagetext_info"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="price" column="price"/>
+        <result property="unit" column="unit"/>
+        <result property="sales" column="sales"/>
+        <result property="likeNum" column="like_Num"/>
+        <result property="busStatus" column="bus_Status"/>
+        <result property="priceDesc" column="price_desc"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="applyTime" column="apply_time"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+
+        <result property="tenantName" column="name"/>
+
+    </resultMap>
+
+    <!--判断登录的用户是否是系统平台-->
+    <select id="selectSystemByTenantId" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        tenant_type type
+        from
+        base_tenant
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--查询商品列表-->
+    <select id="selectProductList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductVo">
+        select
+        DISTINCT(bp.id),
+        product_code productCode,
+        product_name productName,
+        IFNULL(DATE_FORMAT(apply_time,'%Y-%m-%d %H:%i:%s'),'') applyTime,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        b.bus_Name busName,
+        sales
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        where
+        bp.status = '1'
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="busStatus != 0 ">
+            and bp.bus_Status = #{busStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR b.bus_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询可选秒杀商品列表-->
+    <select id="selectSpikeProductList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductVo">
+        select  DISTINCT(p.ID) id ,p.product_name productName,p.product_code productCode,t.name tenantName from biz_product p
+        LEFT JOIN base_tenant t on p.company_id = t.id
+        left JOIN biz_product_classify c on p.ID = c.product_id
+        where p.status='1' and p.bus_Status ='3' and c.bus_id not in('3cd8f1aa29924399ae1bbbb038a81b48','740de8de61a04bcb8864d49cf954d283')
+        <if test="type != 3 ">
+            and p.company_id = #{tenantId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY p.create_Time DESC
+
+    </select>
+
+    <!--查询已选的秒杀商品-->
+    <select id="selectSpikeByid" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultSpike">
+      select p.ID id, p.product_name productName From biz_product b
+      LEFT JOIN biz_product p on p.id=b.product_id
+      where b.ID = #{id}
+    </select>
+
+
+    <!--查询商品数量-->
+    <select id="selectProductCount" resultType="java.lang.Integer">
+        select
+         count(DISTINCT(bp.id)) total
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        INNER JOIN biz_product_spec s on bp.id = s.product_id and s.status = '1'
+        where
+        bp.status = '1'
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="busStatus != 0 ">
+            and bp.bus_Status = #{busStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR b.bus_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+    </select>
+
+
+    <!--查询商品详情-->
+    <select id="selectProductInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductInfoVo">
+          select
+        DISTINCT(bp.id),
+        product_name productName,
+        c.bus_id busId,
+        b.bus_Name busName,
+        b.type busType,
+        product_image productImage,
+        bp.selection_image selectionImage,
+        product_summary productSummary,
+        product_after_sale productAfterSale,
+        product_imagetext_info productImagetextInfo,
+        IFNULL(product_Num,0) productNum,
+        IFNULL(groupbuy_Num,0) groupbuyNum,
+        bp.limit_Num limitNum,
+        bp.supplier,
+        bp.sales_way salesWay,
+        product_Num productNums,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <!--根据商品id查询业务状态-->
+    <select id="selectBusStatusById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        bus_Status busStatus
+        from
+        biz_product
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+   <!--申请上架,业务状态为待审核-->
+    <update id="updateAuditStatus">
+        UPDATE biz_product
+        SET bus_Status = '2',
+  	         apply_time = NOW(),
+  	         audit_time = NOW(),
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--下架,业务状态为已下架-->
+    <update id="updateSoldStatus">
+        UPDATE biz_product
+        SET bus_Status = '5',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+
+    <!--上架,业务状态为已发布-->
+    <update id="updatePutawayStatus">
+        UPDATE biz_product
+        SET bus_Status = '3',
+             publish_time= NOW(),
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--驳回,业务状态为已驳回-->
+    <update id="updateRejectStatus">
+        UPDATE biz_product
+        SET bus_Status = '4',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+
+    <!---查询业务列表-->
+    <select id="selectProductBusinessList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductBusinessVo">
+        select
+        id,
+        bus_Code busCode,
+        bus_Name busName
+        from
+        biz_business
+        where
+        status = '1'
+        and create_type = '2'
+    </select>
+
+    <!--查询商品分类列表-->
+    <select id="selectProductClassifyList" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultClassifyVo">
+        select
+        c.id classifyId,
+        classify_name classifyName
+        from
+        biz_business_classify c
+        INNER JOIN biz_business b on b.id=c.bus_id and b.status = '1'
+        where
+        c.status = '1'
+        and b.create_type = '2'
+        and c.bus_Status = '1'
+        and c.bus_id = #{busId}
+        order by c.view_sort
+    </select>
+    
+
+    <!--根据商户id查询商户下的项目列表-->
+    <select id="selectTenantProjectList" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProjectVo">
+        SELECT DISTINCT(p.project_id) projectId,p.project_name projectName from biz_crm_project p
+        INNER JOIN base_tenant_project tp on tp.project_id = p.project_id and tp.status='1'
+        INNER JOIN base_tenant t on t.id = tp.tenant_id and t.status = '1' and t.tenant_type = '2'
+        where p.status = '1'
+        <if test="type != 3">
+          and t.id = #{id}
+        </if>
+    </select>
+
+
+    <!--根据商户id查询商户下的业务列表-->
+    <select id="selectTenantBusinessList"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductBusinessVo">
+        select
+        DISTINCT(b.bus_id) id,
+        bb.bus_Code busCode,
+        bb.bus_Name busName,
+        bb.type
+        from
+        base_tenant t
+        INNER JOIN base_tenant_business b on t.id = b.tenant_id and b.status = '1'
+        INNER JOIN biz_business bb on bb.id = b.bus_id and bb.status = '1' and bb.wo_type = '3'
+        where
+        t.status = '1'
+        and bb.create_type = '2'
+        and (t.tenant_type = '2' or t.tenant_type = '3')
+        <if test="type != 3 ">
+            and t.id = #{id}
+        </if>
+    </select>
+
+
+
+    <!--查询商品审核列表-->
+    <select id="selectProductAuditList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultProductAuditVo">
+        select
+        DISTINCT(bp.id),
+        product_code productCode,
+        product_name productName,
+        IFNULL(DATE_FORMAT(apply_time,'%Y-%m-%d %H:%i:%s'),'') applyTime,
+        IFNULL(DATE_FORMAT(publish_time,'%Y-%m-%d %H:%i:%s'),'') publishTime,
+        bp.bus_Status busStatus,
+        bp.sales,
+        bp.original_price originalPrice,
+        bp.price,
+        bp.unit,
+        b.bus_Name busName,
+        t.name
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type = '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business b on b.id = c.bus_id
+        where
+        bp.status = '1'
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="busStatus != 0 ">
+            and bp.bus_Status = #{busStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id LIKE CONCAT('%',#{classifyId},'%')
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询商品审核列表数量-->
+    <select id="selectProductAuditCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(bp.id)) total
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type = '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        where
+        bp.status = '1'
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="busStatus != 0 ">
+            and bp.bus_Status = #{busStatus}
+        </if>
+        <if test="classifyId != null and classifyId != '' ">
+            and c.classify_id LIKE CONCAT('%',#{classifyId},'%')
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+    </select>
+
+
+    <!--查询团购活动列表-->
+    <select id="selectGroupActiveList" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultGroupActiveVo">
+        select
+        bp.id,
+        product_code productCode,
+        product_name productName,
+        bp.sales,
+        product_Num productNum,
+        groupbuy_Num groupbuyNum,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        t.name,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.end_Time and bp.is_group_flag = '1' THEN '3'
+		WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.end_Time THEN '2'
+		WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.end_Time THEN '5'
+        END AS productStatus
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type = '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.id = #{groupId}
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        <if test="productStatus == 1 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time
+        </if>
+        <if test="productStatus == 2 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.end_Time
+        </if>
+        <if test="productStatus == 3 ">
+            and bp.sales &gt;= bp.groupbuy_Num
+        </if>
+        <if test="productStatus == 5 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.end_Time
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询团购活动数量-->
+    <select id="selectGroupActiveCount" resultType="java.lang.Integer">
+        select
+        count(*) total
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type = '3') and (t.enable_status = '1' or t.enable_status is null)
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        <if test="type != 3 ">
+            and bp.tenant_id = #{tenantId}
+        </if>
+        and b.id = #{groupId}
+        <if test="productStatus == 1 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d') &lt; bp.beg_Time
+        </if>
+        <if test="productStatus == 2 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.end_Time
+        </if>
+        <if test="productStatus == 3 ">
+            and bp.sales &gt;= bp.groupbuy_Num
+        </if>
+        <if test="productStatus == 5 ">
+            and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.end_Time
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            product_code LIKE CONCAT('%',#{searchVal},'%')
+            OR product_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY bp.create_Time DESC
+    </select>
+
+    <!--查询团购活动详情-->
+    <select id="selectGroupAcidtiveInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultGroupActiveInfoVo">
+        select
+        bp.id,
+        product_name productName,
+        bp.sales,
+        product_Num productNum,
+        groupbuy_Num groupbuyNum,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        bp.original_price originalPrice,
+        bp.price,
+        t.name,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+		WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.end_Time THEN '2'
+		WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.end_Time THEN '5'
+        WHEN bp.is_group_flag = '1' THEN '3'
+        END AS productStatus
+        from
+        biz_product bp
+        INNER JOIN base_tenant t on bp.company_id=t.id and t.status = '1' and (t.tenant_type = '2' or t.tenant_type = '3') and (t.enable_status = '1' or t.enable_status is null)
+        where
+        bp.status = '1'
+        and bp.id = #{id}
+    </select>
+
+    <!--查询该商品所下订单列表-->
+    <select id="selectOrderListById"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultOrderList">
+        select
+        w.`code` orderNo,
+        s.contact_name customerName,
+        s.contact_tel customerTel,
+        s.delivery_addr customerAddress,
+        CASE WHEN b.pay_type='1' THEN '支付宝'
+        WHEN b.pay_type='2' THEN '微信'
+        ELSE '其它'
+        END AS payMent,
+        s.actual_cost actualPrice,
+        p.sub_num buyNum,
+        w.subscribe_status orderStatus,
+        '1' orderType
+        from
+        biz_sub_product p
+        INNER JOIN biz_subscribe s on p.sub_Id=s.id and s.status = '1'
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on p.sub_Id=b.sub_id and b.status = '1'
+        INNER JOIN biz_product_classify c on p.product_Id =c.product_id and c.status = '1'
+        INNER JOIN biz_business bb on c.bus_id = bb.id and bb.status ='1'
+        where
+        p.status = '1'
+        and w.bus_name = bb.bus_Name
+        and w.group_status in ('1','2')
+        and bb.id = #{groupId}
+        and p.product_Id = #{id}
+        order by  w.create_Time desc
+    </select>
+
+    <select id="selectOrderCount" resultType="java.lang.Integer">
+        select
+        COUNT(*)
+        from
+        biz_sub_product p
+        INNER JOIN biz_subscribe s on p.sub_Id=s.id and s.status = '1'
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on p.sub_Id=b.sub_id and b.status = '1'
+        INNER JOIN biz_product_classify c on p.product_Id =c.product_id and c.status = '1'
+        INNER JOIN biz_business bb on c.bus_id = bb.id and bb.status ='1'
+        where
+        p.status = '1'
+        and w.bus_name = bb.bus_Name
+        and w.group_status in ('1','2')
+        and bb.id = #{groupId}
+        and p.product_Id = #{id}
+        order by  w.create_Time desc
+    </select>
+
+    <select id="getProductListByBusId" resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultRecommendInfo">
+
+        SELECT
+        productId,
+        id,
+        num,
+        busName,
+        busType,
+        productName,
+        productCode,
+        tenantName FROM (
+        (SELECT
+        DISTINCT(p.id) productId,
+        b.id,
+        b.bus_Code+0 num,
+        b.bus_name busName,
+        b.type busType,
+        p.product_name productName,
+        p.product_code productCode,
+        t.name tenantName
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3' AND p.is_group_flag = '0'
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            or b.bus_name LIKE CONCAT('%',#{searchVal},'%')
+            or t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY num asc,busName asc,p.create_time desc )
+        union(
+        SELECT
+        DISTINCT(p.id) productId,
+        b.id,
+        b.bus_Code+0 num,
+        b.bus_name busName,
+        b.type busType,
+        p.product_name productName,
+        p.product_code productCode,
+        t.name tenantName
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3'  AND  p.end_Time &gt; NOW()
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            or b.bus_name LIKE CONCAT('%',#{searchVal},'%')
+            or t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY num asc,busName asc,p.create_time desc )
+        )A
+        ORDER BY A.num asc ,A.busName asc
+        <if test="page != null and limit !=''">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectProjectById" parameterType="java.lang.String" resultType="java.lang.String">
+        select p.project_id from base_tenant t
+        INNER JOIN base_tenant_project p on t.id =p.tenant_id
+        where
+        t.status = '1'
+        and t.tenant_type = '1'
+        and t.id = #{tenantId}
+    </select>
+
+
+    <select id="getProductListCount" resultType="java.lang.Integer">
+        SELECT
+			total
+        FROM (
+        (SELECT
+        COUNT(DISTINCT(p.id)) total
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3' AND p.is_group_flag = '0'
+				 )
+        union(
+        SELECT
+        COUNT(DISTINCT(p.id)) total
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3'  AND  p.end_Time > NOW()
+				)
+        )A
+    </select>
+
+    <select id="getProductForAD" resultType="com.github.wxiaoqi.security.jinmao.vo.ProductRecommend.OutputParam.ResultRecommendInfo">
+        SELECT
+        productId,
+        id,
+        num,
+        busName,
+        busType,
+        productName,
+        productCode,
+        tenantName FROM (
+        (SELECT
+        DISTINCT(p.id) productId,
+        b.id,
+        b.bus_Code+0 num,
+        b.bus_name busName,
+        b.type busType,
+        p.product_name productName,
+        p.product_code productCode,
+        t.name tenantName
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        <if test="type == '1'.toString()">
+            and b.type = '1' and b.wo_type = '3'
+        </if>
+        <if test="type == '2'.toString()">
+            and b.type = '2'
+            and p.end_Time > NOW()
+        </if>
+        <if test="type == '4'.toString()">
+            and b.type = '4'
+            and p.end_Time > NOW()
+        </if>
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3' AND p.is_group_flag = '0'
+        and pp.project_id in
+        <foreach collection="projectIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            or b.bus_name LIKE CONCAT('%',#{searchVal},'%')
+            or t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY num asc,busName asc,p.create_time desc )
+        union(
+        SELECT
+        DISTINCT(p.id) productId,
+        b.id,
+        b.bus_Code+0 num,
+        b.bus_name busName,
+        b.type busType,
+        p.product_name productName,
+        p.product_code productCode,
+        t.name tenantName
+        FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on p.id = c.product_id AND  c.status = '1'
+        INNER JOIN biz_business b on b.id = c.bus_id and b.status= '1'
+        <if test="type == '1'.toString()">
+            and b.type = '1' and b.wo_type = '3'
+        </if>
+        <if test="type == '2'.toString()">
+            and b.type = '2'
+            and p.end_Time > NOW()
+        </if>
+        <if test="type == '4'.toString()">
+            and b.type = '4'
+            and p.end_Time > NOW()
+        </if>
+        INNER JOIN base_tenant t ON p.tenant_id = t.id AND t.status = '1' AND t.tenant_type = '2'
+        WHERE
+        p.status = '1' AND  p.bus_status = '3'
+        and pp.project_id in
+        <foreach collection="projectIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            or b.bus_name LIKE CONCAT('%',#{searchVal},'%')
+            or t.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY num asc,busName asc,p.create_time desc )
+        )A
+        ORDER BY A.num asc ,A.busName asc
+        <if test="page != null and limit !=''">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+</mapper>

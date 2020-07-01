@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.merchant.mapper.BaseAppServerUserMapper">
+
+    <select id="isHasSupervision" resultType="java.lang.Integer">
+      SELECT COUNT(*) FROM base_property_service_skills WHERE skill_code = 'JN_020003' AND app_server_id = #{userId} AND `status` = '1';
+    </select>
+
+    <select id="selectCompanyNameById" resultType="java.lang.String" parameterType="java.lang.String">
+        select
+        t.name companyName
+        from
+        base_app_server_user u
+        LEFT JOIN base_tenant t on t.id=u.tenant_id and t.status='1'
+        where
+        u.status = '1'
+        and u.id = #{userId}
+    </select>
+
+</mapper>

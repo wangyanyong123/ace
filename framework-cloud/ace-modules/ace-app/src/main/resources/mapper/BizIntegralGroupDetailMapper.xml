@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizIntegralGroupDetailMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizIntegralGroupDetail" id="bizIntegralGroupDetailMap">
+        <result property="id" column="id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="ruleId" column="rule_id"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="creditsValue" column="credits_value"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="selectGroupIntegralById" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        credits_value creditsValue
+        from
+        biz_group
+        where
+        status = '1'
+        and id =#{groupId}
+    </select>
+
+    <!--查询帖子浏览量-->
+    <select id="selectPostsViewNum" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.integral.PostsViewInfo">
+        select
+        p.id postsId,
+        r.view_num num
+        from
+        biz_group g
+        INNER JOIN biz_forum_posts p on g.id=p.group_id and p.status = '1' and p.show_type = '1'
+        INNER JOIN biz_content_reader r on p.id=r.content_id and r.status = '1'
+        where
+        g.status = '1'
+        and g.id = #{groupId}
+    </select>
+
+    <!--查询小组明细-->
+    <select id="selectRuleInfoByGroupId" resultType="java.lang.String">
+        select
+        SUM(credits_value) creditsValue
+        from
+        biz_integral_group_detail
+        where
+        status = '1'
+        and group_id = #{groupId}
+        and rule_id = #{ruleId}
+        <if test="objectId != null and objectId != '' ">
+            and object_id = #{objectId}
+        </if>
+        <if test="createTime != null and createTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d') LIKE CONCAT('%',#{createTime},'%')
+        </if>
+    </select>
+
+    <!--查询帖子评论量-->
+    <select id="selectPostsCommentNum" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.integral.PostsViewInfo">
+        select
+        p.id postsId,
+        count(c.id) num
+        from
+        biz_group g
+        INNER JOIN biz_forum_posts p on g.id=p.group_id and p.status = '1' and p.show_type = '1'
+        INNER JOIN biz_comment c on p.id=c.object_id and c.status = '1' and c.show_type = '1'
+        where
+        g.status = '1'
+        and g.id = #{groupId}
+    </select>
+
+    <select id="selectProjectByGroupId" parameterType="java.lang.String" resultType="java.lang.String">
+         select project_id from biz_group where status = '1' and id = #{groupId}
+    </select>
+
+    <!--判断用户在小组是否打卡-->
+    <select id="selectIsSignByUser" resultType="java.lang.Integer">
+        select
+        count(id)
+        from
+        biz_group_sign_log
+        where
+        status ='1'
+        and sign_date = CURRENT_DATE()
+        and user_id = #{userId}
+        and group_id = #{groupId}
+    </select>
+
+    <!--判断用户在小组是否发帖-->
+    <select id="selectIsPostsByUser" resultType="java.lang.Integer">
+        select
+        count(id)
+        from
+        biz_forum_posts
+        where
+        status ='1'
+        and user_id = #{userId}
+        and group_id = #{groupId}
+    </select>
+
+</mapper>

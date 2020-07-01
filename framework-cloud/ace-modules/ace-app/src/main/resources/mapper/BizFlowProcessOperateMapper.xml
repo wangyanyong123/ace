@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizFlowProcessOperateMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizFlowProcessOperate" id="bizFlowProcessOperateMap">
+        <result property="id" column="ID"/>
+        <result property="flowId" column="flow_Id"/>
+        <result property="processId" column="process_Id"/>
+        <result property="operateCode" column="operate_Code"/>
+        <result property="operateName" column="operate_Name"/>
+        <result property="viewSort" column="view_Sort"/>
+        <result property="succNextStep" column="succ_next_step"/>
+        <result property="succTips" column="succ_tips"/>
+        <result property="beforeService" column="before_service"/>
+        <result property="currService" column="curr_service"/>
+        <result property="afterService" column="after_service"/>
+        <result property="exceptionService" column="exception_service"/>
+        <result property="nowWoStatus" column="now_wo_status"/>
+        <result property="nextWoStatus" column="next_wo_status"/>
+        <result property="nowSubStatus" column="now_sub_status"/>
+        <result property="nextSubStatus" column="next_sub_status"/>
+        <result property="nextOperateId" column="next_operate_id"/>
+        <result property="createFlag" column="create_flag"/>
+        <result property="buttonColour" column="button_colour"/>
+        <result property="buttonType" column="button_type"/>
+        <result property="description" column="description"/>
+        <result property="operateType" column="operate_type"/>
+        <result property="showFlag" column="show_flag"/>
+        <result property="translogStepName" column="translog_step_name"/>
+        <result property="translogStepDesc" column="translog_step_desc"/>
+        <result property="isRecordTranslog" column="is_record_translog"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <sql id="Base_Column_List" >
+        ID, flow_Id, process_Id, operate_Code, operate_Name, view_Sort, succ_next_step,
+        succ_tips, before_service, curr_service, after_service, exception_service, now_wo_status,next_wo_status,
+        now_sub_status, next_sub_status, next_operate_id, create_flag, button_colour, button_type,
+        description,operate_type,translog_step_name, translog_step_desc, is_record_translog, operate_type,
+        show_flag
+    </sql>
+
+    <select id="selectOperateList" resultMap="bizFlowProcessOperateMap" parameterType="Map" >
+        select
+        <include refid="Base_Column_List" />
+        from biz_flow_process_operate
+        where status='1'
+        <if test="id != null" >
+            AND id=#{id}
+        </if>
+        order by flow_Id,process_Id,view_Sort desc
+    </select>
+
+    <select id="getOperateIdByIdAndOperateType" resultType="map" parameterType="java.lang.String" >
+        select c.id operateId ,c.process_id processId
+        from biz_subscribe_wo a
+        inner join biz_flow_process b on a.flow_id=b.flow_id and b.status='1'
+        inner join biz_flow_process_operate c on  a.flow_id=c.flow_id and b.id=c.process_Id and c.status='1'
+        where a.id=#{id}
+        and c.operate_type=#{operateType}
+        and a.status='1'
+        limit 1
+    </select>
+
+</mapper>

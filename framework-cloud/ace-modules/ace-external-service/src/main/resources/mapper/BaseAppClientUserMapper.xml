@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.external.mapper.BaseAppClientUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.external.entity.BaseAppClientUser" id="baseAppClientUserMap">
+        <result property="id" column="id"/>
+        <result property="mobilePhone" column="mobile_phone"/>
+        <result property="password" column="password"/>
+        <result property="profilePhoto" column="profile_photo"/>
+        <result property="nickname" column="nickname"/>
+        <result property="name" column="name"/>
+        <result property="birthday" column="birthday"/>
+        <result property="email" column="email"/>
+        <result property="sex" column="sex"/>
+        <result property="type" column="type"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="isAuth" column="is_auth"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="status" column="status"/>
+        <result property="crtTime" column="crt_time"/>
+        <result property="updTime" column="upd_time"/>
+        <result property="crmUserId" column="crm_user_id"/>
+        <result property="isSignService" column="is_sign_service"/>
+        <result property="registOs" column="regist_os"/>
+        <result property="memberId" column="memberId"/>
+    </resultMap>
+
+    <select id="selectUserIdByTel" parameterType="java.lang.String" resultType="java.lang.String">
+        select id from base_app_client_user where status ='1' and mobile_phone =#{tel} and is_deleted = '1'
+    </select>
+
+    <update id="insertContentMsgByCode">
+        update
+        sys_msg_templet
+        set  title = #{content},
+             templet_content = #{content},
+             modify_by = #{userId},
+             modify_time = now()
+        where
+        status = '1' and templet_code =#{code}
+    </update>
+</mapper>

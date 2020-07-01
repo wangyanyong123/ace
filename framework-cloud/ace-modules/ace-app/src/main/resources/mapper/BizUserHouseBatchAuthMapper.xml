@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserHouseBatchAuthMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserHouseBatchAuth" id="bizUserHouseBatchAuthMap">
+        <result property="id" column="id"/>
+        <result property="phone" column="phone"/>
+        <result property="name" column="name"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="houseCode" column="house_code"/>
+        <result property="isSend" column="is_send"/>
+        <result property="isSuc" column="is_suc"/>
+        <result property="authResult" column="auth_result"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getUserHoseInfos" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserHoseInfo">
+        SELECT ba.id id,ba.house_code houseCode,ba.`name` userName,cu.id userId,cp.project_id projectId
+        FROM biz_user_house_batch_auth ba
+        LEFT JOIN base_app_client_user cu ON ba.phone = cu.mobile_phone AND cu.`status` = '1'
+        LEFT JOIN biz_crm_project cp ON cp.project_code = ba.project_code AND cp.`status` = '1'
+        WHERE ba.`status` = '1' AND ba.is_send = '0' AND cu.id is not null
+    </select>
+
+</mapper>

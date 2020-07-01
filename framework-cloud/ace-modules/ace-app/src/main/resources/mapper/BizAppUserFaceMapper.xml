@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizAppUserFaceMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizAppUserFace" id="bizAppUserFaceMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="facePhoto" column="face_photo"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getFaceInfoByUserId" resultType="com.github.wxiaoqi.security.app.vo.face.FaceInfoVo">
+        SELECT
+        user_id userId,
+        face_photo photo
+        FROM biz_app_user_face
+        WHERE user_id = #{userId} and status = '1'
+        ORDER BY create_Time desc
+        LIMIT 1
+    </select>
+
+    <update id="deleteFaceInfo">
+        UPDATE biz_app_user_face
+        set status = '0'
+        WHERE user_id = #{userId}
+    </update>
+
+
+    <select id="queryFaceUserInfo" resultType="com.github.wxiaoqi.security.app.vo.face.SyncCrmFaceVo">
+        SELECT
+            bur.house_id houseID,
+            bch.record_house_code housecode,
+            CASE bur.identity_type
+        WHEN 1 THEN
+            '家属'
+        WHEN 2 THEN
+            '租客'
+        ELSE
+            '业主'
+        END relationship
+        FROM
+            biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id
+        AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id
+        AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id
+        AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id
+        AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id
+        AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id
+        AND bcp.`status` = '1'
+        WHERE
+            bur.user_id = #{userId}
+        AND bur.`status` = '1'
+        AND bur.is_delete = '0'
+        AND bcp.project_id = #{projectId}
+    </select>
+
+    <select id="syncHistoryFaceToCrm" resultType="com.github.wxiaoqi.security.app.vo.face.SyncCrmFaceVo">
+        SELECT
+            f.face_photo photoUrl,
+            h.house_id houseID,
+            h.record_house_code housecode,
+            u.nickname NAME,
+            u.mobile_phone phoneNumber,
+            CASE h.identity_type
+        WHEN 1 THEN
+            '家属'
+        WHEN 2 THEN
+            '租客'
+        ELSE
+            '业主'
+        END relationship
+        FROM
+            biz_app_user_face f
+        INNER JOIN biz_user_house h ON f.user_id = h.user_id
+        AND h.`status` = 1
+        AND h.is_delete = '0'
+        INNER JOIN biz_crm_house ch ON h.house_id = ch.house_id
+        AND ch.`status` = 1
+        LEFT JOIN base_app_client_user u ON h.user_id = u.id
+        AND u.`status` = 1
+       WHERE
+            f.`status` = 1
+        GROUP BY
+            h.user_id,
+            h.house_id
+        ORDER BY f.create_Time
+        LIMIT #{startIndex},#{limit}
+    </select>
+</mapper>

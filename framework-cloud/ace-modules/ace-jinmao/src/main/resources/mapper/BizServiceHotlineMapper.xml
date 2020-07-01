@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizServiceHotlineMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizServiceHotline" id="bizServiceHotlineMap">
+        <result property="id" column="ID"/>
+        <result property="projectId" column="project_id"/>
+        <result property="title" column="title"/>
+        <result property="name" column="name"/>
+        <result property="hotline" column="hotline"/>
+        <result property="sort" column="sort"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询服务热线列表-->
+    <select id="selectHotlineList" resultType="com.github.wxiaoqi.security.jinmao.vo.Hotline.OutParam.ResultHotlineVo">
+        select
+        DISTINCT(h.title),
+        h.project_id projectId,
+        bcp.project_name projectName
+        from
+        biz_service_hotline h
+        INNER JOIN biz_crm_project bcp on bcp.project_id=h.project_id and bcp.status = '1'
+        where
+        h.status = '1'
+        <if test="type != 3 ">
+            and tenant_id = #{tenantId}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and h.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            and(
+              h.hotline LIKE CONCAT('%',#{searchVal},'%') or
+              h.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY h.create_time DESC
+    </select>
+
+    <select id="selectIdByTitle" parameterType="java.lang.String" resultType="java.lang.String">
+        select id from biz_service_hotline where project_id = #{title} and status = '1' limit 1
+    </select>
+
+    <!--删除服务热线-->
+    <update id="delHotlineInfo">
+        UPDATE biz_service_hotline
+        SET status = '0', modify_Time = NOW(), modify_By =#{userId}
+        where
+        status = '1'
+        AND project_id = #{id}
+    </update>
+
+
+    <delete id="delHotline" parameterType="java.lang.String">
+         delete from biz_service_hotline where project_id = #{id}
+    </delete>
+
+    <!--查询最后一条记录的排序值-->
+    <select id="selectLastSortByTime" resultType="java.lang.String">
+        select
+        sort
+        from
+        biz_service_hotline
+        where
+        status = '1'
+        ORDER BY create_time DESC
+        limit 1
+    </select>
+
+
+    <!--根据热线id查询服务热线详情-->
+    <select id="selectHotlineInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Hotline.OutParam.ResultHotlineInfoVo">
+        select
+        h.id,
+        h.title,
+        h.project_id projectId,
+        bcp.project_name projectName
+        from
+        biz_service_hotline h
+        INNER JOIN biz_crm_project bcp on bcp.project_id=h.project_id and bcp.status = '1'
+        where
+        h.status = '1'
+        and h.id = #{id}
+    </select>
+
+    <select id="selectNameByProjectId" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Hotline.OutParam.ResultHotlineInfoVo">
+        select
+        id,
+        name,
+        hotline phone
+        from
+        biz_service_hotline
+        where
+        status = '1'
+        and project_id = #{projectId}
+    </select>
+
+    <select id="selectDataByProjectId" resultType="java.lang.String">
+        select
+        id
+        from
+        biz_service_hotline
+        where
+        status = '1'
+        and tenant_id = #{tenantId}
+        and project_id = #{projectId}
+        limit 1
+    </select>
+
+
+    <select id="selectAppHotlineList" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.Hotline.OutParam.ResultAppHotlineVo">
+        select
+        name title,
+        title name,
+        hotline
+        from
+        biz_service_hotline
+        where
+        status ='1'
+        and project_Id = #{projectId}
+    </select>
+
+
+    <!--根据租户id查询项目-->
+    <select id="selectProjectById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.ResultProjectVo.ProjectListVo">
+        select
+        DISTINCT(tp.project_id) id,
+        bcp.project_name projectName
+        from
+        base_tenant_project tp
+        INNER JOIN biz_crm_project bcp on bcp.project_id=tp.project_id and bcp.status = '1'
+        where tp.status = '1' and tenant_id = #{id}
+    </select>
+
+</mapper>

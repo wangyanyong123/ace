@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BaseAppHousekeeperAreaMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BaseAppHousekeeperArea" id="baseAppHousekeeperAreaMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="buildingId" column="building_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+    <select id="getHouseKeeperList" resultType="com.github.wxiaoqi.security.jinmao.vo.houseKeeper.HouseKeeper">
+        SELECT basu.id
+        ,basu.`name`
+        ,basu.mobile_phone mobilePhone
+        FROM base_app_server_user basu
+        WHERE basu.`status` = '1' AND basu.is_housekeeper = '1' AND basu.tenant_id = #{tenantId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            basu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR basu.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY basu.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="getHouseKeeperCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM base_app_server_user basu
+        WHERE basu.`status` = '1' AND basu.is_housekeeper = '1' AND basu.tenant_id = #{tenantId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            basu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            OR basu.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+    </select>
+    <update id="delBuild">
+        update base_app_housekeeper_area
+        SET `status` = '0',modify_Time = NOW(),modify_By = #{muserId}
+        WHERE
+        user_id = #{userId}
+        AND tenant_id = #{tenantId}
+        AND building_id in
+        <foreach collection="builds" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </update>
+    <update id="deleteHouseKeeper">
+        update base_app_housekeeper_area
+        SET `status` = '0',modify_Time = NOW(),modify_By = #{muserId}
+        WHERE
+        user_id = #{userId}
+        AND tenant_id = #{tenantId}
+        AND status = '1'
+    </update>
+    <select id="getAllBuilds" resultType="com.github.wxiaoqi.security.jinmao.vo.houseKeeper.BuildInfoVo">
+        SELECT bb.housing_resources_id buildId
+        ,CONCAT_WS('_',bcb.`name`,bb.record_building_name) buildName
+        ,CASE WHEN bb.housing_resources_id in (SELECT building_id FROM base_app_housekeeper_area WHERE `status` = '1' AND tenant_id = #{tenantId} ) THEN '1'
+        ELSE '0' END isChoose
+        FROM base_tenant_project btp
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = btp.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.project_id = bcp.project_id AND bcb.`status` = '1' AND bcb.property_type = 'House'
+        LEFT JOIN biz_crm_building bb ON bb.block_id = bcb.block_id AND bb.`status` = '1'
+        WHERE btp.`status` = '1' AND btp.tenant_id = #{tenantId} AND bb.housing_resources_id is not null
+        ORDER BY bcb.`name` ASC, bb.building_num+0  ASC,bb.record_building_name asc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="getAllBuildsNum" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM base_tenant_project btp
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = btp.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.project_id = bcp.project_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.block_id = bcb.block_id AND bb.`status` = '1'
+        WHERE btp.`status` = '1' AND btp.tenant_id = #{tenantId}
+        AND bb.housing_resources_id not IN (SELECT building_id FROM base_app_housekeeper_area WHERE `status` = '1')
+    </select>
+    <select id="getBuildsByUserId" resultType="com.github.wxiaoqi.security.jinmao.vo.houseKeeper.BuildInfoVo">
+        SELECT bcb.housing_resources_id buildId
+        ,bcb.record_building_name buildName
+        ,'0' isChoose
+        FROM base_app_housekeeper_area baha
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = baha.building_id AND bcb.`status` = '1'
+        WHERE baha.`status` = '1' AND baha.tenant_id = #{tenantId}  AND baha.user_id = #{userId}
+        ORDER BY bcb.record_building_name
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="getNum" resultType="java.lang.Integer">
+        select COUNT(*)
+        FROM base_app_housekeeper_area
+        WHERE tenant_id = #{tenantId} and `status` = '1'
+        AND building_id in
+        <foreach collection="builds" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+    <select id="getAllIsChooseBuilds" resultType="java.lang.String">
+        SELECT distinct building_id FROM base_app_housekeeper_area WHERE `status` = '1' AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="getGroupBuildsByUserId" resultType="com.github.wxiaoqi.security.jinmao.vo.houseKeeper.BuildInfoVo">
+        SELECT bcb.housing_resources_id buildId
+        ,CONCAT_WS('_',bck.name,bcb.record_building_name) buildName
+        ,'0' isChoose
+        FROM base_app_housekeeper_area baha
+        LEFT JOIN biz_crm_building bcb ON bcb.housing_resources_id = baha.building_id AND bcb.`status` = '1'
+        Left join biz_crm_block bck on bcb.block_id =bck.block_id and bck.status='1'
+        WHERE baha.`status` = '1' AND baha.tenant_id = #{tenantId}  AND baha.user_id = #{userId}
+        ORDER BY bcb.record_building_name
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getAreasByUserId" resultMap="baseAppHousekeeperAreaMap">
+        select * from base_app_housekeeper_area where user_id = #{userId} group by project_id
+    </select>
+</mapper>

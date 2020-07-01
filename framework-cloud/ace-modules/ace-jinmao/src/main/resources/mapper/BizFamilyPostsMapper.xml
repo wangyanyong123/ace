@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizFamilyPostsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizFamilyPosts" id="bizFamilyPostsMap">
+        <result property="id" column="Id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="content" column="content"/>
+        <result property="postImage" column="post_image"/>
+        <result property="showType" column="show_type"/>
+        <result property="isTop" column="is_top"/>
+        <result property="upNum" column="up_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询家里人帖子列表-->
+    <select id="selectFamilyPostsList" resultType="com.github.wxiaoqi.security.jinmao.vo.familyPosts.FamilyPostsVo">
+        select
+        DISTINCT(p.id),
+        p.user_id userId,
+        IFNULL(u.nickname,u.`name`) userName,
+        p.content,
+        bcp.project_name projectName,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        p.show_type showType,
+        p.is_top isTop
+        from
+        biz_family_posts p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        left JOIN base_app_client_user u ON p.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where p.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and p.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and p.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(p.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(p.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.content LIKE CONCAT('%',#{searchVal},'%')
+            OR u.name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.nickname LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by p.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="selectNewFamilyPostsList" resultType="com.github.wxiaoqi.security.jinmao.vo.familyPosts.FamilyPostsVo">
+        select
+        DISTINCT(p.id),
+        p.user_id userId,
+        p.content,
+        bcp.project_name projectName,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        p.show_type showType,
+        p.is_top isTop
+        from
+        biz_family_posts p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        where p.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and p.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and p.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(p.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(p.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND p.content LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        order by p.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询家里人帖子列表数量-->
+    <select id="selectFamilyPostsCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(p.id))
+        from
+        biz_family_posts p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        where p.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and p.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and p.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(p.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(p.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND p.content LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+    </select>
+
+    <!--查询家里人帖子详情-->
+    <select id="selectFamilyPostsInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.familyPosts.FamilyPostsInfo">
+        select
+        DISTINCT(p.id),
+        p.user_id userId,
+        IFNULL(u.nickname,u.`name`) userName,
+        p.content,
+        p.project_id projectId,
+        bcp.project_name projectName,
+        p.image_type imageType,
+        p.post_image postImage,
+        p.up_num upNum,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_family_posts p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        left JOIN base_app_client_user u ON p.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where p.status = '1' and p.id = #{id}
+    </select>
+
+
+    <!--家里人帖子操作置顶,隐藏-->
+    <update id="updateFamilyPostsStatusById">
+        UPDATE biz_family_posts
+        SET
+        <if test="status == 0">
+            show_type = '0',
+        </if>
+        <if test="status == 1">
+            show_type = '1',
+        </if>
+        <if test="status == 3">
+            is_top = '1',
+        </if>
+        <if test="status == 4">
+            is_top = '0',
+        </if>
+
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <select id="selectUserPointById" parameterType="java.lang.String" resultType="java.lang.String">
+        select history_points from biz_user_integral where status = '1' and user_id = #{userId}
+    </select>
+
+    <!--查询用户的个人积分值-->
+    <select id="selectUserValueById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        credits_value
+        from base_app_client_user u where u.is_auth ='1' and u.is_deleted = '1' and u.status = '1' and u.id =#{userId}
+    </select>
+
+
+    <select id="selectGradeRuleList" resultType="com.github.wxiaoqi.security.jinmao.vo.communityTopic.out.GradeRuleVo">
+        select integral,grade_title gradeTitle from biz_user_grade_rule where status = '1' ORDER BY integral
+    </select>
+
+</mapper>

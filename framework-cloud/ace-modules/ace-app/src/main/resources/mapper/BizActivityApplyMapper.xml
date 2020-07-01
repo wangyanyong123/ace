@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizActivityApplyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizActivityApply" id="bizActivityApplyMap">
+        <result property="id" column="ID"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="userMobile" column="user_mobile"/>
+        <result property="activityId" column="activity_Id"/>
+        <result property="subId" column="sub_id"/>
+        <result property="signType" column="sign_type"/>
+        <result property="comeFrom" column="come_from"/>
+        <result property="applyStatus" column="apply_status"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="selectUserInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.activity.out.UserInfo">
+        select
+        IFNULL(nickname,name) name,
+        mobile_phone tel
+        from
+        base_app_client_user
+        where
+        status = '1'
+        and id = #{userId}
+    </select>
+
+    <!--查询该活动是否免费-->
+    <select id="selectIsFreeActivity" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        is_free isFree
+        from
+        biz_activity
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--查询该活动是否可取消-->
+    <select id="selectisCancelActivity" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        is_cancel
+        from
+        biz_activity
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+
+    <!--查询用户活动报名状态-->
+    <select id="selectActivityApplyStatus" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ApplyInfo">
+        select
+        id,
+        sub_id subId,
+        apply_status applyStatus,
+        pay_status payStatus
+        from
+        biz_activity_apply
+        where
+        status = '1'
+        and user_id = #{userId}
+        and activity_Id = #{id}
+        order by create_Time desc
+        limit 1
+    </select>
+
+    <!--用户取消报名操作-->
+    <update id="updateActivityApplyById">
+        UPDATE biz_activity_apply
+        SET
+        apply_status = '2',
+        pay_status = #{payStatus},
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND activity_Id = #{id}
+    </update>
+
+
+    <!--查询活动报名列表-->
+    <select id="selectActivityApplyList" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.activity.out.ApplyVo">
+        select
+        DISTINCT u.id,
+        a.user_name userName,
+        IFNULL(u.profile_photo,'') photo,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i') applyTime
+        from
+        biz_activity_apply a
+        LEFT JOIN base_app_client_user u on a.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        a.status = '1'
+        and a.apply_status = '1'
+        and a.pay_status = '2'
+        and activity_Id = #{id}
+        order by a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询我的活动-->
+    <select id="selectActivityListByUser" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ActivityVo">
+        select * from(
+        (select
+        DISTINCT a.id,
+        aa.id applyId,
+        g.name groupName,
+        a.title,
+        a.address,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.person_Num personNum,
+        a.activit_ccover activitCcover,
+        a.create_Time createTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum,
+        aa.apply_status status
+        from
+        biz_activity a
+        left JOIN biz_group g on a.group_id=g.id and  g.status = '1' and g.enable_status ='2'
+        INNER JOIN biz_activity_apply aa on aa.activity_Id=a.id and aa.status = '1' and aa.apply_status = '1'
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and aa.user_id = #{userId}
+        order by a.create_Time desc)
+        UNION
+        (select
+        DISTINCT a.id,
+        aa.id applyId,
+        g.name groupName,
+        a.title,
+        a.address,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.person_Num personNum,
+        a.activit_ccover activitCcover,
+        a.create_Time createTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum,
+        aa.apply_status status
+        from
+        biz_activity a
+        left JOIN biz_group g on a.group_id=g.id and  g.status = '1' and g.enable_status ='2'
+        INNER JOIN biz_activity_apply aa on aa.activity_Id=a.id and aa.status = '1' and aa.apply_status in ('2','3','4')
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and aa.user_id = #{userId}
+        order by a.create_Time desc))A
+        ORDER BY A.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+</mapper>

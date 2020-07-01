@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizEvaluatePropertyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizEvaluateProperty" id="bizEvaluatePropertyMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="content" column="content"/>
+        <result property="evaluateType" column="evaluate_type"/>
+        <result property="evaluate" column="evaluate"/>
+        <result property="evaluateDate" column="evaluate_date"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询物业评价列表-->
+    <select id="selectPropertyEvaluateList" resultType="com.github.wxiaoqi.security.jinmao.vo.evaluate.PropertyEvaluateVo">
+        select
+        DISTINCT(p.id),
+        bcp.project_name projectName,
+        p.user_Name userName,
+        content,
+        evaluate_type evaluateType,
+        evaluate,
+        IFNULL(DATE_FORMAT(p.create_time,'%Y-%m-%d %H:%i:%s'),'') evaluateDate
+        from
+        biz_evaluate_property p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        INNER JOIN base_tenant_project btp on btp.project_id=bcp.project_id and btp.status = '1'
+        where
+        p.status = '1'
+        <if test="type != 3 ">
+            and btp.tenant_id = #{tenantId}
+        </if>
+        <if test="time != null and time != ''">
+            and evaluate_date = #{time}
+        </if>
+        <if test="evaluateType != null and evaluateType != ''">
+            and evaluate_type = #{evaluateType}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.user_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and p.project_id = #{projectId}
+        </if>
+        ORDER BY p.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectPropertyEvaluateCount" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT(p.id))
+        from
+        biz_evaluate_property p
+        INNER JOIN biz_crm_project bcp on bcp.project_id=p.project_id and bcp.status = '1'
+        INNER JOIN base_tenant_project btp on btp.project_id=bcp.project_id and btp.status = '1'
+        where
+        p.status = '1'
+        <if test="type != 3 ">
+            and btp.tenant_id = #{tenantId}
+        </if>
+        <if test="time != null and time != ''">
+            and evaluate_date = #{time}
+        </if>
+        <if test="evaluateType != null and evaluateType != ''">
+            and evaluate_type = #{evaluateType}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.user_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="projectId != null and projectId != ''">
+            and p.project_id = #{projectId}
+        </if>
+    </select>
+
+</mapper>

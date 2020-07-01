@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserHouseMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserHouse" id="bizUserHouseMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="houseId" column="house_id"/>
+        <result property="identityType" column="identity_type"/>
+        <result property="houseOwner" column="house_owner"/>
+        <result property="isNow" column="is_now"/>
+        <result property="isDelete" column="is_delete"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <update id="setOwnerHouseIsNow">
+        UPDATE biz_user_house
+        SET is_now = '1', modify_time = NOW()
+        where
+        status = '1'
+        and is_delete = '0'
+        and identity_type = '3'
+        and user_id = #{userId}
+        order by  modify_time desc ,create_time desc
+        limit 1
+    </update>
+
+    <update id="setHouseIsNow">
+        UPDATE biz_user_house
+        SET is_now = '1', modify_time = NOW()
+        where
+        status = '1'
+        and is_delete = '0'
+        and user_id = #{userId}
+        order by  modify_time desc ,create_time desc
+        limit 1
+    </update>
+
+    <select id="getHouseListsByUserId" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserHouseVo">
+        SELECT bur.id
+        ,bur.is_now isNow
+        ,bur.identity_type identityType
+        ,bur.house_id houseId
+        ,bcp.project_name projectName
+        ,bb.record_building_name buildName
+        ,bcf.record_floor_name floorName
+        ,UNUM.num number
+        ,bch.record_house_num houseName
+        ,bcc.`name` cityName
+        ,bcu.record_unit_name unitName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        LEFT JOIN (SELECT house_id, COUNT(*) num FROM biz_user_house WHERE  `status` = '1' AND is_delete = '0' AND house_id in (
+        SELECT house_id FROM biz_user_house WHERE user_id = #{userId} AND `status` = '1' AND is_delete = '0')
+        GROUP BY house_id) UNUM ON bur.house_id = UNUM.house_id
+--         LEFT JOIN biz_crm_house bcr ON bur.house_id = bcr.house_id AND bcr.`status` = '1'
+--         LEFT JOIN biz_crm_project bcp ON bcr.project_id = bcp.project_id AND bcp.`status` = '1'
+-- 		LEFT JOIN biz_crm_block bcb ON bcp.project_id = bcb.project_id AND bcb.`status` = '1'
+--         LEFT JOIN biz_crm_building bb ON bcb.block_id = bb.block_id AND bb.`status` = '1'
+--         LEFT JOIN biz_crm_floor bcf ON bcr.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0'
+--         GROUP BY bur.id
+        ORDER BY bur.is_now DESC,bur.modify_time DESC ,bur.create_time DESC
+    </select>
+
+    <select id="getCurrentHouseInfoById" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserHouseVo">
+        SELECT bur.id
+            ,bur.house_id houseId
+            ,bch.record_house_num houseName
+            ,bcp.project_Id projectId
+            ,bcp.project_name projectName
+			,bb.record_building_name buildName
+			,bcf.record_floor_name floorName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+--         LEFT JOIN biz_crm_house bcr ON bur.house_id = bcr.house_id AND bcr.`status` = '1'
+--         LEFT JOIN biz_crm_project bcp ON bcr.project_id = bcp.project_id AND bcp.`status` = '1'
+-- 		LEFT JOIN biz_crm_block bcb ON bcp.project_id = bcb.project_id AND bcb.`status` = '1'
+--         LEFT JOIN biz_crm_building bb ON bcb.block_id = bb.block_id AND bb.`status` = '1'
+--         LEFT JOIN biz_crm_floor bcf ON bcr.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        WHERE bur.id = #{id} AND bur.`status` = '1' AND bur.is_delete = '0' AND bur.is_now = '1'
+    </select>
+
+    <select id="getOwnInfoById" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserInfoVo">
+        SELECT bur.identity_type identityType
+        ,bur.user_id userId
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        FROM biz_user_house bur
+        LEFT JOIN base_app_client_user cu ON bur.user_id = cu.id AND cu.`status` = '1'
+        WHERE bur.id = #{id}
+    </select>
+
+    <select id="getOtherInfosByHouseId" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserInfoVo">
+        SELECT bur.identity_type identityType
+        ,bur.user_id userId
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        FROM biz_user_house bur
+        LEFT JOIN base_app_client_user cu ON bur.user_id = cu.id AND cu.`status` = '1'
+        WHERE bur.house_id = #{houseId} AND bur.is_delete = '0' AND bur.`status` = '1' AND bur.user_id != #{userId}
+    </select>
+
+    <select id="getOthenHousesInfoByUserId" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.OtherHouseDetailInfosVo">
+        SELECT bur.id
+            ,bur.house_id houseId
+            ,bcp.project_name projectName
+            ,bch.record_house_num houseName
+            ,bcp.project_id projectId
+			,bb.record_building_name buildName
+			,bcf.record_floor_name floorName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+--         LEFT JOIN biz_crm_house bcr ON bur.house_id = bcr.house_id AND bcr.`status` = '1'
+--         LEFT JOIN biz_crm_project bcp ON bcr.project_id = bcp.project_id AND bcp.`status` = '1'
+-- 		LEFT JOIN biz_crm_block bcb ON bcp.project_id = bcb.project_id AND bcb.`status` = '1'
+--         LEFT JOIN biz_crm_building bb ON bcb.block_id = bb.block_id AND bb.`status` = '1'
+--         LEFT JOIN biz_crm_floor bcf ON bcr.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0' AND bur.is_now = '0'
+        ORDER BY bur.modify_time DESC ,bur.create_time DESC
+    </select>
+    <select id="getLastTimeOutHouseIdByProjectId" resultType="java.lang.String">
+        SELECT bur.house_id
+            FROM biz_user_house bur
+            LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+            LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+            LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+            LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+            WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0' AND bcp.project_id = #{projectId}
+            GROUP BY bur.id
+            ORDER BY bur.is_now DESC,bur.modify_time DESC ,bur.create_time DESC
+            LIMIT 1;
+    </select>
+    <select id="getAllUserInfosByHouseId" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserInfoVo">
+        SELECT bur.identity_type identityType
+        ,bur.user_id userId
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        FROM biz_user_house bur
+        LEFT JOIN base_app_client_user cu ON bur.user_id = cu.id AND cu.`status` = '1'
+        WHERE bur.house_id = #{houseId} AND bur.is_delete = '0' AND bur.`status` = '1'
+    </select>
+    <select id="getOwnInfoByHouseId" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserInfoVo">
+        SELECT bur.identity_type identityType
+        ,bur.user_id userId
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        FROM biz_user_house bur
+        LEFT JOIN base_app_client_user cu ON bur.user_id = cu.id AND cu.`status` = '1'
+        WHERE bur.house_id = #{houseId} AND bur.is_delete = '0' AND bur.`status` = '1' AND bur.user_id = #{userId}
+    </select>
+    <update id="changOut">
+        UPDATE biz_user_house
+        SET is_now = '0', modify_time = NOW(), modify_by = #{userId}
+        where
+        status = '1'
+        and is_delete = '0'
+        and house_id = #{houseId}
+        and user_id = #{userId}
+        and is_now = '1'
+    </update>
+    <update id="changNow">
+        UPDATE biz_user_house
+        SET is_now = '1', modify_time = NOW(), modify_by = #{userId}
+        where
+        status = '1'
+        and is_delete = '0'
+        and house_id = #{houseId}
+        and user_id = #{userId}
+        and is_now = '0'
+    </update>
+    <select id="getCurrentHouseByProjectIdAndUserId" resultMap="bizUserHouseMap">
+        SELECT buh.*
+        FROM biz_user_house buh
+        LEFT JOIN biz_crm_house bch ON bch.house_id = buh.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_user_project bup ON bup.project_id = bcb.project_id AND bup.user_id = buh.user_id AND bup.`status` = '1'
+        WHERE buh.`status` = '1' AND bup.id is not null AND bup.project_id = #{projectId} AND buh.user_id = #{userId}
+        AND buh.is_now = '1' AND buh.is_delete = '0';
+    </select>
+
+    <select id="getUserInfoByHouseIdWeb" resultType="com.github.wxiaoqi.security.app.vo.user.UserInfo">
+        SELECT DISTINCT base.userId
+        ,base.auditId
+        --         ,base.identityType
+        ,CASE WHEN base.identityType = 0 THEN 2 ELSE base.identityType END identityType
+        ,base.userStatus
+        ,insert(base.mobilePhone,4,4,'****') as mobilePhone
+        ,REPLACE(base.userName, SUBSTR(base.userName,2), '**') userName
+        ,base.profilePhoto
+        ,base.registerTime
+        FROM (
+        SELECT buh.user_id userId
+        ,null auditId
+        --             ,buh.identity_type identityType
+        ,CASE WHEN buh.identity_type = 2 THEN 0 ELSE buh.identity_type END identityType
+        ,CASE WHEN buh.is_delete = 1 THEN 3 ELSE buh.is_delete END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,buh.create_time
+        FROM biz_user_house buh
+        LEFT JOIN base_app_client_user cu ON buh.user_id = cu.id AND cu.`status` = '1'
+        WHERE buh.`status` = '1' AND buh.house_id = #{houseId}
+        UNION ALL
+        SELECT bua.apply_id userId
+        ,bua.id auditId
+        --             ,bua.identity_type identityType
+        ,CASE WHEN bua.identity_type = 2 THEN 0 ELSE bua.identity_type END identityType
+        ,CASE WHEN bua.audit_status = 0 THEN 1 ELSE bua.audit_status END userStatus
+        ,cu.mobile_phone mobilePhone
+        ,cu.profile_photo profilePhoto
+        ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+        ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+        ,bua.create_time
+        FROM biz_user_audit bua
+        LEFT JOIN base_app_client_user cu ON bua.apply_id = cu.id AND cu.`status` = '1'
+        WHERE bua.`status` = '1' AND bua.audit_status != '1' AND bua.house_id = #{houseId})base
+        WHERE 1=1
+        <if test="searchVal != null and searchVal != '' ">
+            and (base.userName LIKE CONCAT('%',#{searchVal},'%')
+            OR base.mobilePhone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY base.userStatus ASC, base.identityType DESC, base.create_time ASC
+        limit #{page} , #{limit}
+    </select>
+
+    <select id="getUserInfoByHouseId" resultType="com.github.wxiaoqi.security.app.vo.user.UserInfo">
+        SELECT DISTINCT base.userId
+        ,base.auditId
+--         ,base.identityType
+        ,CASE WHEN base.identityType = 0 THEN 2 ELSE base.identityType END identityType
+        ,base.userStatus
+        ,base.mobilePhone
+        ,base.profilePhoto
+        ,base.userName
+        ,base.registerTime
+        FROM (
+            SELECT buh.user_id userId
+            ,null auditId
+--             ,buh.identity_type identityType
+            ,CASE WHEN buh.identity_type = 2 THEN 0 ELSE buh.identity_type END identityType
+            ,CASE WHEN buh.is_delete = 1 THEN 3 ELSE buh.is_delete END userStatus
+            ,cu.mobile_phone mobilePhone
+            ,cu.profile_photo profilePhoto
+            ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+            ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+            ,buh.create_time
+            FROM biz_user_house buh
+            LEFT JOIN base_app_client_user cu ON buh.user_id = cu.id AND cu.`status` = '1'
+            WHERE buh.`status` = '1' AND buh.house_id = #{houseId}
+            UNION ALL
+            SELECT bua.apply_id userId
+            ,bua.id auditId
+--             ,bua.identity_type identityType
+            ,CASE WHEN bua.identity_type = 2 THEN 0 ELSE bua.identity_type END identityType
+            ,CASE WHEN bua.audit_status = 0 THEN 1 ELSE bua.audit_status END userStatus
+            ,cu.mobile_phone mobilePhone
+            ,cu.profile_photo profilePhoto
+            ,CASE WHEN IFNULL(cu.`name`, '')='' THEN (CASE WHEN IFNULL(cu.nickname,'')='' THEN cu.mobile_phone ELSE cu.nickname END) ELSE cu.`name` END AS userName
+            ,DATE_FORMAT(cu.crt_time,'%Y-%m-%d') registerTime
+            ,bua.create_time
+            FROM biz_user_audit bua
+            LEFT JOIN base_app_client_user cu ON bua.apply_id = cu.id AND cu.`status` = '1'
+            WHERE bua.`status` = '1' AND bua.audit_status != '1' AND bua.house_id = #{houseId})base
+        WHERE 1=1
+        <if test="searchVal != null and searchVal != '' ">
+            and (base.userName LIKE CONCAT('%',#{searchVal},'%')
+              OR base.mobilePhone LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY base.userStatus ASC, base.identityType DESC, base.create_time ASC
+        limit #{page} , #{limit}
+    </select>
+
+    <select id="getHouseInfosByUserId" resultType="com.github.wxiaoqi.security.app.vo.house.HouseInfoVO">
+        SELECT bur.house_id houseId
+            ,bch.record_house_num houseName
+            ,bcp.project_name projectName
+            ,bb.record_building_name buildName
+            ,bcf.record_floor_name floorName
+            ,bcc.`name` cityName
+            ,bcu.record_unit_name unitName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0'
+    </select>
+
+
+    <select id="selectUserAllHouse" resultType="com.github.wxiaoqi.security.app.vo.userhouse.out.UserHouseVo">
+        SELECT
+            DISTINCT(bur.house_id) houseId
+            ,bur.identity_type identityType
+            ,bcc.name cityName
+            ,bcu.name unitName
+            ,bch.record_house_num houseName
+            ,bcp.project_name projectName
+			,bb.record_building_name buildName
+			,bcf.record_floor_name floorName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_city bcc on bcc.city_id=bcp.city_id and bcc.status = '1'
+--         LEFT JOIN biz_crm_house bcr ON bur.house_id = bcr.house_id AND bcr.`status` = '1'
+--         LEFT JOIN biz_crm_project bcp ON bcr.project_id = bcp.project_id AND bcp.`status` = '1'
+-- 		LEFT JOIN biz_crm_block bcb ON bcp.project_id = bcb.project_id AND bcb.`status` = '1'
+--         LEFT JOIN biz_crm_building bb ON bcb.block_id = bb.block_id AND bb.`status` = '1'
+--         LEFT JOIN biz_crm_floor bcf ON bcr.floor_id = bcf.floor_id AND bcf.`status` = '1'
+        WHERE bur.user_id = #{userId} and bcp.project_id =#{projectId}
+    </select>
+    <select id="getUnitIdById" resultType="java.lang.String">
+        SELECT cf.unit_id
+        FROM biz_crm_house ch
+        LEFT JOIN biz_crm_floor cf ON cf.floor_id = ch.floor_id
+        WHERE ch.house_id = #{houseId}
+    </select>
+    <select id="selectNow" resultMap="bizUserHouseMap">
+        SELECT
+            id,	user_id,	house_id,	identity_type,	house_owner,	is_now,
+            is_delete,	STATUS,	create_by,	create_time,	modify_by,	modify_time
+        FROM
+            biz_user_house
+        WHERE
+            user_id = #{userId}  and  is_now = "1"   AND is_delete = "0" AND STATUS = "1"
+            limit 1
+    </select>
+</mapper>

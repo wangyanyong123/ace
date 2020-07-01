@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.external.mapper.BizFacilitiesMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.external.entity.BizFacilities" id="bizFacilitiesMap">
+        <result property="id" column="ID"/>
+        <result property="enclosedId" column="enclosed_id"/>
+        <result property="facilitiesCode" column="facilities_code"/>
+        <result property="facilitiesName" column="facilities_name"/>
+        <result property="type" column="type"/>
+        <result property="isPrivate" column="is_private"/>
+        <result property="remark" column="remark"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+    <select id="selectByCode" resultMap="bizFacilitiesMap" parameterType="java.lang.String" >
+        select *
+        from biz_facilities
+        where facilities_code = #{facilitiesCode}
+        limit 1
+    </select>
+    <select id="getFacilitiesTypeByCode" resultType="String">
+		SELECT type FROM biz_facilities
+		WHERE facilities_code = #{facilitiesCode} AND STATUS='1'
+	</select>
+
+    <select id="hasAuthority" resultMap="bizFacilitiesMap">
+        SELECT * FROM biz_facilities WHERE facilities_code = #{machineCode} AND `status` = '1' AND enclosed_id in
+        <foreach collection="distinctList" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

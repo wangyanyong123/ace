@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.report.mapper.ReportDownloadStatisticsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.report.entity.ReportDownloadStatistics" id="reportDownloadStatisticsMap">
+        <result property="id" column="id"/>
+        <result property="statisticalDate" column="statistical_date"/>
+        <result property="totalRegisterNum" column="total_register_num"/>
+        <result property="unauthNum" column="unauth_num"/>
+        <result property="authNum" column="auth_num"/>
+        <result property="todayRegisterNum" column="today_register_num"/>
+        <result property="todayUnauthNum" column="today_unauth_num"/>
+        <result property="todayAuthNum" column="today_auth_num"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getTodayRegisterNum" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM base_app_client_user
+        WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(crt_time) = TO_DAYS(NOW())
+    </select>
+    <select id="getTodayAuthNum"  resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id )
+        FROM biz_user_house
+        WHERE `status` = '1' AND is_delete = '0'
+        AND user_id in (SELECT id FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(crt_time) = TO_DAYS(NOW()))
+    </select>
+    <select id="getTodayAddAuthNum"  resultType="java.lang.Integer">
+--         SELECT COUNT(DISTINCT user_id ) FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' AND TO_DAYS(create_time) = TO_DAYS(NOW())
+        SELECT COUNT(DISTINCT user_id )
+        FROM biz_user_house
+        WHERE `status` = '1' AND is_delete = '0' AND TO_DAYS(create_time) = TO_DAYS(NOW())
+        AND user_id not in (SELECT DISTINCT user_id FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' <![CDATA[ AND TO_DAYS(create_time) < TO_DAYS(NOW()) ]]>)
+    </select>
+    <select id="getTotalRegisterNum"  resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM base_app_client_user
+        WHERE `status` = '1' AND is_deleted = '1'
+    </select>
+    <select id="getTotalAuthNum"  resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id)
+        FROM biz_user_house
+        WHERE `status` = '1' AND is_delete = '0' AND user_id in (SELECT id FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' )
+    </select>
+
+    <select id="getByStatisticalDate"  resultMap="reportDownloadStatisticsMap">
+        SELECT *
+        from report_download_statistics
+        where statistical_date = #{statisticalDate} and status = '1'
+    </select>
+
+    <select id="getYesterdayRegisterNum" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(NOW()) - TO_DAYS(crt_time) = 1
+    </select>
+    <select id="getYesterdayAuthNum"  resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id ) FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' AND user_id in (SELECT id FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(NOW()) - TO_DAYS(crt_time) = 1)
+    </select>
+    <select id="getYesterdayAddAuthNum"  resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id ) FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' AND TO_DAYS(NOW()) - TO_DAYS(create_time) = 1
+        AND user_id not in (SELECT DISTINCT user_id FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' AND TO_DAYS(NOW()) - TO_DAYS(create_time) >1)
+    </select>
+    <select id="getYesterdayTotalRegisterNum"  resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(NOW()) > TO_DAYS(crt_time)
+    </select>
+    <select id="getYesterdayTotalAuthNum"  resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id) FROM biz_user_house WHERE `status` = '1' AND is_delete = '0' AND TO_DAYS(NOW()) > TO_DAYS(create_time) AND user_id in (SELECT id FROM base_app_client_user WHERE `status` = '1' AND is_deleted = '1' AND TO_DAYS(NOW()) > TO_DAYS(crt_time))
+    </select>
+
+    <select id="registerAndAuth" resultType="com.github.wxiaoqi.security.report.vo.RegisterAndAuthVo">
+        SELECT statistical_date statisticalDate
+        ,total_register_num totalRegisterNum
+        ,unauth_num unauthNum
+        ,auth_num authNum
+        ,today_register_num todayRegisterNum
+        ,today_unauth_num todayUnauthNum
+        ,today_auth_num todayAuthNum
+        FROM report_download_statistics
+        WHERE 1=1 and `status` = '1'
+        <if test="beginDate != null and beginDate != '' ">
+            <![CDATA[ and STR_TO_DATE(#{beginDate},'%Y-%m-%d') <= STR_TO_DATE(statistical_date,'%Y-%m-%d') ]]>
+        </if>
+        <if test="endDate != null and endDate != '' ">
+            <![CDATA[ and STR_TO_DATE(statistical_date,'%Y-%m-%d') <= STR_TO_DATE(#{endDate},'%Y-%m-%d') ]]>
+        </if>
+        ORDER BY STR_TO_DATE(statistical_date,'%Y-%m-%d') DESC
+        limit #{page} , #{limit}
+    </select>
+
+    <select id="registerAndAuthCount" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM report_download_statistics
+        WHERE 1=1 and `status` = '1'
+        <if test="beginDate != null and beginDate != '' ">
+            <![CDATA[ and STR_TO_DATE(#{beginDate},'%Y-%m-%d') <= STR_TO_DATE(statistical_date,'%Y-%m-%d') ]]>
+        </if>
+        <if test="endDate != null and endDate != '' ">
+            <![CDATA[ and STR_TO_DATE(statistical_date,'%Y-%m-%d') <= STR_TO_DATE(#{endDate},'%Y-%m-%d') ]]>
+        </if>
+    </select>
+</mapper>

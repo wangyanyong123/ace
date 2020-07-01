@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizCouponMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizCoupon" id="bizCouponMap">
+        <result property="id" column="id"/>
+        <result property="flowNum" column="flow_num"/>
+        <result property="couponName" column="coupon_name"/>
+        <result property="couponType" column="coupon_type"/>
+        <result property="startUseTime" column="start_use_time"/>
+        <result property="endUseTime" column="end_use_time"/>
+        <result property="amount" column="amount"/>
+        <result property="value" column="value"/>
+        <result property="discountNum" column="discount_num"/>
+        <result property="maxValue" column="max_value"/>
+        <result property="minValue" column="min_value"/>
+        <result property="getLimit" column="get_limit"/>
+        <result property="coverPhoto" column="cover_photo"/>
+        <result property="productId" column="product_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="useStatus" column="use_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getAccountByTenantId" resultType="java.lang.String">
+        SELECT account from base_tenant where id = #{tenantId}
+    </select>
+
+    <select id="getProjectInfoByCoupon" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultProjectVo.ProjectListVo">
+        SELECT
+        p.project_id id,
+        p.project_Name projectName
+        FROM biz_crm_project p
+        INNER JOIN biz_coupon_project cp on ap.project_id = p.project_id AND cp.status = '1'
+        WHERE
+        p.status = '1'
+        <if test="id != null and id !=''">
+            AND
+            cp.coupon_id = #{id}
+        </if>
+    </select>
+
+    <select id="getCouponList" resultType="com.github.wxiaoqi.security.jinmao.vo.coupon.out.CouponListVo">
+        SELECT
+        DISTINCT (c.id) ,c.coupon_name couponName,c.coupon_type couponType,c.amount amount,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.start_use_time,'%Y-%m-%d %H:%i') startUseTime,DATE_FORMAT(c.end_use_time,'%Y-%m-%d %H:%i') endUseTime, c.use_status useStatus
+        FROM biz_coupon c
+        WHERE c.status = '1' and c.tenant_id= #{tenantId}
+        <if test = "useStatus !=6 ">
+            and c.use_status = #{useStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            c.coupon_name LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY c.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getCouponTotal" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM biz_coupon c
+        WHERE
+        c.status = '1' and c.tenant_id= #{tenantId}
+        <if test = "useStatus !=6 ">
+            and c.use_status = #{useStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            c.coupon_name LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+    </select>
+
+    <select id="getCouponDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.coupon.out.ResultCoupon">
+        SELECT id,coupon_name couponName,coupon_type couponType,amount,`value`,IFNULL(max_value,'') masValue,min_value minValue,
+        get_limit getLimit,DATE_FORMAT(start_use_time,'%Y-%m-%d %H:%i') startUseTime,DATE_FORMAT(end_use_time,'%Y-%m-%d %H:%i') endUseTime,use_status useStatus,
+        IFNULL(discount_num,'') discountNum,cover_photo coverPhotoImage from biz_coupon  where id = #{id}
+    </select>
+
+    <select id="getProjectByCouponId" resultType="java.lang.String">
+        SELECT
+        p.project_name projectName
+        FROM  biz_coupon c
+        INNER JOIN biz_coupon_project cp on cp.coupon_id = c.id and cp.status = '1'
+        INNER JOIN biz_crm_project p on cp.project_id = p.project_id and p.status = '1'
+        WHERE
+        c.status = '1'
+        AND
+        c.id = #{id}
+    </select>
+
+    <select id="getUseSituation" resultType="com.github.wxiaoqi.security.jinmao.vo.coupon.out.UseSituationVo">
+        SELECT cu.coupon_code couponCode , u.nickname userName,u.mobile_phone phone,s.sub_code subCode,cu.use_status useStatus from biz_coupon_use cu
+        INNER JOIN base_app_client_user u on u.id = cu.user_id and u.status = '1'
+        LEFT JOIN biz_subscribe s on s.id = cu.order_id and s.status = '1'
+        where cu.status = '1' and cu.coupon_id = #{couponId}
+        <if test = "useStatus !=4 ">
+            and cu.use_status = #{useStatus}
+        </if>
+    </select>
+
+    <select id="getUseSituationTotal" resultType="java.lang.Integer">
+        SELECT count(*) from biz_coupon_use cu
+        INNER JOIN base_app_client_user u on u.id = cu.user_id and u.status = '1'
+        left JOIN biz_subscribe s on s.id = cu.order_id and s.status = '1'
+        where cu.status = '1' and cu.coupon_id = #{couponId}
+        <if test = "useStatus !=4 ">
+            and cu.use_status = #{useStatus}
+        </if>
+    </select>
+
+    <select id="getCouponUseCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) total from biz_coupon_use
+        where status = '1' and use_status &lt;&gt; '0' and coupon_id = #{couponId}
+    </select>
+
+
+    <select id="getProductByProject" resultType="com.github.wxiaoqi.security.jinmao.vo.coupon.out.ProductInfoVo">
+        select * from (
+        (SELECT DISTINCT(p.id) productId,p.product_name productName,s.price price,'优选商品' type,p.product_code code FROM biz_product p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on c.product_id = p.id and c.status= '1'
+        INNER JOIN biz_product_spec s on s.product_id = p.id and c.status= '1' and s.sort = '1'
+        INNER JOIN biz_business_classify bc on bc.bus_id = c.bus_id and bc.status= '1'
+        INNER JOIN biz_business b on b.ID = bc.bus_id and b.status = '1' and b.type = '1'
+        INNER JOIN base_tenant t on t.id = p.tenant_id and t.status= '1'
+        WHERE p.status = '1' and p.bus_Status = '3' AND pp.project_id in
+        <foreach collection="projectList" item="projectId" open="(" close=")" separator=",">
+            #{projectId}
+        </foreach>
+        <if test="type != 3">
+            and t.id = #{tenantId}
+        </if>)
+        UNION all
+        (SELECT DISTINCT(p.id) productId,p.name productName,s.price price,'生活服务' type,p.reservation_code code FROM biz_reservation p
+        INNER JOIN biz_product_project pp ON pp.product_id = p.id AND pp.status = '1'
+        INNER JOIN biz_product_classify c on c.product_id = p.id and c.status= '1'
+        INNER JOIN biz_product_spec s on s.product_id = p.id and c.status= '1' and s.sort = '1'
+        INNER JOIN biz_business_classify bc on bc.bus_id = c.bus_id and bc.status= '1'
+        INNER JOIN biz_business b on b.ID = bc.bus_id and b.status = '1' and b.type = '1'
+        INNER JOIN base_tenant t on t.id = p.tenant_id and t.status= '1'
+        WHERE p.status = '1' and p.reserva_Status = '3' AND pp.project_id in
+        <foreach collection="projectList" item="projectId" open="(" close=")" separator=",">
+            #{projectId}
+        </foreach>
+        <if test="type != 3">
+            and t.id = #{tenantId}
+        </if>)
+        )A ORDER BY A.code desc
+    </select>
+
+    <update id="updateCouponUseStatus" >
+        UPDATE biz_coupon_use SET status = '0'
+        WHERE coupon_id = #{couponId};
+    </update>
+
+    <select id="getCouponProject" resultType="com.github.wxiaoqi.security.api.vo.household.ProjectInfoVo" >
+        SELECT p.project_id projectId,p.project_name projectName from biz_crm_project p
+        INNER JOIN biz_coupon_project cp on cp.project_id = p.project_id and cp.status = '1'
+        INNER JOIN biz_coupon c on cp.coupon_id = c.id and c.status = '1'
+        where c.id = #{couponId}
+    </select>
+
+    <select id="getCouponProduct" resultType="com.github.wxiaoqi.security.jinmao.vo.coupon.out.ProductInfoVo">
+        SELECT DISTINCT(p.id) productId,p.product_name productName from biz_product p
+        INNER JOIN biz_coupon_product cp on cp.product_id = p.id and cp.status = '1'
+        INNER JOIN biz_coupon c on cp.coupon_id = c.id and c.status = '1'
+        where c.id = #{couponId}
+    </select>
+</mapper>

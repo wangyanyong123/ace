@@ -1,0 +1,3 @@
+app：放提供给APP的接口
+web：放提供给web的接口
+一个模块一个controller，如果有直接对单张表进行操作的接口，可以直接继承BaseController，参考SysModuleController和SysModuleProjectController

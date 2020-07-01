@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizPostalAddressMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizPostalAddress" id="bizPostalAddressMap">
+        <result property="id" column="ID"/>
+        <result property="userId" column="user_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="procCode" column="proc_code"/>
+        <result property="procName" column="proc_name"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="cityName" column="city_name"/>
+        <result property="districtCode" column="district_code"/>
+        <result property="districtName" column="district_name"/>
+        <result property="roomId" column="room_id"/>
+        <result property="addr" column="addr"/>
+        <result property="isUse" column="is_use"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="projectId" column="projectId"/>
+    </resultMap>
+
+
+    <!--获取我的收货地址列表 -->
+    <select id="getPostalAddressList"
+            resultType="com.github.wxiaoqi.security.api.vo.postaladdress.out.PostalAddressOut">
+        select
+        bpa.id,bpa.contact_name contactName,bpa.contact_tel contactTel,bpa.addr addr,bpa.is_use isUse,
+        bpa.proc_code procCode ,bpa.proc_name procName,bpa.city_code cityCode,bpa.city_name cityName,
+        bpa.district_code districtCode,bpa.district_name districtName,bpa.project_id projectId
+        ,proj.project_name projectName
+        from  biz_postal_address bpa
+        LEFT JOIN biz_crm_project proj ON bpa.project_id = proj.project_id
+        where bpa.status = '1'
+        and bpa.user_Id = #{userId}
+        order by bpa.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--去除默认地址 -->
+    <update id="delDefaultPostalAddress">
+        update biz_postal_address
+        set is_use='0'
+        where status = '1'
+        and user_Id = #{userId}
+    </update>
+
+    <!--获取我的默认收货地址 -->
+    <select id="getUsePostalAddress"
+            resultType="com.github.wxiaoqi.security.api.vo.postaladdress.out.PostalAddressOut">
+        select
+            bpa.id,bpa.contact_name contactName,bpa.contact_tel contactTel,bpa.addr addr,bpa.is_use isUse,
+            bpa.proc_code procCode ,bpa.proc_name procName,bpa.city_code cityCode,bpa.city_name cityName,
+            bpa.district_code districtCode,bpa.district_name districtName,bpa.project_id projectId
+            ,proj.project_name projectName
+        from  biz_postal_address bpa
+        LEFT JOIN biz_crm_project proj ON bpa.project_id = proj.project_id
+        where bpa.status = '1'
+        and bpa.is_use='1'
+        and bpa.user_Id = #{userId}
+        order by bpa.create_Time desc
+        limit 1
+    </select>
+
+    <!--查询不配送地址-->
+    <select id="getNoDeliveryAddress" resultType="com.github.wxiaoqi.security.api.vo.postaladdress.out.PostalAddressDeliveryOut">
+       SELECT
+        company_id tenantId,
+        region_code procCode
+       FROM biz_company_no_delivery
+       WHERE
+	    status = '1'
+	   AND
+	    company_id = #{tenantId}
+       AND
+        region_code = #{procCode}
+        limit 1
+
+    </select>
+    <select id="selectById" resultMap="bizPostalAddressMap">
+        select
+        `ID`, `project_id`, `user_id`, `contact_name`, `contact_tel`, `proc_code`,
+        `proc_name`, `city_code`, `city_name`, `district_code`, `district_name`,
+         `room_id`, `record_house_code`, `addr`, `is_use`
+         from
+         biz_postal_address
+         where id = #{addressId} and status = '1'
+    </select>
+</mapper>

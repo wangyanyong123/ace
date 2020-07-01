@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductOrderMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductOrder" id="bizProductOrderMap">
+        <result property="id" column="id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="orderCode" column="order_code"/>
+        <result property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="orderType" column="order_type"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="refundStatus" column="refund_status"/>
+        <result property="commentStatus" column="comment_status"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="appType" column="app_type"/>
+        <result property="productPrice" column="product_price"/>
+        <result property="expressPrice" column="express_price"/>
+        <result property="actualPrice" column="actual_price"/>
+        <result property="discountPrice" column="discount_price"/>
+        <result property="quantity" column="quantity"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="deliveryAddr" column="delivery_addr"/>
+        <result property="paidTime" column="paid_time"/>
+        <result property="sendTime" column="send_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <sql id="ProductOrderListWhereCase">
+        <where>
+            <if test="tenantId != null and tenantId !=''">
+                and o.tenant_id = #{tenantId}
+            </if>
+            <if test="projectId != null and projectId.size > 0">
+                and o.project_id in
+                <foreach collection="projectId" item="pid" open="(" close=")" separator=",">
+                    #{pid}
+                </foreach>
+            </if>
+            <if test="startDate != null">
+                and DATE_FORMAT(o.create_time,'%Y-%m-%d') >=  DATE_FORMAT(#{startDate}, '%Y-%m-%d')
+            </if>
+            <if test="endDate != null">
+                and DATE_FORMAT(o.create_time,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endDate}, '%Y-%m-%d')
+            </if>
+            <if test="orderStatus != null">
+                and o.order_status = #{orderStatus}
+            </if>
+
+            <if test="refundStatus != null">
+                and o.refund_status = #{refundStatus}
+            </if>
+
+            <if test="commentStatus != null">
+                and o.comment_status = #{commentStatus}
+            </if>
+            <if test="searchVal != null and searchVal !=''">
+                and (
+                o.order_code LIKE CONCAT('%',#{searchVal},'%')
+                or o.title LIKE CONCAT('%',#{searchVal},'%')
+                or o.contact_name LIKE CONCAT('%',#{searchVal},'%')
+                )
+            </if>
+            and o.status = '1'
+
+        </where>
+    </sql>
+    <select id="selectProductOrderList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.productorder.out.ProductOrderListVo">
+        SELECT
+            o.id orderId,o.order_code orderCode,o.title,o.contact_name contactName,o.actual_price actualPrice, o.create_time createTime, o.order_status orderStatus,o.refund_status refundStatus
+        FROM
+            biz_product_order o
+        <include refid="ProductOrderListWhereCase"/>
+        order by o.create_time desc
+        <if test="start != null">
+            limit #{start},#{limit}
+        </if>
+    </select>
+    <select id="countProductOrderList" resultType="int">
+        select count(1) from biz_product_order o
+        <include refid="ProductOrderListWhereCase"/>
+    </select>
+
+    <select id="selectProductOrderDetailVo"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.productorder.out.ProductOrderDetailVo">
+        select id orderDetailId,order_id orderId,product_id productId,product_name productName,
+        spec_id specId, spec_name specName, spec_img specImg, sales_price salesPrice,quantity,
+        detail_status detailStatus, detail_refund_status detailRefundStatus, comment_status commentStatus
+        from biz_product_order_detail
+        <where>
+            order_id = #{orderId}
+            <if test="tenantId != null and tenantId !=''">
+                and tenant_id = #{tenantId}
+            </if>
+            and status = '1'
+        </where>
+        ORDER BY product_name
+    </select>
+
+    <select id="selectProductOrderOperationList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.productorder.out.ProductOrderOperationVo">
+        select
+            order_id orderId,step_status stepStatus,curr_step currStep,description,create_time createTime
+        from biz_order_operation_record where order_id = #{orderId} and status = '1'
+        order by create_time desc,step_status desc
+    </select>
+
+    <select id="selectOrderListForProductId"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultOrderList">
+        SELECT
+            o.order_code orderNo,o.contact_name customerName,o.contact_tel customerTel,o.delivery_addr customerAddress,
+            CASE WHEN ab.pay_type = '1' THEN
+            '支付宝'
+        ELSE
+            '微信'
+        END payMent, o.actual_price actualPrice,od.quantity buyNum,od.detail_status orderStatus,od.detail_refund_status refundStatus,'2' orderType
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail od on ( o.id = od.order_id and od.status = '1')
+        INNER JOIN biz_account_book ab on (o.parent_id = ab.sub_id and ab.status = '1')
+
+        where od.product_id = #{productId} and o.order_type = #{orderType} and o.status = '1' AND o.order_status != 5 AND o.id NOT IN (
+            SELECT
+                r.id
+            FROM
+                biz_product_order r
+            INNER JOIN biz_product_order_detail rd ON r.id = rd.order_id
+            AND rd.`status` = '1'
+            WHERE
+                rd.product_id = #{productId}
+            AND  r.order_status = 45
+            AND r.refund_status = 0
+        )
+    </select>
+
+    <select id="getGroupProductCount" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail od ON o.id = od.order_id AND od.`status` = '1'
+        WHERE
+            od.product_id = #{productId}
+        AND o.id NOT IN (
+            SELECT
+                r.id
+            FROM
+                biz_product_order r
+            INNER JOIN biz_product_order_detail rd ON r.id = rd.order_id
+            AND rd.`status` = '1'
+            WHERE
+                rd.product_id = #{productId}
+            AND  r.order_status = 45
+            AND r.refund_status = 0
+        )
+        AND o.order_status != 5
+        AND o.`status` = '1'
+
+    </select>
+
+
+    <select id="exportProductOrderExcel"
+            resultType="java.util.Map">
+        SELECT
+        o.id orderId,
+        o.order_code orderCode,
+        o.title,
+        o.contact_name contactName,
+        o.contact_tel contactTel,
+        o.delivery_addr deliveryAddr,
+        o.actual_price actualPrice,
+        o.create_time createTime,
+        o.order_status orderStatus,
+        o.refund_status refundStatus,
+        o.comment_status commentStatus,
+        IFNULL(p.project_name, '') projectName,
+        a.apply_price applyPrice,
+        IFNULL(
+        DATE_FORMAT(
+        a.refund_success_time,
+        '%Y-%m-%d %H:%i:%s'
+        ),
+        ''
+        ) applyTime,
+        (
+        CASE
+        WHEN ab.pay_type = '1' THEN
+        '支付宝'
+        ELSE
+        '微信'
+        END
+        ) payType,
+        (
+        SELECT
+        IFNULL(SUM(i.discount_price), 0)
+        FROM
+        biz_product_order_discount i
+        <where>
+            <if test="tenantId != null and tenantId !=''">
+                AND i.tenant_id = #{tenantId}
+            </if>
+            AND i.order_id = o.id
+            AND i.`status` = 1
+        </where>
+        ) discountPrice,
+        (
+        SELECT
+        IFNULL(SUM(i.price), 0)
+        FROM
+        biz_order_increment i
+        <where>
+            <if test="tenantId != null and tenantId !=''">
+                AND i.tenant_id = #{tenantId}
+            </if>
+            AND i.order_id = o.id
+            AND i.`status` = 1
+        </where>
+        ) expressPrice,
+        o.quantity,
+        o.app_type appType,
+        o.confirm_time confirmTime,
+        ab.actual_Id actualId,
+        (
+        CASE o.order_type
+        WHEN 0 THEN
+        '线下订单'
+        WHEN 1 THEN
+        '普通订单'
+        WHEN 2 THEN
+        '团购订单'
+        WHEN 3 THEN
+        '抢购订单'
+        END
+        ) orderType,
+        r.remark
+        FROM
+        biz_product_order o
+        LEFT JOIN biz_crm_project p ON o.project_id = p.project_id
+        AND p.`status` = 1
+        LEFT JOIN biz_refund_audit a ON a.sub_id = o.id
+        AND a.`status` = 1
+        LEFT JOIN biz_account_book ab ON o.parent_id = ab.sub_id
+        AND ab. STATUS = '1'
+        LEFT JOIN biz_order_remark r ON r.order_id = o.id
+        AND r.`status` = 1
+        <include refid="ProductOrderListWhereCase"/>
+        GROUP BY o.id
+        order by o.create_time desc
+    </select>
+
+    <select id="queryProductOrderDetailInfo" resultType="java.util.Map">
+       SELECT
+            od.detail_status detailStatus,
+            od.detail_refund_status detailRefundStatus,
+            od.comment_status detailcommentStatus,
+            p.beg_Time begTime,
+            p.end_Time endTime,
+            od.product_name productName,
+            od.spec_name specName,
+            od.sales_price salesPrice,
+            od.total_price totalPrice,
+            od.unit,
+            od.quantity detailQuantity,
+            p.sales_way sales,
+            p.supplier
+        FROM
+            biz_product_order_detail od
+        LEFT JOIN biz_product p ON od.product_id = p.id
+        AND p. STATUS = '1'
+        WHERE
+            od.order_id = #{orderId}
+        AND od. STATUS = '1'
+    </select>
+
+    <select id="getDiscountPrice" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(i.discount_price), 0)
+        FROM
+        biz_product_order_discount i
+        <where>
+            <if test="tenantId != null and tenantId !=''">
+                AND i.tenant_id = #{tenantId}
+            </if>
+            AND i.order_id = #{orderId}
+            AND i.`status` = 1
+        </where>
+    </select>
+
+    <select id="getExpressPrice" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(i.price), 0)
+        FROM
+        biz_order_increment i
+        <where>
+            <if test="tenantId != null and tenantId !=''">
+                AND i.tenant_id = #{tenantId}
+            </if>
+            AND i.order_id = #{orderId}
+            AND i.`status` = 1
+        </where>
+    </select>
+</mapper>

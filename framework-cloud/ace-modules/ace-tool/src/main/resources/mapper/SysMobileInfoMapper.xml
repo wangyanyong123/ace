@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.sms.mapper.SysMobileInfoMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.sms.entity.SysMobileInfo" id="sysMobileInfoMap">
+        <result property="id" column="id"/>
+        <result property="cid" column="cid"/>
+        <result property="userId" column="user_id"/>
+        <result property="clientType" column="client_type"/>
+        <result property="os" column="os"/>
+        <result property="osVersion" column="os_version"/>
+        <result property="version" column="version"/>
+        <result property="macId" column="mac_id"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <insert id="insertMobileInfo" parameterType="com.github.wxiaoqi.sms.entity.SysMobileInfo">
+		insert into sys_mobile_info
+		(id , cid , user_id , os , os_Version , version , client_Type ,mac_id,  create_time , create_by )
+		 values(#{id},#{cid},#{userId},#{os},#{osVersion} , #{version} , #{clientType} ,#{macId} ,#{createTime},#{createBy})
+	</insert>
+
+    <update id="updateMobileInfo" parameterType="com.github.wxiaoqi.sms.entity.SysMobileInfo">
+		update sys_mobile_info set cid = #{cid},user_id = #{userId},os = #{os},
+		       os_Version = #{osVersion} , version = #{version} , client_Type = #{clientType}, mac_id=#{macId},
+		        modify_By = #{modifyBy} , modify_Time = #{modifyTime}
+		        where user_id = #{userId}
+	</update>
+
+    <select id="getMobileInfoByUserId" resultType="com.github.wxiaoqi.sms.entity.SysMobileInfo" parameterType="String">
+		SELECT cid , os , os_version osVersion, version , client_Type clientType,mac_id macId
+		FROM sys_mobile_info
+		WHERE user_id = #{userId} and status = '1' limit 1
+	</select>
+
+    <insert id="insertMobileInfoLog" parameterType="com.github.wxiaoqi.sms.entity.SysMobileInfo">
+		insert into sys_mobile_info_log
+		(id , cid , user_id , os , os_Version , version , client_Type ,mac_id,  create_time , create_by )
+		values(#{id},#{cid},#{userId},#{os},#{osVersion} , #{version} , #{clientType} ,#{macId} ,#{createTime},#{createBy})
+	</insert>
+
+    <!-- 删除脏数据 -->
+    <delete id="delDirtyData" parameterType="com.github.wxiaoqi.sms.entity.SysMobileInfo">
+		DELETE FROM sys_mobile_info WHERE cid = #{cid} AND user_id != #{userId}
+	</delete>
+
+</mapper>

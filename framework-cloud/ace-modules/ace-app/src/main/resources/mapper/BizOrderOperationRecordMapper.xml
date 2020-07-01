@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizOrderOperationRecordMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizOrderOperationRecord" id="bizOrderOperationRecordMap">
+        <result property="id" column="id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="step_status" column="stepStatus"/>
+        <result property="currStep" column="curr_step"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+    </resultMap>
+
+    <select id="selectInfoVoByOrderId"
+            resultType="com.github.wxiaoqi.security.app.vo.order.out.OrderOperationRecordInfo">
+        SELECT
+            record.order_id orderId,
+            record.parent_id parentId,
+            record.step_status stepStatus,
+            record.curr_step currStep,
+            record.description,
+            record.create_time createTime
+        FROM
+            biz_order_operation_record record
+        INNER JOIN biz_product_order o on (o.id = record.order_id or o.parent_id = record.order_id )
+        WHERE
+            o.id = #{orderId} and o.`status` = '1' and record.status = '1'
+            order by record.create_time desc,record.step_status desc
+    </select>
+</mapper>

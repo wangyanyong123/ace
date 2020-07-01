@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BizFriendApplyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.im.entity.BizFriendApply" id="bizFriendApplyMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="friendId" column="friend_id"/>
+        <result property="isPass" column="is_pass"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <update id="updateById">
+        update biz_friend_apply set is_pass = #{s}, modify_time = NOW()
+        where friend_id = #{friendId} and user_id = #{userId} and status = '1' and is_pass = '0'
+    </update>
+
+    <select id="getFriendApplys" resultType="com.github.wxiaoqi.security.im.vo.friend.NameApplyVo">
+        SELECT bfa.id
+        ,bacu.id userId
+        ,CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END AS userName
+        ,bacu.profile_photo profilePhoto
+        ,bfa.is_pass isPass
+        FROM biz_friend_apply bfa
+        LEFT JOIN base_app_client_user bacu ON bfa.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        WHERE bfa.`status` = '1' AND bacu.id is not null AND bfa.user_id = #{userId}
+--         GROUP BY bacu.id
+        ORDER BY userName ASC,bfa.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getFriendApplysNum" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM (
+        SELECT bfa.id
+        FROM biz_friend_apply bfa
+        LEFT JOIN base_app_client_user bacu ON bfa.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        WHERE bfa.`status` = '1' AND bacu.id is not null AND bfa.user_id = #{userId}
+--         GROUP BY bacu.id
+        )a
+    </select>
+
+    <select id="isHasApply"  resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM (
+        SELECT bfa.id
+        FROM biz_friend_apply bfa
+        LEFT JOIN base_app_client_user bacu ON bfa.friend_id = bacu.id AND bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1'
+        WHERE bfa.`status` = '1' AND bacu.id is not null AND bfa.user_id = #{userId} and bfa.is_pass = '0'
+        GROUP BY bacu.id)a
+    </select>
+
+    <select id="getSearchFriend" resultType="com.github.wxiaoqi.security.im.dto.NameDto">
+        SELECT DISTINCT bacu.id userId
+        ,CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END AS userName
+        ,bacu.profile_photo profilePhoto
+        ,bacu.sex sex
+        ,CASE WHEN buh.id is null THEN 1 ELSE 0 END isTourist
+        ,CASE WHEN bfa.id is null THEN 0 ELSE 1 END isApply
+        ,CASE WHEN bfb.id is null THEN 0 ELSE 1 END isBlack
+        ,CASE WHEN bfu.id is null THEN 0 ELSE 1 END isFriend
+        FROM base_app_client_user bacu
+        LEFT JOIN biz_user_house buh ON buh.user_id = bacu.id AND buh.`status` = '1' AND buh.is_delete = '0'
+        LEFT JOIN biz_friend_apply bfa ON bfa.`status` = '1' AND bfa.is_pass = '0' AND (bfa.friend_id = #{userId} AND bfa.user_id = bacu.id)
+        LEFT JOIN biz_friend_black bfb ON bfb.`status` = '1' AND bfb.is_delete = '0' AND ((bfb.friend_id = #{userId} AND bfb.user_id = bacu.id) OR (bfb.friend_id = bacu.id AND bfb.user_id = #{userId}))
+        LEFT JOIN biz_friend_user bfu ON bfu.`status` = '1' AND bfu.is_delete = '0' AND (bfu.friend_id = bacu.id AND bfu.user_id = #{userId})
+        WHERE bacu.`status` = '1' AND bacu.is_deleted = '1' AND bacu.is_auth = '1' and bacu.mobile_phone = #{tel}
+        LIMIT 1
+    </select>
+</mapper>

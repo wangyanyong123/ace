@@ -1,0 +1,14 @@
+spring:
+    profiles:
+      active: localhost
+
+logging:
+    level:
+#        tk.mybatis: DEBUG
+        com.github.wxiaoqi.security.center: DEBUG
+    file: /mnt/logs/ace-center.log
+    file.max-size: 10MB
+    file.max-history : 365
+    pattern:
+      file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+      console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

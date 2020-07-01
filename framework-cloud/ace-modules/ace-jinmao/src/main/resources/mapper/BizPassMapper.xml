@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizPassMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizPass" id="bizPassMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="qrVal" column="qr_val"/>
+        <result property="qrType" column="qr_type"/>
+        <result property="passType" column="pass_type"/>
+        <result property="passStatus" column="pass_status"/>
+        <result property="passAddr" column="pass_addr"/>
+        <result property="passDesc" column="pass_desc"/>
+        <result property="timeStamp" column="time_stamp"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="facilitiesCode" column="facilities_code"/>
+        <result property="facilitiesType" column="facilities_type"/>
+        <result property="status" column="status"/>
+        <result property="type" column="type"/>
+        <result property="desc" column="desc"/>
+        <result property="openStatus" column="open_status"/>
+    </resultMap>
+
+    <select id="getQrPassLogList" resultType="com.github.wxiaoqi.security.jinmao.vo.passlog.QrPassListVo">
+        SELECT cp.project_name projectName,u.nickname name,u.mobile_phone phone,p.pass_addr passAddr,p.pass_desc passDesc,DATE_FORMAT(p.create_time,'%Y-%m-%d %H:%i:%s') createTime from biz_pass p
+        INNER JOIN base_app_client_user u on u.id = p.user_id and u.status = '1'
+        INNER JOIN biz_facilities f on f.facilities_code = p.facilities_code and f.status = '1'
+        INNER JOIN biz_enclosed e on e.id = f.enclosed_id and e.status = '1'
+        INNER JOIN biz_crm_project cp on cp.project_id = e.project_id and cp.status = '1'
+        WHERE p.status = '1'
+        <if test="projectId == null or projectId == ''">
+            and cp.project_id in
+            (SELECT DISTINCT(cp.project_id) from biz_crm_project cp INNER JOIN biz_user_project up on cp.project_id = up.project_id and cp.status = '1')
+        </if>
+        <if test="projectId !=null and projectId !=''">
+            and cp.project_id = #{projectId}
+        </if>
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(p.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(p.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.pass_addr LIKE CONCAT('%',#{searchVal},'%')
+            OR u.nickname LIKE CONCAT('%',#{searchVal},'%')
+            OR u.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            or p.pass_desc LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <select id="getQrPassCount" resultType="java.lang.Integer">
+        SELECT count(*) from biz_pass p
+        INNER JOIN base_app_client_user u on u.id = p.user_id and u.status = '1'
+        INNER JOIN biz_facilities f on f.facilities_code = p.facilities_code and f.status = '1'
+        INNER JOIN biz_enclosed e on e.id = f.enclosed_id and e.status = '1'
+        INNER JOIN biz_crm_project cp on cp.project_id = e.project_id and cp.status = '1'
+        where p.status = '1'
+        <if test="projectId == null or projectId == ''">
+            and cp.project_id in
+            (SELECT DISTINCT(cp.project_id) from biz_crm_project cp INNER JOIN biz_user_project up on cp.project_id = up.project_id and cp.status = '1')
+        </if>
+        <if test="projectId !=null and projectId !=''">
+            and cp.project_id = #{projectId}
+        </if>
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(p.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(p.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.pass_addr LIKE CONCAT('%',#{searchVal},'%')
+            OR u.nickname LIKE CONCAT('%',#{searchVal},'%')
+            OR u.mobile_phone LIKE CONCAT('%',#{searchVal},'%')
+            or p.pass_desc LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+    </select>
+</mapper>

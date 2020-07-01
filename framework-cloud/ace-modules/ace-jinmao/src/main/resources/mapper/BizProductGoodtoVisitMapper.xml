@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductGoodtoVisitMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductGoodtoVisit" id="bizProductGoodtoVisitMap">
+        <result property="id" column="id"/>
+        <result property="productId" column="product_id"/>
+        <result property="title" column="title"/>
+        <result property="subHeading" column="sub_heading"/>
+        <result property="content" column="content"/>
+        <result property="recommendImages" column="recommend_images"/>
+        <result property="signer" column="signer"/>
+        <result property="signerLogo" column="signer_logo"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询好物探访列表-->
+    <select id="selectGoodVisitList"  resultType="com.github.wxiaoqi.security.jinmao.vo.productgoodvisit.outputparam.ResultGoodVisitVo">
+        SELECT
+            DISTINCT (gv.id) id,
+            p.id productId,
+            p.product_name productName,
+            gv.title,
+            gv.sub_heading subHeading,
+            gv.signer,
+            gv.publish_time publishTime,
+            p.bus_status busStatus,
+            IFNULL(r.view_num,0)  visitCount,
+            gv.enable_status enableStatus
+        FROM
+            biz_product_goodto_visit gv
+        INNER JOIN biz_product p on p.id = gv.product_id and p.status = '1'
+        INNER JOIN biz_product_project pp on p.id = pp.product_id and pp.status = '1'
+        INNER JOIN biz_crm_project cp on pp.project_id = cp.project_id and cp.status = '1'
+        left JOIN biz_content_reader r on r.content_id = gv.id and r.status = '1'
+        WHERE
+            gv.status = '1'
+        <if test = "projectId != null and projectId !=''">
+            and cp.project_id = #{projectId}
+        </if>
+        <if test="enableStatus != 4 ">
+            and gv.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+                gv.title LIKE CONCAT('%',#{searchVal},'%')
+            OR p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY gv.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectGoodVisitCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(DISTINCT (gv.id)) total
+        FROM
+        biz_product_goodto_visit gv
+        INNER JOIN biz_product p on p.id = gv.product_id and p.status = '1'
+        INNER JOIN biz_product_project pp on p.id = pp.product_id and pp.status = '1'
+        INNER JOIN biz_crm_project cp on pp.project_id = cp.project_id and cp.status = '1'
+        left JOIN biz_content_reader r on r.content_id = gv.id and r.status = '1'
+        WHERE
+        gv.status = '1'
+        <if test = "projectId != null and projectId !=''">
+            and cp.project_id = #{projectId}
+        </if>
+        <if test="enableStatus != 4 ">
+            and gv.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            gv.title LIKE CONCAT('%',#{searchVal},'%')
+            OR gv.sub_heading LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY gv.create_time DESC
+    </select>
+
+    <!--禁用与启用-->
+    <update id="updateGoodVisitStatus">
+        UPDATE biz_product_goodto_visit
+        SET enable_status = #{enableStatus},
+            modify_Time = NOW()
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--查询好物探访关联商品-->
+    <select id="selectProductList" resultType="com.github.wxiaoqi.security.jinmao.vo.productgoodvisit.outputparam.ProductListVo">
+        SELECT
+        DISTINCT(p.ID) productId,
+        p.product_name productName,
+        t.name tenantName
+        FROM biz_product p
+        INNER JOIN biz_product_classify c on c.product_id = p.id AND c.status = '1'
+        INNER JOIN biz_business b ON c.bus_id = b.id and b.status = '1' and b.type = '1'
+        INNER JOIN base_tenant t on p.tenant_id = t.id AND t.status = '1' AND t.enable_status = '1' AND t.tenant_type = '2'
+        where
+        p.status = '1' and p.bus_status = '3'
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            p.product_name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY p.product_code desc
+    </select>
+    <select id="selectProjectNames" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultProjectVo.ProjectListVo">
+        SELECT
+            cp.project_id id,
+            cp.project_name projectName
+        FROM biz_crm_project cp
+        LEFT JOIN biz_product_project pp on pp.project_id = cp.project_id AND pp.status = '1'
+        LEFT JOIN biz_product p on pp.product_id = p.id AND p.status = '1'
+        WHERE
+            p.id = #{productId}
+        ORDER BY projectName
+    </select>
+    <!--查询探访表是否已关联商品-->
+    <select id="selectGoodVisitExist" parameterType="java.lang.String" resultType="java.lang.String">
+        SELECT
+		gv.id
+		FROM biz_product_goodto_visit gv
+		where
+		gv.status = '1'
+		and
+		gv.product_id = #{productId}
+    </select>
+    <!--根据ID好物探访详情-->
+    <select id="getGoodVisitInfo"  resultType="com.github.wxiaoqi.security.jinmao.vo.productgoodvisit.outputparam.ResultGoodVisitInfoVo">
+       SELECT
+	        gv.id ,
+	        gv.title,
+	        gv.sub_heading subHeading,
+	        gv.recommend_images recommendImage,
+	        gv.signer,
+	        gv.signer_logo signerLog,
+	        gv.publish_time publishTime,
+	        gv.content
+	    FROM
+	        biz_product_goodto_visit gv
+	    WHERE
+	        gv.status = '1'
+	    AND
+	        gv.id = #{id}
+    </select>
+    <!--根据探访表ID查询商品信息-->
+    <select id="selectGVProductList" resultType="com.github.wxiaoqi.security.jinmao.vo.productgoodvisit.outputparam.ProductListVo">
+      SELECT
+            p.id productId,
+	        p.product_name productName
+      FROM
+            biz_product p
+      INNER JOIN biz_product_goodto_visit gv on p.id = gv.product_id and p.status = '1'
+      WHERE
+	        gv.status = '1'
+      AND
+	        gv.id = #{id}
+    </select>
+
+    <!--根据商品查询关联商户-->
+    <select id="selectTenantByProductId" resultType="com.github.wxiaoqi.security.jinmao.vo.productgoodvisit.outputparam.TenantVo">
+        SELECT
+        t.id tenantId,
+        t.name tenantName
+        FROM base_tenant t
+        INNER JOIN biz_product p on p.tenant_id = t.id and p.status = '1'
+        where
+        t.status = '1'
+        AND
+        t.tenant_type != '1'
+        AND p.id = #{productId}
+    </select>
+
+    <!--好物探访商品删除-->
+    <update id="deleteGoodVisit" >
+        UPDATE biz_product_goodto_visit
+        SET status = #{status},
+            modify_Time = NOW()
+  		where id = #{id}
+    </update>
+</mapper>

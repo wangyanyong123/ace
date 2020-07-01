@@ -1,0 +1,23 @@
+CREATE TABLE `biz_product_comment` (
+  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `order_id` varchar(36) CHARACTER SET utf8 NOT NULL,
+  `order_detail_id` varchar(36) CHARACTER SET utf8 NOT NULL,
+  `product_id` varchar(36) CHARACTER SET utf8 DEFAULT NULL,
+  `comment_score` int(1) DEFAULT '0' COMMENT '评论分值 0~5',
+  `content` varchar(1024) CHARACTER SET utf8mb4 DEFAULT '' COMMENT '评论内容',
+  `img_url` varchar(1024) CHARACTER SET utf8 DEFAULT NULL,
+  `user_id` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `nick_name` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_head_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `check_status` int(1) DEFAULT '0' COMMENT '审核状态 0：未审核，1：审核通过，2：审核不通过',
+  `check_by` varchar(36) CHARACTER SET utf8 DEFAULT NULL,
+  `check_time` datetime DEFAULT NULL,
+  `check_content` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
+  `status` char(1) COLLATE utf8mb4_unicode_ci DEFAULT '1',
+  `create_time` datetime DEFAULT NULL,
+  `create_by` varchar(36) CHARACTER SET utf8 DEFAULT NULL,
+  `modify_by` varchar(36) CHARACTER SET utf8 DEFAULT NULL,
+  `modify_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `delete_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

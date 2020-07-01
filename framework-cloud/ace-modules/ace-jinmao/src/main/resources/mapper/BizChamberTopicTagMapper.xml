@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizChamberTopicTagMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizChamberTopicTag" id="bizChamberTopicTagMap">
+        <result property="id" column="id"/>
+        <result property="topicTagCode" column="topic_tag_code"/>
+        <result property="topicTagName" column="topic_tag_Name"/>
+        <result property="viewSort" column="view_sort"/>
+        <result property="status" column="status"/>
+        <result property="createDate" column="create_date"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateDate" column="update_date"/>
+        <result property="updateBy" column="update_by"/>
+    </resultMap>
+
+
+    <!--查询议事厅话题标签列表-->
+    <select id="selectChamberTopicTagList" resultType="com.github.wxiaoqi.security.jinmao.vo.chamberTopic.out.ChamberTopicTagVo">
+        select
+        DISTINCT(t.id),
+        topic_tag_code topicTagCode,
+        topic_tag_Name topicTagName,
+        view_sort viewSort
+        from biz_chamber_topic_tag t
+        INNER JOIN biz_chamber_topic_tag_project p on p.topic_tag_id=t.id and p.status = '1'
+        where t.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            topic_tag_code LIKE CONCAT('%',#{searchVal},'%')
+            OR topic_tag_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_sort asc, t.create_date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询议事厅话题标签列表数量-->
+    <select id="selectChamberTopicTagCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT (t.id))
+        from biz_chamber_topic_tag t
+        INNER JOIN biz_chamber_topic_tag_project p on p.topic_tag_id=t.id and p.status = '1'
+        where t.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            topic_tag_code LIKE CONCAT('%',#{searchVal},'%')
+            OR topic_tag_Name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY view_sort asc, t.create_date desc
+    </select>
+
+    <!--查询话题标签详情-->
+    <select id="selectChamberTopicTagInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.chamberTopic.out.ChamberTopicTagInfo">
+        select
+        id,
+        topic_tag_Name topicTagName,
+        view_sort viewSort
+        from biz_chamber_topic_tag
+        where status = '1' and id = #{id}
+    </select>
+
+    <!--删除话题标签-->
+    <update id="delTopicTagById">
+        UPDATE
+            biz_chamber_topic_tag
+        SET
+            status = '0',
+            update_by = #{userId},
+            update_date = NOW()
+        WHERE
+            status = '1'
+        AND
+            id = #{id}
+    </update>
+
+    <!--查询议事厅话题是否关联标签-->
+    <select id="selectIsRelateByTagId" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select count(*) from biz_chamber_topic where status = '1' and topic_tag_id =#{tagId}
+    </select>
+
+</mapper>

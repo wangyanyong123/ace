@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizIntegralProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizIntegralProduct" id="bizIntegralProductMap">
+        <result property="id" column="ID"/>
+        <result property="productCode" column="product_code"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="selectionImage" column="selection_image"/>
+        <result property="productImagetextInfo" column="product_imagetext_info"/>
+        <result property="specName" column="spec_name"/>
+        <result property="specIntegral" column="spec_integral"/>
+        <result property="specUnit" column="spec_unit"/>
+        <result property="productNum" column="product_Num"/>
+        <result property="cashNum" column="cash_Num"/>
+        <result property="busStatus" column="bus_Status"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询积分商品列表-->
+    <select id="selectProductList" resultType="com.github.wxiaoqi.security.app.vo.integralproduct.IntegralProductVo">
+        select
+        DISTINCT(bip.id),
+        product_name productName,
+        product_image productImage,
+        spec_integral specIntegral,
+        case when spec_integral &lt;= (select total_points from biz_user_integral where status = '1' and user_id =#{userId}) then '可兑换'
+        else '不可兑换' end as cashStatusStr
+        from
+        biz_integral_product bip
+        INNER JOIN biz_product_project pp on bip.id=pp.product_id and pp.status = '1'
+        where bip.status = '1' and bus_Status = '2'
+        and pp.project_id = #{projectId}
+        <if test="isRecommend == 1">
+            and bip.is_recommend = '1'
+        </if>
+        <if test="startIntegral != null and startIntegral != ''">
+           and spec_integral &gt;= #{startIntegral}
+        </if>
+        <if test="endIntegral != null and endIntegral !='' ">
+            and spec_integral  &lt; #{endIntegral}
+        </if>
+        ORDER BY is_recommend+1 desc, SUBSTRING(product_code,3,6)+0 asc,bip.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询兑换记录-->
+    <select id="selectCashList" resultType="com.github.wxiaoqi.security.app.vo.integralproduct.CashVo">
+        select
+        DISTINCT(bcp.id),
+        bip.product_name productName,
+        cash_integral cashIntegral,
+        DATE_FORMAT(bcp.create_time,'%Y-%m-%d %H:%i:%s') cashTime
+        from
+        biz_cash_product bcp
+        INNER JOIN biz_integral_product bip on bcp.product_id=bip.id and bip.status = '1'
+        where
+        project_id = #{projectId}
+        and bcp.user_id=#{userId}
+        order by bcp.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询积分筛选范围-->
+    <select id="selectIntegralScreenList" resultType="com.github.wxiaoqi.security.app.vo.integralproduct.ScreenVo">
+        select * from (
+        (select UUID() id, -1 startIntegral,-1 endIntegral, '全部' integralStr)
+        UNION ALL
+        (select
+        id,
+        start_integral startIntegral,
+        CASE when end_integral = '-1' then ''
+        else end_integral end as endIntegral,
+        CASE when end_integral = '-1' then CONCAT('>=',start_integral)
+        else CONCAT(start_integral,'~',end_integral) end as integralStr
+        from
+        biz_integral_screen
+        where
+        status = '1'
+        )) a
+        ORDER BY a.startIntegral asc
+    </select>
+
+    <!--查询当前用户积分-->
+    <select id="selectCurrentIntegralByUserId" parameterType="java.lang.String" resultType="java.lang.String">
+        select sum(sign_points+task_points-consume_points) from biz_user_integral where status = '1' and user_id = #{userId}
+    </select>
+
+    <!--查询用户消费积分-->
+    <select id="selectConsumePointByUser" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.intergral.in.UserSignIn">
+        select id, consume_points consumePoints  from biz_user_integral where status = '1' and user_id = #{userId}
+    </select>
+
+    <!--查询积分商品详情-->
+    <select id="selectProductInfo" resultType="com.github.wxiaoqi.security.app.vo.integralproduct.IntegralProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        cash_Num cashNum,
+        selection_image selectionImage,
+        product_imagetext_info productImagetextInfo,
+        spec_name specName,
+        spec_unit specUnit,
+        spec_integral specIntegral,
+        case when cash_Num >= product_Num and product_classify = '1' then '2'
+        when cash_Num >= product_Num and product_Num>'0' and product_classify = '1' then '2'
+        when cash_Num >= product_Num and product_Num > 0 and product_classify = '2' then '2'
+        when spec_integral &lt;= (select total_points from biz_user_integral where status = '1' and user_id = #{userId}) then '1'
+        when spec_integral &lt;= (select total_points from biz_user_integral where status = '1' and user_id = #{userId}) and product_Num= '0' and product_classify = '2'  then '1'
+        else '0' end as cashStatus
+        from
+        biz_integral_product
+        where
+        status = '1' and id = #{id}
+    </select>
+
+
+    <!--断库存是否够并减库存-->
+    <update id="updateStockById" >
+    	update biz_integral_product set cash_Num=cash_Num+1 WHERE cash_Num+1 &lt;= product_Num and id=#{productId}
+  	</update>
+
+</mapper>

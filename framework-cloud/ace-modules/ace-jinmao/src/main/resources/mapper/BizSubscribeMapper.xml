@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizSubscribeMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizSubscribe" id="bizSubscribeMap">
+        <result property="id" column="id"/>
+        <result property="subCode" column="sub_code"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="userId" column="user_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="deliveryAddr" column="delivery_addr"/>
+        <result property="source" column="source"/>
+        <result property="projectId" column="project_id"/>
+        <result property="crmProjectCode" column="crm_project_code"/>
+        <result property="roomId" column="room_id"/>
+        <result property="crmRoomCode" column="crm_room_code"/>
+        <result property="receivableCost" column="receivable_cost"/>
+        <result property="productCost" column="product_cost"/>
+        <result property="expressCost" column="express_cost"/>
+        <result property="actualCost" column="actual_cost"/>
+        <result property="discountCost" column="discount_cost"/>
+        <result property="remark" column="remark"/>
+        <result property="totalNum" column="total_num"/>
+        <result property="price" column="price"/>
+        <result property="unit" column="unit"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--获取用户物业费用列表-->
+    <select id="getPropertyBillList" resultType="com.github.wxiaoqi.security.jinmao.vo.propertybill.UserBillVo">
+        SELECT DISTINCT(s.id),s.sub_code subCode,s.title,IFNULL(s.contact_name,'') name,IFNULL(s.notice_status,'0') noticeStatus,s.crm_project_code crmProjectCode,s.room_id roomId,
+        s.crm_room_code crmRoomCode,u.crm_user_id crmUserId,ab.pay_type payType,ab.pay_status payStatus,DATE_FORMAT(ab.pay_date,'%Y-%m-%d %H:%i:%s') payDate,
+        IFNULL(s.contact_tel,'') phone,s.actual_cost actualCost,sw.subscribe_status subStatus, IFNULL(s.invoice_type,'0') invoiceType,t.name companyName,d.name centerCityName
+        FROM biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id = sw.id and sw.status = '1' and IFNULL(wo_type,'') = '' and sw.subscribe_status = '4'  and sw.bus_name = '物业缴费'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id and p.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        INNER JOIN biz_account_book ab on ab.sub_id = s.id AND ab.status = '1'
+        LEFT  JOIN base_app_client_user u ON u.id = sw.user_id AND u.status =  '1'
+        INNER JOIN base_user bu on bu.tenant_id = tp.tenant_id and bu.status = '1'
+        INNER JOIN base_tenant t on t.id = bu.tenant_id and t.status = '1' and t.tenant_type = '1'
+        left JOIN biz_dict d on t.center_city_name = d.val and d.status = '1'
+        WHERE s.status = '1'
+        <if test="type != 3 ">
+            and tp.tenant_id = #{tenantId}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            AND s.project_id =#{projectId}
+        </if>
+        <if test="subStatus != null and subStatus!=''">
+            AND sw.subscribe_status =#{subStatus}
+        </if>
+        <if test="syncStatus != null and syncStatus!=''">
+            AND s.notice_status =#{syncStatus}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (s.sub_code LIKE CONCAT('%',#{searchVal},'%') or s.title LIKE CONCAT('%',#{searchVal},'%')
+            or s.contact_name LIKE CONCAT('%',#{searchVal},'%') or s.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        order by s.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getPropertyBillCount" resultType="java.lang.Integer">
+        SELECT count(DISTINCT(s.id)) total
+        FROM biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id = sw.id and sw.status = '1' and IFNULL(wo_type,'') = '' and sw.subscribe_status = '4'  and sw.bus_name = '物业缴费'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id and p.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        INNER JOIN biz_account_book ab on ab.sub_id = s.id AND ab.status = '1'
+        LEFT  JOIN base_app_client_user u ON u.id = sw.user_id AND u.status =  '1'
+        INNER JOIN base_user bu on bu.tenant_id = tp.tenant_id and bu.status = '1'
+        INNER JOIN base_tenant t on t.id = bu.tenant_id and t.status = '1' and t.tenant_type = '1'
+        left JOIN biz_dict d on t.center_city_name = d.val and d.status = '1'
+        WHERE s.status = '1'
+        <if test="type != 3 ">
+            and tp.tenant_id = #{tenantId}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            AND s.project_id =#{projectId}
+        </if>
+        <if test="subStatus != null and subStatus!=''">
+            AND sw.subscribe_status =#{subStatus}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (s.sub_code LIKE CONCAT('%',#{searchVal},'%') or s.title LIKE CONCAT('%',#{searchVal},'%')
+            or s.contact_name LIKE CONCAT('%',#{searchVal},'%') or s.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+    </select>
+
+    <!--获取物业费用详情-->
+    <select id="getPropertyBillDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.propertybill.BillDetailVo">
+        SELECT s.id subId,s.sub_code subCode,s.title,s.actual_cost actualCost,s.room_id roomId,DATE_FORMAT(ab.pay_date,'%Y-%m-%d %H:%i:%s') payDate,IFNULL(s.notice_status,'0') noticeStatus,
+        sw.subscribe_status subStatus,ab.pay_status payStatus,IFNULL(ab.pay_type,'') payType,IFNULL(s.contact_name,'') name,IFNULL(s.contact_tel,'') phone,s.create_Time createTime,
+        IFNULL(s.invoice_type,'0') invoiceType,s.invoice_name invoiceName ,s.unit_addr unitAddr,s.bank_name bankName, s.bank_num bankNum,s.telphone,s.duty_num dutyNum,t.name companyName,d.name centerCityName
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on sw.id = s.id and sw.status = '1' AND IFNULL(sw.wo_type,'') = ''
+        LEFT JOIN biz_account_book ab ON s.id = ab.sub_id and ab.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = s.project_id and tp.status = '1'
+        INNER JOIN base_tenant t on t.id = tp.tenant_id and t.status = '1' and t.tenant_type = '1'
+        INNER JOIN biz_dict d on t.center_city_name = d.val and d.status = '1'
+        WHERE s.id = #{id} AND s.status = '1'
+    </select>
+
+    <!--获取物业费明细详情-->
+    <select id="getPropertyFeeById" resultType="com.github.wxiaoqi.security.jinmao.vo.propertybill.BillDateVo">
+        SELECT id, sub_id subId,should_id shouldId,should_date shouldDate,item,should_amount shouldAmount
+        FROM biz_sub_property_fee
+        where  status = '1' and sub_id = #{id}
+        order by should_date desc
+    </select>
+
+    <select id="selectBillListFeeById" resultType="com.github.wxiaoqi.security.jinmao.vo.propertybill.UserAllBillList">
+        SELECT should_date shouldDate,sum(should_amount) shouldAmount
+        FROM biz_sub_property_fee
+        where  status = '1' and sub_id = #{id}
+        GROUP BY should_date
+        order by should_date desc
+    </select>
+
+    <select id="selectPayBillFeeById" resultType="com.github.wxiaoqi.security.jinmao.vo.propertybill.BillDateVo">
+         SELECT id, sub_id subId,should_id shouldId,should_date shouldDate,item,should_amount shouldAmount
+        FROM biz_sub_property_fee
+        where  status = '1' and sub_id = #{id} and should_date = #{shouldDate}
+        order by should_date desc
+    </select>
+
+    <select id="getRoomNameBySubId" resultType="java.lang.String">
+        SELECT
+        CONCAT_WS('_',bcp.project_name,bb.record_building_name,bcu.name,bch.record_house_num) roomName
+        FROM biz_crm_house bch
+        LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+        LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+        LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+        LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+        LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+        WHERE bch.house_id = #{roomId} AND bch.`status` = '1'
+    </select>
+
+    <select id="getProjectId" resultType="java.lang.String">
+        SELECT p.project_id from  biz_crm_project p
+        INNER JOIN base_tenant_project tp on p.project_id = tp.project_id AND tp.status = '1' and tp.tenant_id = #{tenantId}
+        INNER JOIN base_tenant t on t.id = tp.tenant_id AND t.tenant_type = '1'
+        where p.status = '1';
+    </select>
+
+    <select id="querySubList" parameterType="map" resultType="java.util.Map">
+        SELECT w.id,w.sub_code code,w.title,w.description,sw.wo_type woType,w.contact_name contactName,w.contact_tel contactTel,w.delivery_addr deliveryAddr,
+        w.project_Id projectId, IFNULL(u.name,'') handleBy,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        IFNULL(DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,IFNULL(DATE_FORMAT(w.modify_Time,'%Y-%m-%d %H:%i:%s'),'') modifyTime,IFNULL(DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s'),'') receiveWoTime,
+        IFNULL(DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d %H:%i:%s'),'') expectedServiceTime,
+        IFNULL(DATE_FORMAT(sw.start_process_time,'%Y-%m-%d %H:%i:%s'),'') startProcessTime,IFNULL(DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s'),'') finishWoTime,
+        w.actual_cost actualCost,w.total_num totalNum,t.name companyName,w.unit unit,CONCAT_WS(',',ad.actual_Id,ad.account_pid) actualId,w.remark
+        from biz_subscribe w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        INNER JOIN base_tenant t on sw.company_Id=t.id and t.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        LEFT JOIN biz_account_book ad ON w.id = ad.sub_id AND ad.`status` = '1'
+        where w.status='1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="startExpectedServiceTime != null">
+            and DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d')&gt;=DATE_FORMAT(#{startExpectedServiceTime},'%Y-%m-%d')
+        </if>
+        <if test="endExpectedServiceTime != null" >
+            and DATE_FORMAT(sw.expected_service_time,'%Y-%m-%d')&lt;=DATE_FORMAT(#{endExpectedServiceTime},'%Y-%m-%d')
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and w.project_Id=#{projectId}
+        </if>
+        <if test="companyId != null and companyId!=''">
+            and sw.company_id=#{companyId}
+        </if>
+        <if test="subStatus != null and subStatus!=''">
+            and sw.subscribe_status=#{subStatus}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (w.sub_code LIKE CONCAT('%',#{searchVal},'%') or w.title LIKE CONCAT('%',#{searchVal},'%')
+            or w.contact_name LIKE CONCAT('%',#{searchVal},'%') or w.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        and sw.bus_id in
+        <foreach collection="busIdList" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        order by w.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+</mapper>

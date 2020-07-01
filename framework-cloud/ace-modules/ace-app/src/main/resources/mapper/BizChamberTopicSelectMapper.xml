@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizChamberTopicSelectMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizChamberTopicSelect" id="bizChamberTopicSelectMap">
+        <result property="id" column="Id"/>
+        <result property="topicId" column="topic_Id"/>
+        <result property="selectContent" column="select_content"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="STATUS"/>
+        <result property="timeStamp" column="Time_Stamp"/>
+        <result property="createBy" column="Create_By"/>
+        <result property="createTime" column="Create_Time"/>
+        <result property="modifyBy" column="Modify_By"/>
+        <result property="modifyTime" column="Modify_Time"/>
+    </resultMap>
+
+
+    <select id="selectBallotSelectList" resultType="com.github.wxiaoqi.security.app.vo.topic.out.SelContentVo">
+        select
+        s.id,
+        select_content selectContent,
+        IFNULL((SELECT '1' from biz_chamber_topic_vote v where v.select_Id=s.id and v.user_id=#{userId} and v.`status`='1' limit 1),'0')  isSelect
+        from biz_chamber_topic_select s where s.status = '1' and topic_Id = #{topicId}
+        ORDER BY s.sort,Create_Time
+    </select>
+
+    <!--查询每个投票选项的人数-->
+    <select id="selectSelNumById" resultType="java.lang.Integer">
+        select COUNT(user_Id) from biz_chamber_topic_vote where status = '1' and select_Id = #{selectId} and topic_Id = #{topicId}
+    </select>
+
+</mapper>

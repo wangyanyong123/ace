@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizCrmUnitMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizCrmUnit" id="bizCrmUnitMap">
+        <result property="unitId" column="unit_id"/>
+        <result property="unitCode" column="unit_code"/>
+        <result property="recordUnitCode" column="record_unit_code"/>
+        <result property="name" column="name"/>
+        <result property="recordUnitName" column="record_unit_name"/>
+        <result property="unitNum" column="unit_num"/>
+        <result property="recordUnitNum" column="record_unit_num"/>
+        <result property="buildingId" column="building_id"/>
+        <result property="buildingCode" column="building_code"/>
+        <result property="recordBuildingCode" column="record_building_code"/>
+        <result property="modifiedOn" column="modified_on"/>
+        <result property="propertyType" column="property_type"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getByIds" resultMap="bizCrmUnitMap">
+        select * from biz_crm_unit
+        where 1=1 and
+        unit_id in
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+    <select id="getUnitInfoListByBuildId" resultType="com.github.wxiaoqi.security.app.vo.city.out.UnitInfoVo">
+        select unit_id unitId ,record_unit_name unitName
+        from biz_crm_unit
+        where `status` = '1'and building_id = #{buildId}
+        <if test="type != null and type == 1">
+            and property_type = 'House'
+        </if>
+        <if test="type != null and type == 2">
+            and property_type = 'PublicArea'
+        </if>
+        order by record_unit_num + 0 ASC ,record_unit_name asc
+    </select>
+    <select id="getUnitInfoListByProjectId" resultType="com.github.wxiaoqi.security.api.vo.face.UnitInfoVo">
+        SELECT bcu.unit_id unitId, CONCAT_WS('_',bc.`name` , bcb.record_building_name , bcu.record_unit_name) unitName
+        FROM biz_crm_unit bcu
+        LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+        WHERE bcu.`status` = '1' AND bcu.property_type = 'House' AND bc.project_id = #{projectId}
+        order by block_num + 0 ASC ,bcb.building_num + 0 ASC,bcu.record_unit_num + 0 ASC ,bcu.record_unit_name asc
+    </select>
+
+    <select id="getUnitInfo" resultType="com.github.wxiaoqi.security.app.vo.city.out.UnitInfoVo">
+         SELECT bcu.unit_id unitId, CONCAT_WS('_',bc.`name` , bcb.record_building_name , bcu.record_unit_name) unitName
+        FROM biz_crm_unit bcu
+        LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+        WHERE bcu.`status` = '1' AND bcu.property_type = 'House' AND bc.project_id = #{projectId}
+        order by block_num + 0 ASC ,bcb.building_num + 0 ASC,bcu.record_unit_num + 0 ASC ,bcu.record_unit_name asc
+    </select>
+
+    <select id="getUnitByUser" resultType="com.github.wxiaoqi.security.app.vo.face.Unit">
+        SELECT
+		bcp.project_name projectName
+		,bch.record_house_num houseName
+		,bcc.`name` cityName
+		,bcu.record_unit_name unitName
+		,bcu.unit_id unitId
+		,GROUP_CONCAT(bcf.record_floor_name) elevatorAuthority
+		FROM biz_user_house bur
+		LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+		LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+		LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcu.`status` = '1'
+		LEFT JOIN biz_crm_building bb ON bb.housing_resources_id = bcu.building_id AND bb.`status` = '1'
+		LEFT JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+		LEFT JOIN biz_crm_project bcp ON bcp.project_id = bcb.project_id AND bcp.`status` = '1'
+		LEFT JOIN biz_crm_city bcc ON bcc.city_id = bcp.city_id AND bcc.`status` = '1'
+		LEFT JOIN (SELECT house_id, COUNT(*) num FROM biz_user_house WHERE  `status` = '1' AND is_delete = '0' AND house_id in (
+		SELECT house_id FROM biz_user_house WHERE user_id = #{userId} AND `status` = '1' AND is_delete = '0')
+		GROUP BY house_id) UNUM ON bur.house_id = UNUM.house_id
+		WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0' AND bcp.project_id = #{projectId}
+		GROUP BY bcu.unit_id
+		ORDER BY bur.is_now DESC,bur.modify_time DESC ,bur.create_time DESC
+    </select>
+
+    <select id="getUnitInfoList" resultType="map">
+        SELECT p.project_id projectId,p.project_name projectName,bc.block_id blockId,bc.name blockName,
+        bcu.unit_id unitId, CONCAT_WS('_',bc.`name` , bcb.record_building_name , bcu.record_unit_name) unitName
+        FROM biz_crm_unit bcu
+        LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+        LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+        LEFT JOIN biz_crm_project p on p.project_id=bc.project_id and p.status='1'
+        WHERE bcu.`status` = '1' AND bcu.property_type = 'House'
+        and p.project_id!='' and bc.block_id!=''
+        order by p.project_code,bc.name,bcb.building_num + 0 ASC,bcu.record_unit_num + 0 ASC ,bcu.record_unit_name asc;
+    </select>
+
+
+</mapper>

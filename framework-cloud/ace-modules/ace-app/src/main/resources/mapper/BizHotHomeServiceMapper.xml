@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizHotHomeServiceMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizHotHomeService" id="bizHotHomeServiceMap">
+        <result property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="imgUrl" column="img_url"/>
+        <result property="linkUrl" column="link_url"/>
+        <result property="position" column="position"/>
+        <result property="sortNum" column="sort_num"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="busId" column="bus_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectHotHomeServiceList" resultMap="bizHotHomeServiceMap">
+        select distinct title,img_url,bus_id from biz_hot_home_service hhs
+        <where>
+            <if test="projectId != null and projectId !=''">
+                and exists (select id from biz_hot_home_service_project hhsp
+                where hhsp.hot_home_service_id = hhs.id and hhsp.status = '1')
+            </if>
+            <if test="position != null">
+                and position = #{position}
+            </if>
+            and hhs.status = '1' ORDER BY hhs.sort_num desc,hhs.create_time desc
+        </where>
+        limit 2
+    </select>
+    <select id="selectHotHomeServiceListByCityCode" resultMap="bizHotHomeServiceMap">
+        SELECT
+            DISTINCT   title, img_url, bus_id
+        FROM
+        biz_hot_home_service hhs
+        INNER JOIN biz_reservation_delivery rd on (rd.product_id = hhs.bus_id and rd.status = '1')
+        <where>
+            <if test="position != null">
+                and hhs.position = #{position}
+            </if>
+            and hhs.status = '1'
+            group by hhs.bus_id
+            ORDER BY hhs.sort_num desc,hhs.create_time desc
+        </where>
+        limit 2
+    </select>
+    <select id="selectHotHomeServiceSalesMoreListByCityCode" resultMap="bizHotHomeServiceMap">
+        SELECT
+            r.`name` title,r.reservation_logo img_url ,r.id bus_id,rod.product_id
+          ,sum(rod.quantity) quantity
+        FROM
+            biz_reservation r
+        INNER JOIN biz_reservation_order_detail rod on (rod.product_id = r.id and rod.`status` = '1')
+        INNER JOIN biz_reservation_order ro on (ro.id = rod.order_id and ro.`status` = '1')
+        INNER JOIN biz_account_book ab on ( ab.bus_type = 2 and ab.sub_id = ro.id)
+        INNER  JOIN biz_reservation_delivery rd on ( r.id = rd.product_id and rd.`status` = '1')
+
+        where r.reserva_Status = 3 and ab.pay_status = 2 and ro.create_time >= #{limitDate}
+        and rd.city_code in
+        <foreach collection="cityCodeList" item ='cityCode' open="(" close=")" separator=",">
+            #{cityCode}
+        </foreach>
+        GROUP BY r.id
+        ORDER BY quantity desc
+        limit 2
+    </select>
+</mapper>

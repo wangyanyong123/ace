@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizProductSpecMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizProductSpec" id="bizProductSpecMap">
+        <result property="id" column="ID"/>
+        <result property="productId" column="product_id"/>
+        <result property="specName" column="spec_name"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="price" column="price"/>
+        <result property="lowestNum" column="lowest_num"/>
+        <result property="unit" column="unit"/>
+        <result property="specImage" column="spec_image"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询商品规格详情-->
+    <select id="selectSpecInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultSpecVo"
+        parameterType="java.lang.String">
+        select
+        id,
+        spec_name specName,
+        original_price originalPrice,
+        price,
+        lowest_num lowestNum,
+        spec_Type_Code specTypeCode,
+        unit,
+        spec_image specImage
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        order by sort
+    </select>
+
+
+    <select id="selectAuditSpecInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.Product.OutParam.ResultSpecVo"
+        parameterType="java.lang.String">
+        select
+        original_price originalPrice,
+        price,
+        unit
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        order by sort
+        LIMIT 1
+    </select>
+
+
+    <select id="selectLastSortById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        sort
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{id}
+        ORDER BY sort DESC
+        limit 1
+    </select>
+
+
+    <select id="selectIdList" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        id
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{id}
+    </select>
+
+    <delete id="delSpecInfo" parameterType="java.lang.String">
+         delete from biz_product_spec where product_id = #{id}
+    </delete>
+
+
+    <update id="deleteSpecIds">
+        UPDATE biz_product_spec s SET s.`status` = 0 WHERE s.ID IN
+        <foreach collection="specIds" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BaseAppServerUserTenantIdMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BaseAppServerUserTenantId" id="baseAppServerUserTenantIdMap">
+        <result property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getServerTenant" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM base_app_server_user_tenant_id where id = #{id} and status = '1'
+    </select>
+
+    <delete id="delServerTenant">
+        DELETE FROM base_app_server_user_tenant_id WHERE  tenant_id = #{tenantId} and id = #{id}
+    </delete>
+</mapper>

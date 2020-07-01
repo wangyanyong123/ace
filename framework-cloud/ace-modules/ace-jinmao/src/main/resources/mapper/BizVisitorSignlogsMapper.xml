@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizVisitorSignlogsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizVisitorSignlogs" id="bizVisitorSignlogsMap">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="houseId" column="house_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="visitorName" column="visitor_name"/>
+        <result property="visitorPhone" column="visitor_phone"/>
+        <result property="visitorSex" column="visitor_sex"/>
+        <result property="visitorNum" column="visitor_num"/>
+        <result property="visitTime" column="visit_time"/>
+        <result property="visitAddr" column="visit_addr"/>
+        <result property="visitReason" column="visit_reason"/>
+        <result property="isDrive" column="is_drive"/>
+        <result property="licensePlate" column="license_plate"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getVisitSignList" resultType="com.github.wxiaoqi.security.jinmao.vo.visitsign.ResultVisitListVo">
+        SELECT
+        s.id,
+        u.nickname name,
+        s.visitor_name visitorName,
+        s.visitor_phone phone,
+        s.visitor_num visitNum,
+        DATE_FORMAT(s.visit_time,'%Y-%m-%d %H:%i:%s') visitTime,
+        p.project_name projectName,
+        s.visit_addr visitAddr,
+        s.visit_reason visitReason,
+        s.is_drive isDrive,
+        IFNULL(s.license_plate,'') licensePlate
+        FROM biz_visitor_signlogs s
+        INNER JOIN base_app_client_user u on u.id = s.user_id AND u.status = '1'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id AND p.status = '1'
+        where s.status= '1'
+        <if test="projectId !=null and projectId != ''">
+        AND s.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            s.visitor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.nickname LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY s.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getVisitSignCount" resultType="java.lang.Integer">
+        SELECT
+         COUNT(s.id) total
+        FROM biz_visitor_signlogs s
+        INNER JOIN base_app_client_user u on u.id = s.user_id AND u.status = '1'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id AND p.status = '1'
+        where s.status= '1'
+        <if test="projectId !=null and projectId != ''">
+            AND s.project_id = #{projectId}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            s.visitor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.name LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY s.create_Time DESC
+    </select>
+
+
+    <select id="getVisitSignInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.visitsign.ResultVisitInfoVo">
+        SELECT
+        s.id,
+        u.nickname name,
+        s.visitor_name visitorName,
+        s.visitor_phone phone,
+        s.visitor_num visitNum,
+        s.visitor_photo visitPhotoStr,
+        DATE_FORMAT(s.visit_time,'%Y-%m-%d %H:%i:%s') visitTime,
+        p.project_name projectName,
+        s.visit_addr visitAddr,
+        s.visit_reason visitReason,
+        s.is_drive isDrive,
+        DATE_FORMAT(s.visit_effect_time,'%Y-%m-%d %H:%i:%s') visitEffectTime,
+        DATE_FORMAT(s.visit_end_time,'%Y-%m-%d %H:%i:%s') visitEndTime,
+        IFNULL(s.license_plate,'') licensePlate
+        FROM biz_visitor_signlogs s
+        INNER JOIN base_app_client_user u on u.id = s.user_id AND u.status = '1'
+        INNER JOIN biz_crm_project p ON s.project_id = p.project_id AND p.status = '1'
+        where s.status= '1' and s.id = #{id}
+    </select>
+</mapper>

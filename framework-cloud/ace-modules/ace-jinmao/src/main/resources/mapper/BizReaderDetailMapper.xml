@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizReaderDetailMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizReaderDetail" id="bizReaderDetailMap">
+        <result property="id" column="ID"/>
+        <result property="objectId" column="object_id"/>
+        <result property="type" column="type"/>
+        <result property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+     <!--按分钟统计数据-->
+    <select id="selectStatDataByMinute" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatDataVo">
+        select A.time,A.dataType,A.topicType,
+        CONCAT(A.time,'~',date_format(date_add(A.time,INTERVAL 5 minute), '%Y-%m-%d %H:%i')) createTime,A.pv,A.uv
+         from(
+        select
+        DATE_FORMAT(
+                    concat( date( create_Time ), ' ', HOUR ( create_Time ), ':', floor( MINUTE ( create_Time ) / 5 ) * 5 ),
+                    '%Y-%m-%d %H:%i'
+                ) AS time,'分钟' dataType,
+        case when type = '1' then '家里人'
+        when type = '2' then '议事厅'
+        when type = '3' then '社区话题'
+        else '业主圈帖子' end as topicType,
+        count(*) pv, count(DISTINCT(user_id)) uv
+        from
+        biz_reader_detail
+        WHERE status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 0 = #{dataType}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i ') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i ')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i ') &lt;=DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i ')
+        </if>
+        GROUP BY DATE_FORMAT( time, '%Y-%m-%d %H:%i' )
+        ORDER BY time desc) A
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--按小时统计数据-->
+    <select id="selectStatDataByHours" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatDataVo">
+        select temp.date,d1.topicType,'小时' dataType,
+        IFNULL(d1.createTime,CONCAT(temp.date,'~',date_format(date_add(temp.date,INTERVAL 1 HOUR), '%Y-%m-%d %H:%i'))) createTime,
+        IFNULL(d1.pv,0) pv,IFNULL(d1.uv,0) uv from
+        (SELECT
+        DATE_FORMAT(adddate(CONCAT(#{startTime},':00'), interval numlist.id HOUR),'%Y-%m-%d %H:%i') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id HOUR),'%Y-%m-%d %H:%i') &lt;= date_format(#{endTime}, '%Y-%m-%d %H:%i')) temp
+        LEFT JOIN(
+        select  case when type = '1' then '家里人'
+        when type = '2' then '议事厅'
+        when type = '3' then '社区话题'
+        else '业主圈帖子' end as topicType, '小时' dataType, type,
+        CONCAT(date_format(create_time, '%Y-%m-%d %H'),':00') time,
+        CONCAT(date_format(create_time, '%Y-%m-%d %H'),':00','-',date_format(date_add(create_time,INTERVAL 1 HOUR), '%Y-%m-%d %H'),':00') createTime,
+        count(*) pv, count(DISTINCT(user_id)) uv
+        from biz_reader_detail
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 1 = #{dataType}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d %H ') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d %H ')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(create_Time,'%Y-%m-%d %H ') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d %H ')
+        </if>
+        GROUP BY date_format(create_time, '%Y-%m-%d %H '),type
+        ) d1 on (d1.time&lt;=temp.date and temp.date &lt; CONCAT(date_format(date_add(d1.time,INTERVAL 1 HOUR), '%Y-%m-%d %H'),':00'))
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--按天统计数据-->
+    <select id="selectStatDataByDay" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatDataVo">
+        select temp.date,d2.topicType,'日' dataType,IFNULL(d2.createTime,temp.date) createTime,
+        IFNULL(d2.pv,0) pv,IFNULL(d2.uv,0) uv from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id day),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select  case when type = '1' then '家里人'
+        when type = '2' then '议事厅'
+        when type = '3' then '社区话题'
+        else '业主圈帖子' end as topicType, '日' dataType,
+        date_format(create_time, '%Y-%m-%d') createTime,
+        count(*) pv, count(DISTINCT(user_id)) uv
+        from biz_reader_detail
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 2 = #{dataType}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(create_Time,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        GROUP BY date_format(create_time, '%Y-%m-%d'),type
+        ) d2 on d2.createTime=temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--按周统计数据-->
+    <select id="selectStatDataByWeek" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatDataVo">
+        select DISTINCT(temp.date),d3.topicType,'周' dataType,CONCAT(date_format(temp.date, '%Y-%m-%d'),'~',date_format(date_add(temp.date,INTERVAL 1 WEEK), '%Y-%m-%d')) createTime,
+        IFNULL(sum(d3.pv),0) pv,
+        (select count(DISTINCT(user_id)) from  biz_reader_detail
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 3 = #{dataType}
+        </if>
+        AND (DATE_FORMAT(create_Time,'%Y-%m-%d') >= temp.date
+        and DATE_FORMAT(create_Time,'%Y-%m-%d') &lt; SUBSTRING(date_format(date_add(temp.date,INTERVAL 1 WEEK), '%Y-%m-%d'),1,10))) uv
+        from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y-%m-%d') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id WEEK),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select  case when type = '1' then '家里人'
+        when type = '2' then '议事厅'
+        when type = '3' then '社区话题'
+        else '业主圈帖子' end as topicType, '周' dataType,
+        date_format(create_time, '%Y-%m-%d') time,
+        CONCAT(date_format(create_time, '%Y-%m-%d'),'-',date_format(date_add(create_time,INTERVAL 1 WEEK), '%Y-%m-%d')) createTime,
+        count(*) pv, count(DISTINCT(user_id)) uv
+        from biz_reader_detail
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 3 = #{dataType}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m-%d') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(create_Time,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        GROUP BY date_format(create_time, '%Y-%m-%d'),type
+        ORDER BY type+0,create_time
+        ) d3 on (d3.time >= temp.date and d3.time &lt;date_format(date_add(temp.date,INTERVAL 1 WEEK), '%Y-%m-%d'))
+        GROUP BY temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--按月统计数据-->
+    <select id="selectStatDataByMouth" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatDataVo">
+        select temp.date,d4.topicType,'月' dataType,IFNULL(d4.createTime,temp.date) createTime,
+        IFNULL(d4.pv,0) pv,IFNULL(d4.uv,0) uv from
+        (SELECT
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m') AS 'date'
+        FROM
+        (
+        SELECT
+        n1.i + n10.i * 10 + n100.i * 100 AS id
+        FROM
+        biz_num n1
+        CROSS JOIN biz_num AS n10
+        CROSS JOIN biz_num AS n100
+        ) AS numlist
+        WHERE
+        DATE_FORMAT(adddate(#{startTime}, interval numlist.id month),'%Y-%m-%d') &lt;= date_format(#{endTime}, '%Y-%m-%d')) temp
+        LEFT JOIN(
+        select  case when type = '1' then '家里人'
+        when type = '2' then '议事厅'
+        when type = '3' then '社区话题'
+        else '业主圈帖子' end as topicType, '月' dataType,
+        date_format(create_time, '%Y-%m') createTime,
+        count(*) pv, count(DISTINCT(user_id)) uv
+        from biz_reader_detail
+        where status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="type != null and type != '' ">
+            and type = #{type}
+        </if>
+        <if test="dataType != null and dataType != '' ">
+            and 4 = #{dataType}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(create_Time,'%Y-%m') &gt;= DATE_FORMAT(#{startTime},'%Y-%m')
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(create_Time,'%Y-%m') &lt;=DATE_FORMAT(#{endTime},'%Y-%m')
+        </if>
+        GROUP BY date_format(create_time, '%Y-%m'),type
+        ORDER BY type+0,create_time
+        ) d4 on d4.createTime=temp.date
+        ORDER BY temp.date desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询统计各帖子信息-->
+    <select id="selectTopicListByType" resultType="com.github.wxiaoqi.security.jinmao.vo.stat.out.StatTopicVo">
+        select * from (
+        (
+        select DISTINCT(bfp.id),content, IFNULL(u.nickname,u.`name`) userName,bfp.user_id userId,'' tagName, '' topicType,'' groupName,
+        DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s') createTime, d.create_time dtime,d.project_id projectId,up_num upNum,
+        COUNT(DISTINCT(d.id)) pv, COUNT(DISTINCT(d.user_id)) uv
+        from
+        biz_reader_detail d
+        INNER JOIN biz_family_posts bfp on d.object_id=bfp.id and bfp.status = '1'
+        left JOIN base_app_client_user u ON bfp.user_id=u.id  and u.is_deleted = '1' and u.status = '1'
+        where
+        d.status ='1'
+        and d.type = #{type}
+        <if test="dataType == 0">
+            and (date_format(d.create_time, '%Y-%m-%d %H:%i') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i')
+            and date_format(d.create_time, '%Y-%m-%d %H:%i') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i'))
+        </if>
+        <if test="dataType == 1">
+            and (date_format(d.create_time, '%Y-%m-%d %H') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H')
+            and date_format(d.create_time, '%Y-%m-%d %H') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H'))
+        </if>
+        <if test="dataType == 2">
+            and date_format(d.create_time, '%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="dataType == 3">
+            and (date_format(d.create_time, '%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            and date_format(d.create_time, '%Y-%m-%d') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d'))
+        </if>
+        <if test="dataType == 4">
+            and date_format(d.create_time, '%Y-%m') =  #{startTime}
+        </if>
+        GROUP BY d.object_id
+        ) UNION
+        (
+        select DISTINCT(bfp.id),case when title = '' then description when title is null then description else title end as content,
+        IFNULL(u.nickname,u.`name`) userName,bfp.user_id userId,'' tagName, '' topicType,g.name groupName,
+        DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s') createTime, d.create_time dtime,d.project_id projectId,up_num upNum,
+        COUNT(DISTINCT(d.id)) pv, COUNT(DISTINCT(d.user_id)) uv
+        from
+        biz_reader_detail d
+        INNER JOIN biz_forum_posts bfp on d.object_id=bfp.id and bfp.status = '1'
+        left JOIN base_app_client_user u ON bfp.user_id=u.id  and u.is_deleted = '1' and u.status = '1'
+        LEFT JOIN biz_group g on bfp.group_id = g.id and g.status = '1'
+        where
+        d.status ='1'
+        and d.type =#{type}
+        <if test="dataType == 0">
+            and (date_format(d.create_time, '%Y-%m-%d %H:%i') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i')
+            and date_format(d.create_time, '%Y-%m-%d %H:%i') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i'))
+        </if>
+        <if test="dataType == 1">
+            and (date_format(d.create_time, '%Y-%m-%d %H') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H')
+            and date_format(d.create_time, '%Y-%m-%d %H') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H'))
+        </if>
+        <if test="dataType == 2">
+            and date_format(d.create_time, '%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="dataType == 3">
+            and (date_format(d.create_time, '%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            and date_format(d.create_time, '%Y-%m-%d') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d'))
+        </if>
+        <if test="dataType == 4">
+            and date_format(d.create_time, '%Y-%m') =  #{startTime}
+        </if>
+        GROUP BY d.object_id
+        ) UNION
+        (
+        select DISTINCT(bfp.id),IFNULL(content,title)content, IFNULL(u.nickname,u.`name`) userName,bfp.user_id userId, topic_tag_Name tagName,
+        case when topic_type = '1' then '话题' when topic_type = '2' then '投票' end as topicType,'' groupName,
+        DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s') createTime, d.create_time dtime,d.project_id projectId,up_num upNum,
+        COUNT(DISTINCT(d.id)) pv, COUNT(DISTINCT(d.user_id)) uv
+        from
+        biz_reader_detail d
+        INNER JOIN biz_chamber_topic bfp on d.object_id=bfp.id and bfp.status = '1'
+        left JOIN base_app_client_user u ON bfp.user_id=u.id  and u.is_deleted = '1' and u.status = '1'
+        left JOIN biz_chamber_topic_tag t on bfp.topic_tag_id=t.id and t.status = '1'
+        where
+        d.status ='1'
+        and d.type =#{type}
+        <if test="dataType == 0">
+            and (date_format(d.create_time, '%Y-%m-%d %H:%i') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i')
+            and date_format(d.create_time, '%Y-%m-%d %H:%i') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i'))
+        </if>
+        <if test="dataType == 1">
+            and (date_format(d.create_time, '%Y-%m-%d %H') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H')
+            and date_format(d.create_time, '%Y-%m-%d %H') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H'))
+        </if>
+        <if test="dataType == 2">
+            and date_format(d.create_time, '%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="dataType == 3">
+            and (date_format(d.create_time, '%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            and date_format(d.create_time, '%Y-%m-%d') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d'))
+        </if>
+        <if test="dataType == 4">
+            and date_format(d.create_time, '%Y-%m') =  #{startTime}
+        </if>
+        GROUP BY d.object_id
+        ) UNION
+        (
+        select DISTINCT(bfp.id),IFNULL(title,content)content, '' userName, bfp.user_id userId, '' tagName, '' topicType,'' groupName,
+        DATE_FORMAT(bfp.create_Time,'%Y-%m-%d %H:%i:%s') createTime, d.create_time dtime,d.project_id projectId,up_num upNum,
+        COUNT(DISTINCT(d.id)) pv, COUNT(DISTINCT(d.user_id)) uv
+        from
+        biz_reader_detail d
+        INNER JOIN biz_community_topic bfp on d.object_id=bfp.id and bfp.status = '1'
+        where
+        d.status ='1'
+        and d.type = #{type}
+        <if test="dataType == 0">
+            and (date_format(d.create_time, '%Y-%m-%d %H:%i') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i')
+            and date_format(d.create_time, '%Y-%m-%d %H:%i') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i'))
+        </if>
+        <if test="dataType == 1">
+            and (date_format(d.create_time, '%Y-%m-%d %H') >= DATE_FORMAT(#{startTime},'%Y-%m-%d %H')
+            and date_format(d.create_time, '%Y-%m-%d %H') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d %H'))
+        </if>
+        <if test="dataType == 2">
+            and date_format(d.create_time, '%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="dataType == 3">
+            and (date_format(d.create_time, '%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            and date_format(d.create_time, '%Y-%m-%d') &lt; DATE_FORMAT(#{endTime},'%Y-%m-%d'))
+        </if>
+        <if test="dataType == 4">
+            and date_format(d.create_time, '%Y-%m') =  #{startTime}
+        </if>
+        GROUP BY d.object_id
+        )) A
+        where 1=1
+        <if test="projectId != null and projectId != '' ">
+            and A.projectId = #{projectId}
+        </if>
+        <if test="pSort == 0">
+            ORDER BY A.pv
+        </if>
+        <if test="pSort == 1">
+            ORDER BY A.pv desc
+        </if>
+        <if test="uSort == 0">
+            ORDER BY A.uv
+        </if>
+        <if test="uSort == 1">
+            ORDER BY A.uv desc
+        </if>
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+</mapper>

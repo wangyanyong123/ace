@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizGroupMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizGroup" id="bizGroupMap">
+        <result property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="name" column="name"/>
+        <result property="summary" column="summary"/>
+        <result property="classifyCode" column="classify_code"/>
+        <result property="classifyName" column="classify_name"/>
+        <result property="logoImage" column="logo_image"/>
+        <result property="grade" column="grade"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询小组列表-->
+    <select id="selectGroupList" resultType="com.github.wxiaoqi.security.jinmao.vo.group.out.ResultGroupListVo">
+      SELECT
+		g.id,
+		g.name,
+		g.logo_image logoImage,
+		g.grade,
+		g.enable_status enableStatus
+    FROM biz_group g
+    WHERE
+		g.status = '1'and
+        g.project_id in
+        <foreach collection="projectId" item="item" open="(" close=")" separator=",">
+          #{item}
+        </foreach>
+	<if test="enableStatus != 4">
+    AND
+        g.enable_status = #{enableStatus}
+    </if>
+    <if test="searchVal != null and searchVal != '' ">
+    AND
+        g.name LIKE CONCAT('%',#{searchVal},'%')
+    </if>
+    ORDER BY g.create_Time DESC
+    <if test="page != null and limit != null">
+        LIMIT #{page},#{limit}
+    </if>
+    </select>
+    <!--查询小组数量-->
+    <select id="selectGroupCount" resultType="java.lang.Integer" >
+    SELECT
+        COUNT(*) total
+    FROM biz_group g
+    WHERE
+    g.status = '1' and
+        g.project_id in
+        <foreach collection="ids" item="item" open="(" close=")" separator=",">
+        #{item}
+        </foreach>
+
+    <if test="enableStatus != 4">
+        AND
+        g.enable_status = #{enableStatus}
+    </if>
+    <if test="searchVal != null and searchVal != '' ">
+        AND
+        g.name LIKE CONCAT('%',#{searchVal},'%')
+    </if>
+    </select>
+    <select id="getGroupName" resultType="java.lang.String">
+        SELECT
+        name
+        FROM biz_group
+        WHERE
+        name = #{name}
+        AND status = '1'
+        AND project_id = #{projectId}
+        limit 1
+    </select>
+    <!--根据ID查询小组详情-->
+    <select id="selectGroupInfoById" resultType="com.github.wxiaoqi.security.jinmao.vo.group.out.ResultGroupInfoVo">
+        SELECT
+		g.id,
+		g.name,
+		g.logo_image logoImage,
+		g.summary summary,
+		p.project_id projectId,
+		p.project_name projectName,
+		g.classify_code classifyCode,
+		g.classify_name classifyName
+        FROM biz_group g
+        LEFT JOIN biz_crm_project p on p.project_id = g.project_id AND p.status = '1'
+        LEFT JOIN dict_value v on g.classify_code = v.value
+        WHERE
+        g.id = #{id}
+        AND
+            g.status = '1'
+        GROUP BY name
+    </select>
+    <!--查询小组分类-->
+    <select id="selectGroupClassify" resultType="com.github.wxiaoqi.security.jinmao.vo.group.out.ResultClassifyInfoVo">
+        SELECT
+            v.value classifyCode,
+            v.label_zh_CH classifyName
+        FROM dict_value v
+        WHERE
+            v.code like '%comm_group_classify%'
+        <if test="classifyCode !=null and classifyCode !=''">
+        AND
+            v.value = #{classifyCode}
+        </if>
+    </select>
+    <!--修改小组状态-->
+    <update id="updateGroupStatus">
+        UPDATE
+            biz_group
+        SET
+            enable_status = #{enableStatus},
+            modify_Time = NOW()
+        WHERE
+            status = '1'
+        AND
+            id = #{id}
+    </update>
+    <!--加入/取消小组组长-->
+    <update id="updateGroupLeaderStatus">
+        UPDATE
+	      biz_group_leader l
+        SET
+        <if test="status == 1">
+          l.status = '0',
+        </if>
+        <if test="status == 2">
+          l.status = '1',
+        </if>
+          modify_Time = NOW()
+        WHERE
+	      l.user_id = #{userId}
+        AND
+          l.group_id = #{groupId}
+    </update>
+    <update id="updateGroupMemberStatus">
+         UPDATE
+	      biz_group_member m
+        SET
+          m.member_status = #{status},
+          modify_Time = NOW()
+        WHERE
+	      m.user_id = #{userId}
+	    and m.group_id = #{groupId}
+    </update>
+    <!--删除小组-->
+    <update id="deleteGroupById"  >
+        UPDATE
+          biz_group g
+        SET
+          g.status = '0',
+          modify_Time = NOW()
+        WHERE
+          g.id = #{id}
+    </update>
+    <!--查询小组关联项目-->
+    <select id="selectGroupProjectInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.group.out.ResultProject">
+        SELECT
+            g.project_id projectId,
+            p.project_name projectName
+        FROM biz_group g
+        LEFT JOIN biz_crm_project p on g.project_id = p.project_id AND p.status = '1'
+        WHERE
+            g.status = '1'
+        AND
+          g.id = #{id}
+    </select>
+    <!--查询小组分类-->
+    <select id="selectGroupClassifyInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.group.out.ResultClassify">
+        SELECT
+            g.classify_code code,
+            g.classify_name classifyName
+        FROM biz_group g
+        WHERE
+            g.status = '1'
+        AND
+            g.id = #{id}
+    </select>
+
+</mapper>

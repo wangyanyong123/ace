@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizUserGradeRuleMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizUserGradeRule" id="bizUserGradeRuleMap">
+        <result property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="integral" column="integral"/>
+        <result property="gradeTitle" column="grade_title"/>
+        <result property="gradeImg" column="grade_img"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <select id="getGradeList" resultType="com.github.wxiaoqi.security.jinmao.vo.grade.out.GradeList">
+        SELECT id,code,grade_title gradeTitle,integral from biz_user_grade_rule
+        where status = '1'
+        <if test="searchVal != null and searchVal !=''">
+            and (code like CONCAT('%',#{searchVal},'%')
+            or grade_title like CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY integral asc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getGradeListTotal" resultType="java.lang.Integer">
+        SELECT count(id) from biz_user_grade_rule
+        where status = '1'
+        <if test="searchVal != null and searchVal !=''">
+            and (code like CONCAT('%',#{searchVal},'%')
+            or grade_title like CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+    </select>
+
+    <update id="deleteById">
+        update biz_user_grade_rule set status = '0' where id = #{id}
+    </update>
+
+    <select id="getGradeIsExist" resultType="java.lang.Integer">
+        SELECT count(1) from biz_user_grade_rule where status = '1' and integral = #{integral}
+    </select>
+</mapper>

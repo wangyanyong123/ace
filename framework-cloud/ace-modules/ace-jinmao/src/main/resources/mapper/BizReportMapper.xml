@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizReportMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizReport" id="bizReportMap">
+        <result property="id" column="id"/>
+        <result property="postsId" column="posts_id"/>
+        <result property="commentId" column="comment_id"/>
+        <result property="beUserId" column="be_user_id"/>
+        <result property="beReportPerson" column="be_report_person"/>
+        <result property="beReportTel" column="be_report_tel"/>
+        <result property="reportCount" column="report_count"/>
+        <result property="isFeedback" column="is_feedback"/>
+        <result property="isComment" column="is_comment"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询举报列表-->
+    <select id="selectReportList" resultType="com.github.wxiaoqi.security.jinmao.vo.report.out.ReportVo">
+        select * from (
+        (select
+        r.id reportId,
+        bfp.title,
+        bfp.id postsId,
+        bfp.description,
+        '' commentId,
+        '' content,
+        '' commentTime,
+        r.be_user_id beUserId,
+        u.nickname beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        (select COUNT(DISTINCT(user_id)) from biz_report_feedback where status = '1' and user_id = r.be_user_id limit 1) isFeedback,
+        bfp.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        bfp.project_id projectId,
+        bfp.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_forum_posts bfp on r.posts_id=bfp.id
+        INNER JOIN biz_group g on bfp.group_id=g.id
+        INNER JOIN base_app_client_user u on u.id=r.be_user_id
+        where
+        r.status = '1' and r.type = '1')
+        UNION
+        (select
+        r.id reportId,
+        a.title,
+        a.id postsId,
+        '' description,
+        r.comment_id commentId,
+        c.content,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') commentTime,
+        r.be_user_id beUserId,
+        u.nickname beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        (select COUNT(DISTINCT(user_id)) from biz_report_feedback where status = '1' and user_id = r.be_user_id limit 1) isFeedback,
+        c.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        a.project_id projectId,
+        a.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_comment c on (r.posts_id=c.object_id and r.comment_id=c.id)
+        left JOIN biz_activity a on c.object_id=a.id
+        left JOIN biz_group g on a.group_id=g.id
+        INNER JOIN base_app_client_user u on u.id=r.be_user_id
+        where
+        r.status = '1' and r.type = '3')
+        UNION
+        (select
+        r.id reportId,
+        bfp.title,
+        bfp.id postsId,
+        '' description,
+        r.comment_id commentId,
+        c.content,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') commentTime,
+        r.be_user_id beUserId,
+        u.nickname beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        (select COUNT(DISTINCT(user_id)) from biz_report_feedback where status = '1' and user_id = r.be_user_id limit 1) isFeedback,
+        c.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        bfp.project_id projectId,
+        bfp.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_comment c on (r.posts_id=c.object_id and r.comment_id=c.id)
+        INNER JOIN biz_forum_posts bfp on c.object_id=bfp.id
+        INNER JOIN biz_group g on bfp.group_id=g.id
+        INNER JOIN base_app_client_user u on u.id=r.be_user_id
+        where
+        r.status = '1' and r.type = '2')
+        )A
+        where
+        1=1
+        <if test="projectId != null and projectId != '' ">
+            and A.projectId = #{projectId}
+        </if>
+        <if test="groupId != null and groupId != '' ">
+            and A.groupId = #{groupId}
+        </if>
+        <if test="reportType != null and reportType != '' ">
+            and A.reportType = #{reportType}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            A.title LIKE CONCAT('%',#{searchVal},'%')
+            OR A.beReportPerson LIKE CONCAT('%',#{searchVal},'%')
+            OR A.beReportTel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY A.reportTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询举报列表数量-->
+    <select id="selectReportCount" resultType="java.lang.Integer">
+        select count(reportId) from (
+        (select
+        r.id reportId,
+        bfp.title,
+        bfp.id postsId,
+        '' commentId,
+        '' content,
+        '' commentTime,
+        r.be_user_id beUserId,
+        r.be_report_person beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        r.is_feedback isFeedback,
+        bfp.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        bfp.project_id projectId,
+        bfp.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_forum_posts bfp on r.posts_id=bfp.id
+        INNER JOIN biz_group g on bfp.group_id=g.id
+        where
+        r.status = '1' and r.type = '1')
+        UNION
+        (select
+        r.id reportId,
+        a.title,
+        a.id postsId,
+        r.comment_id commentId,
+        c.content,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') commentTime,
+        r.be_user_id beUserId,
+        r.be_report_person beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        r.is_feedback isFeedback,
+        c.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        a.project_id projectId,
+        a.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_comment c on (r.posts_id=c.object_id and r.comment_id=c.id)
+        left JOIN biz_activity a on c.object_id=a.id
+        left JOIN biz_group g on a.group_id=g.id
+        where
+        r.status = '1' and r.type = '3')
+        UNION
+        (select
+        r.id reportId,
+        bfp.title,
+        bfp.id postsId,
+        r.comment_id commentId,
+        c.content,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') commentTime,
+        r.be_user_id beUserId,
+        r.be_report_person beReportPerson,
+        r.be_report_tel beReportTel,
+        r.type reportType,
+        r.report_count reportCount,
+        r.is_comment isForbid,
+        r.is_feedback isFeedback,
+        c.show_type showType,
+        DATE_FORMAT(r.create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        bfp.project_id projectId,
+        bfp.group_id groupId,
+        g.name groupName
+        from
+        biz_report r
+        INNER JOIN biz_comment c on (r.posts_id=c.object_id and r.comment_id=c.id)
+        INNER JOIN biz_forum_posts bfp on c.object_id=bfp.id
+        INNER JOIN biz_group g on bfp.group_id=g.id
+        where
+        r.status = '1' and r.type = '2')
+        )A
+        where
+        1=1
+        <if test="projectId != null and projectId != '' ">
+            and A.projectId = #{projectId}
+        </if>
+        <if test="groupId != null and groupId != '' ">
+            and A.groupId = #{groupId}
+        </if>
+        <if test="reportType != null and reportType != '' ">
+            and A.reportType = #{reportType}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            A.title LIKE CONCAT('%',#{searchVal},'%')
+            OR A.beReportPerson LIKE CONCAT('%',#{searchVal},'%')
+            OR A.beReportTel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY A.reportTime desc
+    </select>
+
+    <!--允许/禁止评论,发帖-->
+    <update id="updateForbidStatus">
+        UPDATE biz_report
+        SET  <if test="status == 0">
+              is_comment = '0',
+             </if>
+             <if test="status == 1">
+               is_comment = '1',
+             </if>
+               modify_Time = NOW(),
+               modify_By = #{userId}
+        where
+        status = 1
+        AND be_user_id = #{beUserId}
+    </update>
+
+    <!--查看举报人信息-->
+    <select id="seelctReportPersonList" resultType="com.github.wxiaoqi.security.jinmao.vo.report.out.ReportPersonVo">
+        select
+        report_person reportPerson,
+        contact,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') reportTime,
+        report_reason reportReason
+        from
+        biz_report_person
+        where
+        status = '1'
+        and report_id = #{reportId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            report_person LIKE CONCAT('%',#{searchVal},'%')
+            OR contact LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="seelctReportPersonCount" resultType="java.lang.Integer">
+        select
+        COUNT(id)
+        from
+        biz_report_person
+        where
+        status = '1'
+        and report_id = #{reportId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            report_person LIKE CONCAT('%',#{searchVal},'%')
+            OR contact LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY create_Time desc
+    </select>
+
+    <!--查询反馈信息-->
+    <select id="selectFeedbackByUserId"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.report.out.FeedbackVo">
+        select
+        user_name userName,
+        contact,
+        content,
+        source,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i:%s') feedbackTime
+        from
+        biz_report_feedback
+        where
+        status = '1'
+        and user_id = #{userId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR contact LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectFeedbackByUserIdCount" resultType="java.lang.Integer">
+        select
+        COUNT(id)
+        from
+        biz_report_feedback
+        where
+        status = '1'
+        and user_id = #{userId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR contact LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by create_Time desc
+    </select>
+
+</mapper>

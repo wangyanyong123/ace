@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizEvaluateHousekeeperDetailMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizEvaluateHousekeeperDetail" id="bizEvaluateHousekeeperDetailMap">
+        <result property="id" column="id"/>
+        <result property="housekeeperId" column="housekeeper_id"/>
+        <result property="evaluateNum" column="evaluate_Num"/>
+        <result property="satisfaction" column="satisfaction"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询管家评价数-->
+    <select id="selectHousekeeperInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.evaluate.out.HousekeeperInfo">
+        select
+        id detailId,
+        evaluate_Num evaluateNum,
+        satisfaction
+        from
+        biz_evaluate_housekeeper_detail
+        where
+        status = '1'
+        and DATE_FORMAT(create_Time,'%Y-%m') = DATE_FORMAT(CURRENT_DATE(),'%Y-%m')
+        and housekeeper_id = #{housekeeperId}
+    </select>
+
+</mapper>

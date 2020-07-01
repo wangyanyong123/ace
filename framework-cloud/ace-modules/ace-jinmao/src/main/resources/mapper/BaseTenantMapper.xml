@@ -1,0 +1,397 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BaseTenantMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BaseTenant" id="baseTenantMap">
+        <result property="id" column="id"/>
+        <result property="account" column="account"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="licenceNo" column="licence_no"/>
+        <result property="address" column="address"/>
+        <result property="juristicperson" column="juristicPerson"/>
+        <result property="setupTime" column="setup_time"/>
+        <result property="regCapital" column="reg_capital"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="contactEmail" column="contact_email"/>
+        <result property="summary" column="summary"/>
+        <result property="status" column="status"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="crtUserName" column="crt_user_name"/>
+        <result property="crtUserId" column="crt_user_id"/>
+        <result property="crtTime" column="crt_time"/>
+        <result property="updUserName" column="upd_user_name"/>
+        <result property="updUserId" column="upd_user_id"/>
+        <result property="updTime" column="upd_time"/>
+        <result property="attr1" column="attr1"/>
+        <result property="attr2" column="attr2"/>
+        <result property="attr3" column="attr3"/>
+        <result property="attr4" column="attr4"/>
+        <result property="description" column="description"/>
+        <result property="isSuperTenant" column="is_super_tenant"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="owner" column="owner"/>
+    </resultMap>
+
+
+    <resultMap id="BaseUserMap" type="com.github.wxiaoqi.security.jinmao.entity.BaseUser">
+        <!--
+          WARNING - @mbggenerated
+        -->
+        <id column="id" jdbcType="VARCHAR" property="id" />
+        <result column="username" jdbcType="VARCHAR" property="username" />
+        <result column="password" jdbcType="VARCHAR" property="password" />
+        <result column="name" jdbcType="VARCHAR" property="name" />
+        <result column="birthday" jdbcType="VARCHAR" property="birthday" />
+        <result column="address" jdbcType="VARCHAR" property="address" />
+        <result column="mobile_phone" jdbcType="VARCHAR" property="mobilePhone" />
+        <result column="tel_phone" jdbcType="VARCHAR" property="telPhone" />
+        <result column="email" jdbcType="VARCHAR" property="email" />
+        <result column="sex" jdbcType="CHAR" property="sex" />
+        <result column="type" jdbcType="CHAR" property="type" />
+        <result column="description" jdbcType="VARCHAR" property="description" />
+        <result property="crtUserName" column="crt_user_name"/>
+        <result property="crtUserId" column="crt_user_id"/>
+        <result property="crtTime" column="crt_time"/>
+        <result property="updUserName" column="upd_user_name"/>
+        <result property="updUserId" column="upd_user_id"/>
+        <result property="updTime" column="upd_time"/>
+        <result column="attr1" jdbcType="VARCHAR" property="attr1" />
+        <result column="attr2" jdbcType="VARCHAR" property="attr2" />
+        <result column="attr3" jdbcType="VARCHAR" property="attr3" />
+        <result column="attr4" jdbcType="VARCHAR" property="attr4" />
+        <result column="attr5" jdbcType="VARCHAR" property="attr5" />
+        <result column="attr6" jdbcType="VARCHAR" property="attr6" />
+        <result column="attr7" jdbcType="VARCHAR" property="attr7" />
+        <result column="attr8" jdbcType="VARCHAR" property="attr8" />
+        <result column="depart_id" jdbcType="VARCHAR" property="departId" />
+        <result column="is_deleted" jdbcType="VARCHAR" property="isDeleted"/>
+        <result column="is_disabled" jdbcType="VARCHAR" property="isDisabled"/>
+        <result column="is_super_admin" jdbcType="VARCHAR" property="isSuperAdmin"/>
+        <result column="tenant_id" jdbcType="VARCHAR" property="tenantId"/>
+    </resultMap>
+
+
+    <!-- 查询公司管理列表-->
+    <select id="selectCompanyManageList"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.ResultManageVo">
+        SELECT
+        t.id,
+        t.account,
+        t.tenant_type tenantType,
+        t.name,
+        t.licence_no licenceNo,
+        t.contactor_name contactorName,
+        t.contact_tel contactTel,
+        t.contact_email contactEmail,
+        GROUP_CONCAT(bp.project_code) projectCode,
+        GROUP_CONCAT(bp.project_name) projectName,
+        t.enable_status enableStatus
+        FROM
+        base_tenant t
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        INNER JOIN biz_crm_project bp on p.project_id=bp.project_id and bp.status = '1'
+        WHERE
+        t.status = '1'
+        and t.tenant_type in( '1',"4")
+        <if test="enableStatus != 3 ">
+            and t.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            t.account LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        GROUP BY t.id
+        ORDER BY t.crt_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectCompanyManageCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*) total
+        FROM
+        base_tenant t
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        INNER JOIN biz_crm_project bp on p.project_id=bp.project_id and bp.status = '1'
+        WHERE
+        t.status = '1'
+        and t.tenant_type = '1'
+        <if test="enableStatus != 3 ">
+            and t.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            t.account LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY t.crt_time DESC
+    </select>
+
+    <!--禁用与启用-->
+    <update id="updateTenantEnableStatus">
+        UPDATE base_tenant
+        SET enable_status = #{enableStatus},
+  	         upd_time = NOW(),
+  	         upd_user_id = #{updUserId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+    <!--效验关联的项目是否在其它数据中维护-->
+    <select id="selectIsProjectByProjectId" parameterType="java.lang.String"
+       resultType="java.lang.String">
+        SELECT
+        t.id
+        FROM
+        base_tenant t
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        WHERE
+        t.status = '1'
+        and t.enable_status = '1'
+        and t.tenant_type = '1'
+        and p.project_id = #{projectId}
+    </select>
+
+    <!--启用时,判断该项目是否在其它数据中维护,如果维护过则启用失败-->
+    <select id="selectIsProjectInfo" resultType="com.github.wxiaoqi.security.jinmao.entity.BaseTenant">
+        SELECT
+        *
+        FROM
+        base_tenant t
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        INNER JOIN
+        (SELECT
+        p.project_Id projectId
+        FROM
+        base_tenant tt
+        INNER JOIN base_tenant_project p on tt.id=p.tenant_id and p.status = '1'
+        WHERE
+        tt.status = '1'
+        and tt.tenant_type = '1'
+        and tt.id = #{id}) A on A.projectId=p.project_Id
+        where
+        t.status = '1'
+        and t.enable_status = '1'
+        and t.tenant_type = '1'
+        limit 1
+    </select>
+
+
+    <!--根据租户id查询该管理详情-->
+    <select id="selectTenantInfo" parameterType="java.lang.String"
+      resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.ResultTenantVo">
+        SELECT
+        t.id,
+        t.name,
+        t.licence_no licenceNo,
+        t.address,
+        t.juristicPerson,
+        DATE_FORMAT(t.setup_time ,'%Y-%m-%d') setupTime,
+        t.reg_capital regCapital,
+        t.contactor_name contactorName,
+        t.contact_tel contactTel,
+        t.contact_email contactEmail,
+		GROUP_CONCAT( p.project_id) projectId,
+        GROUP_CONCAT(bp.project_name) projectName,
+        t.summary,
+        d.name cityName,
+        t.tenant_type
+        FROM
+        base_tenant t
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        INNER JOIN biz_crm_project bp on p.project_id=bp.project_id and bp.status = '1'
+        left JOIN biz_dict d on (d.name = t.center_city_name and d.pid = 'centerCityName' and d.status = '1')
+        WHERE
+        t.status = '1'
+        and t.id = #{id}
+    </select>
+
+    <!--查询商户管理列表-->
+    <select id="selectMerchantManageList" resultType="com.github.wxiaoqi.security.jinmao.vo.MerchantManagement.OutParam.ResultMerchantManageVo">
+        SELECT
+        t.id,
+        t.account,
+        t.name,
+        t.licence_no licenceNo,
+        t.contactor_name contactorName,
+        t.contact_tel contactTel,
+        t.enable_status enableStatus
+        FROM base_tenant t
+        WHERE
+        t.status = '1' and t.tenant_type = '2'
+        AND t.tenant_id = #{tenantId}
+        <if test="enableStatus != 3 ">
+            and t.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            t.account LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY t.crt_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectMerchantManageCount" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*) total
+        FROM
+        base_tenant t
+        WHERE
+        t.status = '1'
+        and
+        t.tenant_type = '2'
+        AND t.tenant_id = #{tenantId}
+        <if test="enableStatus != 3 ">
+            and t.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            t.account LIKE CONCAT('%',#{searchVal},'%')
+            OR t.name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contactor_name LIKE CONCAT('%',#{searchVal},'%')
+            OR t.contact_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY t.crt_time DESC
+    </select>
+
+    <!--禁用和启用-->
+    <update id="updateMerchantEnableStatus">
+        UPDATE base_tenant
+        SET enable_status = #{enableStatus},
+            upd_time = NOW(),
+            upd_user_id = #{updUserId}
+        WHERE
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <!--根据ID查找商户管理详情-->
+    <select id="selectMerchantInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.MerchantManagement.OutParam.ResultMerchantVo">
+        SELECT
+        t.id,
+        t.name,
+        t.licence_no licenceNo,
+        t.address,
+        t.juristicPerson,
+        DATE_FORMAT(t.setup_time ,'%Y-%m-%d') setupTime,
+        t.reg_capital regCapital,
+        t.contactor_name contactorName,
+        t.contact_tel contactTel,
+        t.contact_email contactEmail,
+        t.logo_img logo,
+        t.summary,
+        t.qualific_img qualificImg,
+        t.is_close isClose,
+        t.is_invoice isInvoice,
+        t.is_print isPrint
+        FROM
+        base_tenant t
+        WHERE
+        t.status = '1'
+        and
+         t.tenant_type = '2'
+        and t.id = #{id}
+    </select>
+
+    <select id="getPostageInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.postage.out.PostageInfoVo">
+        SELECT p.id,IFNULL(p.start_amount,'') startAmount,IFNULL(p.end_amount,'') endAmount,IFNULL(p.postage,'') postage FROM base_tenant_postage p
+        INNER JOIN base_tenant t on t.id = p.tenant_id and t.status = '1'
+        where p.status= '1' and p.tenant_id = #{id} ORDER BY p.start_amount
+    </select>
+
+    <!--根据id查询租户类型-->
+    <select id="selectTenantTypeById" parameterType="java.lang.String" resultType="java.lang.String">
+       select tenant_type from  base_tenant where id = #{id}
+    </select>
+
+    <select id="selectRoleTypeByUserId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.UserInfo">
+        select
+        u.name userName,
+        t.tenant_type tenantType,
+        t.name tenantName
+        from
+        base_app_server_user u
+        LEFT JOIN base_tenant t on u.tenant_id=t.id and t.status ='1'
+        where
+        u.status ='1'
+        and u.id = #{userId}
+    </select>
+
+    <!--查询当前用户所属角色-->
+    <select id="selectRoleTypeByUser" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.UserInfo">
+        select
+        u.name userName,
+        t.tenant_type tenantType,
+        t.name tenantName
+        from
+        base_user u
+        LEFT JOIN base_tenant t on u.tenant_id=t.id and t.status ='1'
+        where
+        u.status ='1'
+        and u.id = #{userId}
+    </select>
+    <!--获取商户名称-->
+    <select id="getMerchantName" resultType="java.lang.String">
+        SELECT
+          id
+        FROM base_tenant
+        WHERE
+        status = '1' and tenant_type = '2'
+        AND name = #{name}
+    </select>
+
+
+    <select id="selectBaseUserId" parameterType="java.lang.String" resultType="java.lang.String">
+        select u.id from  base_user u
+        INNER JOIN base_tenant t on u.id=t.owner
+        where u.tenant_id =  #{tenantId}
+    </select>
+
+    <update id="updateBaseUserStatus">
+        UPDATE base_user
+        SET is_disabled = #{status},
+            upd_time = NOW(),
+            upd_user_id = #{updUserId}
+        WHERE
+        status = 1
+        AND id = #{id}
+    </update>
+
+    <select id="selectWebUserInfo" parameterType="java.lang.String" resultMap="BaseUserMap">
+        select * from base_user where tenant_id = #{tenantId} limit 1
+    </select>
+
+    <update id="delPostageInfo">
+        update base_tenant_postage
+        set status = '0'
+        where id = #{id}
+    </update>
+
+    <select id="getCenterCity" resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.CenterCityVo">
+        SELECT id,val,name cityName from biz_dict
+        where pid = 'centerCityName' and status = '1'
+    </select>
+</mapper>

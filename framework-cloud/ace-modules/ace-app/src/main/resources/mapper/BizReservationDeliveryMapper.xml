@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizReservationDeliveryMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizReservationDelivery" id="bizReservationDeliveryMap">
+        <result property="id" column="id"/>
+        <result property="companyId" column="company_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="procCode" column="proc_code"/>
+        <result property="procName" column="proc_name"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="cityName" column="city_name"/>
+        <result property="fullName" column="full_Name"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+    </resultMap>
+    <resultMap id="DeliveryCityCodeResultMap"
+               type="com.github.wxiaoqi.security.app.vo.productdelivery.out.ProductDeliveryData">
+        <id column="product_id" property="productId"/>
+        <result column="company_id" property="tenantId"/>
+        <collection property="cityCodeList"  ofType="string">
+            <result column="city_code"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectReservationDeliveryList"
+            resultMap="DeliveryCityCodeResultMap">
+        select company_id ,product_id ,city_code
+        from biz_reservation_delivery
+        where company_id = #{tenantId}
+        <if test="productIdList != null and productIdList.size >0">
+            and product_id in
+            <foreach collection="productIdList" item="productId" open="(" separator="," close=")">
+                #{productId}
+            </foreach>
+        </if>
+        and status = '1'
+    </select>
+
+</mapper>

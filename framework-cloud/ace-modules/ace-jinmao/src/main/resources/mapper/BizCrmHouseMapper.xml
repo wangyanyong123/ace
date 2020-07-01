@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizCrmHouseMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizCrmHouse" id="bizCrmHouseMap">
+        <result property="houseId" column="house_id"/>
+        <result property="useArea" column="use_area"/>
+        <result property="businessClass" column="business_class"/>
+        <result property="businessCategories" column="business_categories"/>
+        <result property="actualCheckinDate" column="actual_checkin_date"/>
+        <result property="propertyNature" column="property_nature"/>
+        <result property="useNature" column="use_nature"/>
+        <result property="houseStatus" column="house_status"/>
+        <result property="orientation" column="orientation"/>
+        <result property="bedroom" column="bedroom"/>
+        <result property="parlour" column="parlour"/>
+        <result property="toilet" column="toilet"/>
+        <result property="kitchen" column="kitchen"/>
+        <result property="balcony" column="balcony"/>
+        <result property="structureArea" column="structure_area"/>
+        <result property="insideSpace" column="inside_space"/>
+        <result property="decorationStandard" column="decoration_standard"/>
+        <result property="unitHouseCode" column="unit_house_code"/>
+        <result property="recordHouseCode" column="record_house_code"/>
+        <result property="floorId" column="floor_id"/>
+        <result property="floorCode" column="floor_code"/>
+        <result property="recordFloorCode" column="record_floor_code"/>
+        <result property="houseNum" column="house_num"/>
+        <result property="recordHouseNum" column="record_house_num"/>
+        <result property="houseName" column="house_name"/>
+        <result property="recordHouseName" column="record_house_name"/>
+        <result property="modifiedOn" column="modified_on"/>
+        <result property="blockBuildingCode" column="block_building_code"/>
+        <result property="businessType" column="business_type"/>
+        <result property="housingResourcesId" column="housing_resources_id"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="projectId" column="project_id"/>
+        <result property="propertyType" column="property_type"/>
+        <result property="recordBuildingCode" column="record_building_code"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+
+    <select id="getHouseInfoTree" resultType="com.github.wxiaoqi.security.jinmao.vo.house.HouseTreeList">
+        SELECT id,parentId,name,nameStr,code,type FROM (
+        (SELECT block_id id, project_id parentId,name,name nameStr,block_code code,property_type type,block_code + 0 num ,0 as sort
+            FROM biz_crm_block
+            WHERE `status` = '1' AND project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and property_type = 'PublicArea'
+            </if>
+            order by block_num + 0 ASC ,name asc)
+
+            UNION ALL
+
+        (SELECT bcb.housing_resources_id id, bcb.block_id parentId,bcb.record_building_name name,bcb.record_building_name nameStr,bcb.record_building_code code,bc.property_type type,bcb.building_num + 0 num ,1 as sort
+            FROM biz_crm_building bcb
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcb.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bc.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bc.property_type = 'PublicArea'
+            </if>
+            order by bcb.building_num + 0 ASC,bcb.record_building_name asc)
+
+            UNION ALL
+
+        (SELECT bcu.unit_id id, bcu.building_id parentId,bcu.record_unit_name name,bcu.record_unit_name nameStr,bcu.record_unit_code code,bcu.property_type type,bcu.record_unit_num + 0 num ,2 as sort
+            FROM biz_crm_unit bcu
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcu.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bcu.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bcu.property_type = 'PublicArea'
+            </if>
+            order by bcu.record_unit_num + 0 ASC ,bcu.record_unit_name asc)
+
+            UNION ALL
+
+        (SELECT bcf.floor_id id, bcf.unit_id parentId,bcf.record_floor_name name, bcf.record_floor_name nameStr, bcf.record_floor_code code,bcf.property_type type,REPLACE(bcf.record_floor_name, '层', '') + 0 num ,3 as sort
+            FROM biz_crm_floor bcf
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bcf.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bcf.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bcf.property_type = 'PublicArea'
+            </if>
+            order by REPLACE(bcf.record_floor_name,'层','') + 0 ASC ,bcf.floor_num + 0 ASC ,bcf.record_floor_name asc)
+
+            UNION ALL
+
+        (SELECT bch.house_id id, bch.floor_id parentId,bch.record_house_num name,CONCAT_WS('_',bc.name,bcb.record_building_name,bcu.record_unit_name,bcf.record_floor_name,bch.record_house_num) nameStr,record_house_code code,bch.property_type type,bch.record_house_num + 0 num ,4 as sort
+            FROM biz_crm_house bch
+            LEFT JOIN biz_crm_floor bcf ON bcf.floor_id = bch.floor_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_unit bcu ON bcu.unit_id = bcf.unit_id AND bcf.`status` = '1'
+            LEFT JOIN biz_crm_building bcb ON bcu.building_id = bcb.housing_resources_id AND bcb.`status` = '1'
+            LEFT JOIN biz_crm_block bc ON bcb.block_id = bc.block_id AND bc.`status` = '1'
+            WHERE bch.`status` = '1' AND bc.project_id = #{projectId}
+            <if test="type != null and type == 1">
+                and bch.property_type = 'House'
+            </if>
+            <if test="type != null and type == 2">
+                and bch.property_type = 'PublicArea'
+            </if>
+            order by bch.record_house_num + 0 asc)
+            )a
+        ORDER BY a.sort ASC, a.num ASC
+    </select>
+
+    <select id="getRegistryByProject" resultType="com.github.wxiaoqi.security.jinmao.vo.house.UserRegistryVo">
+        SELECT p.project_name projectName,cb.name blockName,b.record_building_name buildingName,
+        u.record_unit_name unitName,f.record_floor_name floorName,ch.record_house_name houseName,case when uh.id is null then '否' else '是' end isRegistry from biz_user_house uh
+        right JOIN biz_crm_house ch on ch.house_id = uh.house_id and uh.is_delete = '0'
+        INNER JOIN biz_crm_floor f on f.floor_id = ch.floor_id and f.status = '1' and f.property_type = 'House'
+        INNER JOIN biz_crm_unit u on u.unit_id = f.unit_id #and u.status = '1'
+        INNER JOIN biz_crm_building b on b.housing_resources_id = u.building_id and b.status = '1'
+        INNER JOIN biz_crm_block cb on cb.block_id = b.block_id and cb.status = '1'
+        INNER JOIN biz_crm_project p on p.project_id = cb.project_id and p.status = '1'
+        where p.project_id = #{projectId}
+        GROUP BY houseName
+        ORDER BY blockName,REPLACE(buildingName,'号楼','')+ 0 ,REPLACE(unitName,'单元','') + 0 ,REPLACE(floorName,'层','') + 0,houseName
+    </select>
+
+    <select id="getCrmHouseByUserId" resultType="java.util.Map">
+        SELECT bur.house_id houseId, bch.record_house_num houseNum, bch.record_house_name houseName
+        FROM biz_user_house bur
+        LEFT JOIN biz_crm_house bch ON bch.house_id = bur.house_id AND bch.`status` = '1'
+        WHERE bur.user_id = #{userId} AND bur.`status` = '1' AND bur.is_delete = '0'
+    </select>
+
+    <select id="getProjectHouseCount" resultType="int">
+        SELECT
+            count(house.house_id)
+        FROM
+            biz_crm_block block
+        INNER JOIN biz_crm_building building ON block.block_id = building.block_id
+        INNER JOIN biz_crm_unit unit on building.housing_resources_id = unit.building_id
+        INNER JOIN biz_crm_floor floor ON unit.unit_id = floor.unit_id
+        INNER JOIN biz_crm_house house on house.floor_id = floor.floor_id
+        where
+        block.project_id = #{projectId}
+        and block.`status` = '1' and building.`status` = '1'
+        and unit.`status` = '1' and floor.`status` = '1' and house.`status` = '1'
+        and house.property_type = 'House'
+    </select>
+</mapper>

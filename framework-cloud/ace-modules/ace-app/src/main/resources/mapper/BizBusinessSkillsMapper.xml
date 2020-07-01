@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizBusinessSkillsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizBusinessSkills" id="bizBusinessSkillsMap">
+        <result property="id" column="ID"/>
+        <result property="busId" column="bus_Id"/>
+        <result property="skillCode" column="skill_code"/>
+        <result property="skillName" column="skill_name"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="selectBusSkillsList" resultMap="bizBusinessSkillsMap" parameterType="Map" >
+        select
+        ID,bus_Id,skill_code,skill_name
+        from biz_business_skills
+        where status='1'
+        <if test="id != null" >
+            AND id=#{id}
+        </if>
+        order by bus_Id desc
+    </select>
+
+</mapper>

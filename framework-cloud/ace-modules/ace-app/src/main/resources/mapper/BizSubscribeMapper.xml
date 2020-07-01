@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizSubscribeMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizSubscribe" id="bizSubscribeMap">
+        <result property="id" column="id"/>
+        <result property="subCode" column="sub_code"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="userId" column="user_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="deliveryAddr" column="delivery_addr"/>
+        <result property="source" column="source"/>
+        <result property="projectId" column="project_id"/>
+        <result property="crmProjectCode" column="crm_project_code"/>
+        <result property="roomId" column="room_id"/>
+        <result property="crmRoomCode" column="crm_room_code"/>
+        <result property="crmUserId" column="crm_user_id"/>
+        <result property="receivableCost" column="receivable_cost"/>
+        <result property="productCost" column="product_cost"/>
+        <result property="expressCost" column="express_cost"/>
+        <result property="actualCost" column="actual_cost"/>
+        <result property="discountCost" column="discount_cost"/>
+        <result property="remark" column="remark"/>
+        <result property="totalNum" column="total_num"/>
+        <result property="unit" column="unit"/>
+        <result property="price" column="price"/>
+        <result property="noticeStatus" column="notice_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="invoiceType" column="invoice_Type"/>
+        <result property="invoiceName" column="invoice_Name"/>
+        <result property="dutyNum" column="duty_Num"/>
+        <result property="couponId" column="coupon_Id"/>
+    </resultMap>
+
+    <!-- 客户端APP查询我的订单列表-->
+    <select id="getSubListForClientApp" parameterType="String" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubListVo">
+       SELECT s.id,sw.code code,s.title,sw.subscribe_status subStatus,
+        sw.process_id processId,DATE_FORMAT(w.create_Time,'%Y-%m-%d %H:%i:%s') createTimeStr,sw.img_id imgId,
+        s.contact_name contactName,s.actual_cost actualCost,s.total_num totalNum,t.name companyName,s.price price,s.unit unit
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo sw on s.id=sw.id and sw.status='1' AND IFNULL(sw.wo_type,'') &lt;&gt; '' and sw.wo_type != '4'
+        LEFT JOIN base_tenant t on sw.company_Id=t.id
+        LEFT JOIN  biz_wo  w on w.id=sw.id and w.status='1'
+        where s.status='1'
+        and sw.user_id=#{userId}
+        <if test="subscribeStatus != null and subscribeStatus!='' " >
+            and sw.subscribe_status=#{subscribeStatus}
+        </if>
+        <if test="commentStatus != null and commentStatus!='' " >
+            and sw.comment_status=#{commentStatus}
+        </if>
+        order by s.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--Web后台查询订单列表-->
+    <select id="querySubListByWeb" parameterType="map" resultType="com.github.wxiaoqi.security.api.vo.order.out.SubListForWebVo">
+        SELECT w.id,w.sub_code code,w.title,w.description,sw.wo_type woType,w.contact_name contactName,w.contact_tel contactTel,w.delivery_addr deliveryAddr,
+        IFNULL(u.name,'') handleBy,sw.wo_status woStatus,sw.subscribe_status subStatus,
+        IFNULL(DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime,IFNULL(DATE_FORMAT(sw.receive_wo_time,'%Y-%m-%d %H:%i:%s'),'') receiveWoTime,
+        IFNULL(DATE_FORMAT(sw.start_process_time,'%Y-%m-%d %H:%i:%s'),'') startProcessTime,IFNULL(DATE_FORMAT(sw.finish_wo_time,'%Y-%m-%d %H:%i:%s'),'') finishWoTime,
+        w.actual_cost actualCost,w.total_num totalNum,t.name companyName,w.unit unit
+        from biz_subscribe w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        INNER JOIN base_tenant t on sw.company_Id=t.id and t.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        where w.status='1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and w.project_Id=#{projectId}
+        </if>
+        <if test="companyId != null and companyId!=''">
+            and sw.company_id=#{companyId}
+        </if>
+        <if test="subStatus != null and subStatus!=''">
+            and sw.subscribe_status=#{subStatus}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (w.sub_code LIKE CONCAT('%',#{searchVal},'%') or w.title LIKE CONCAT('%',#{searchVal},'%')
+            or w.contact_name LIKE CONCAT('%',#{searchVal},'%') or w.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        and sw.bus_id in
+        <foreach collection="busIdList" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        order by w.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--Web后台查询订单列表总数查询-->
+    <select id="querySubListByWebTotal" parameterType="map"  resultType="int">
+        SELECT count(w.id)
+        from biz_subscribe w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id and sw.status='1'
+        INNER JOIN base_tenant t on sw.company_Id=t.id and t.status='1'
+        LEFT JOIN base_app_server_user u on u.id=sw.handle_by and u.status='1'
+        where w.status='1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(w.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and w.project_Id=#{projectId}
+        </if>
+        <if test="companyId != null and companyId!=''">
+            and sw.company_id=#{companyId}
+        </if>
+        <if test="subStatus != null and subStatus!=''">
+            and sw.subscribe_status=#{subStatus}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (w.sub_code LIKE CONCAT('%',#{searchVal},'%') or w.title LIKE CONCAT('%',#{searchVal},'%')
+            or w.contact_name LIKE CONCAT('%',#{searchVal},'%') or w.contact_tel LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        and sw.bus_id in
+        <foreach collection="busIdList" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getByCompanyId" parameterType="java.lang.String" resultType="java.lang.String">
+        select account from base_tenant where id = #{companyId}
+    </select>
+
+
+    <select id="selectBusIdByProductId" parameterType="java.lang.String" resultType="java.lang.String">
+        select DISTINCT(c.bus_id) from
+        biz_product p
+        INNER JOIN biz_product_classify c on p.id=c.product_id and c.status = '1'
+        where p.status = '1' and p.id = #{id}
+    </select>
+
+    <select id="getSubContactById" parameterType="java.lang.String" resultType="com.github.wxiaoqi.security.app.vo.order.out.SubContactVo">
+        select p.contact_tel contactTel, p.contact_name contactName, p.delivery_addr deliveryAddr, p.project_id projectId from
+        biz_subscribe p
+        where p.status = '1' and p.id = #{id}
+    </select>
+
+    <select id="getActualCostById" resultType="java.math.BigDecimal">
+        select  actual_cost from biz_subscribe where id = #{id} and status = '1' limit 1
+    </select>
+</mapper>

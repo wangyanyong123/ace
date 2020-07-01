@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizReservationOrderMapper">
+
+    <sql id="queryReservationOrderWhereCase">
+        <where>
+            <if test="query.startDate != null">
+                AND DATE_FORMAT(o.create_time,'%Y-%m-%d') &gt;=  DATE_FORMAT(#{query.startDate}, '%Y-%m-%d')
+            </if>
+            <if test="query.endDate != null">
+                AND DATE_FORMAT(o.create_time,'%Y-%m-%d') &lt;= DATE_FORMAT(#{query.endDate}, '%Y-%m-%d')
+            </if>
+            <if test="query.startReservationTime != null">
+                AND DATE_FORMAT(o.reservation_Time,'%Y-%m-%d') &gt;= DATE_FORMAT(#{query.startReservationTime}, '%Y-%m-%d')
+            </if>
+            <if test="query.endReservationTime != null">
+                AND DATE_FORMAT(o.reservation_Time,'%Y-%m-%d') &lt;= DATE_FORMAT(#{query.endReservationTime}, '%Y-%m-%d')
+            </if>
+
+            <if test="query.tenantId != null and query.tenantId!=''">
+                AND o.tenant_id = #{query.tenantId}
+            </if>
+            <if test="query.projectId != null and query.projectId.size > 0">
+                AND o.project_Id in
+                <foreach collection="query.projectId" item="pid" open="(" close=")" separator=",">
+                    #{pid}
+                </foreach>
+            </if>
+            <if test="query.orderStatus != null" >
+                AND o.order_status = #{query.orderStatus}
+            </if>
+            <if test="query.refundStatus != null">
+                AND o.refund_status = #{query.refundStatus}
+            </if>
+            <if test="query.commentStatus != null">
+                AND o.comment_status = #{query.commentStatus}
+            </if>
+            <if test="query.searchVal != null and query.searchVal!=''">
+                AND (o.order_code LIKE CONCAT('%',#{query.searchVal},'%')
+                    or o.title LIKE CONCAT('%',#{query.searchVal},'%')
+                    or o.contact_name LIKE CONCAT('%',#{query.searchVal},'%')
+                    or t.name LIKE CONCAT('%',#{query.searchVal},'%'))
+            </if>
+            AND o.`status` = 1
+        </where>
+    </sql>
+    <!-- 服务订单列表 -->
+    <select id="queryReservationOrderPage" resultType="com.github.wxiaoqi.security.jinmao.vo.reservation.order.out.ReservationOrderVO">
+        SELECT
+        o.id orderId,
+        o.title title,
+        o.description,
+        o.order_status orderStatus,
+        o.refund_status refundStatus,
+        o.comment_status commentStatus,
+        t.`name` tenantName,
+        od.product_name productName,
+        o.contact_name contactName,
+        o.actual_price actualPrice,
+        od.quantity,
+        od.unit,
+        DATE_FORMAT(
+        o.reservation_Time,
+        '%Y-%m-%d %H:%i:%s'
+        ) reservationTime,
+        DATE_FORMAT(
+        o.create_time,
+        '%Y-%m-%d %H:%i:%s'
+        ) createTime
+        FROM
+        biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON od.order_id = o.id
+        INNER JOIN base_tenant t ON o.tenant_id = t.id
+        AND od.`status` = 1
+        <include refid="queryReservationOrderWhereCase"/>
+        ORDER BY o.create_time DESC
+        <if test="query.page != null and query.limit != null">
+            LIMIT #{query.page},#{query.limit}
+        </if>
+    </select>
+
+    <!-- 服务订单列表 -->
+    <select id="queryReservationOrderCount" resultType="int">
+        SELECT
+        COUNT(*)
+        FROM
+        biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON od.order_id = o.id
+        INNER JOIN base_tenant t ON o.tenant_id = t.id
+        AND od.`status` = 1
+        <include refid="queryReservationOrderWhereCase"/>
+    </select>
+
+    <select id="exportReservationOrder" resultType="java.util.Map">
+        SELECT
+            o.order_code orderCode,
+            o.title,
+            IFNULL(
+                DATE_FORMAT(
+                    o.create_Time,
+                    '%Y-%m-%d %H:%i:%s'
+                ),
+                ''
+            ) createTime,
+            IFNULL(
+                DATE_FORMAT(
+                    o.reservation_Time,
+                    '%Y-%m-%d %H:%i:%s'
+                ),
+                ''
+            ) reservationTime,
+            o.contact_name contactName,
+            o.contact_tel contactTel,
+            p.project_name projectName,
+            o.delivery_addr deliveryAddr,
+            o.actual_price actualPrice,
+            o.discount_price discountPrice,
+            (
+                CASE
+                WHEN ab.pay_type = '1' THEN
+                    '支付宝'
+                ELSE
+                    '微信'
+                END
+            ) payType,
+            o.order_status orderStatus,
+            o.refund_status refundStatus,
+            o.comment_status commentStatus,
+            a.apply_price applyPrice,
+            IFNULL(
+                DATE_FORMAT(
+                a.refund_success_time,
+                '%Y-%m-%d %H:%i:%s'
+                ),
+                ''
+            ) applyTime,
+            od.product_name productName,
+            od.spec_name specName,
+            od.quantity,
+            od.sales_price salesPrice,
+            od.unit,
+            t. NAME tenantName,
+            r.sales_way salesWay,
+            r.supplier,
+            o.app_type appType,
+            o.confirm_time confirmTime,
+            ab.actual_Id actualId,
+            (
+            CASE o.order_type
+            WHEN 0 THEN
+            '线下订单'
+            WHEN 1 THEN
+            '普通订单'
+            WHEN 2 THEN
+            '团购订单'
+            WHEN 3 THEN
+            '疯抢订单'
+            END
+            ) orderType,
+            o.remark
+        FROM
+            biz_reservation_order o
+        INNER JOIN biz_reservation_order_detail od ON o.id = od.order_id
+        INNER JOIN base_tenant t ON o.tenant_id = t.id
+        AND t. STATUS = '1'
+        LEFT JOIN biz_crm_project p ON p.project_id = o.project_id
+        AND p.`status` = 1
+        LEFT JOIN biz_account_book ab ON o.id = ab.sub_id
+        AND ab. STATUS = '1'
+        LEFT JOIN biz_refund_audit a ON a.sub_id = o.id
+        AND a.`status` = 1
+        LEFT JOIN base_app_server_user u ON u.id = o.user_id
+        AND u. STATUS = '1'
+        LEFT JOIN biz_reservation r ON r.id = od.product_id
+        <include refid="queryReservationOrderWhereCase"/>
+        ORDER BY o.create_time DESC
+    </select>
+</mapper>

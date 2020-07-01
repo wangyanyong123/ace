@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizDecisionMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizDecision" id="bizDecisionMap">
+        <result property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="eventType" column="event_type"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="publishStatus" column="publish_status"/>
+        <result property="decisionStatus" column="decision_status"/>
+        <result property="progressRate" column="progress_rate"/>
+        <result property="remark" column="remark"/>
+        <result property="houseCount" column="house_count"/>
+        <result property="houseArea" column="house_area"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="deleteTime" column="delete_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <update id="additionProgressRate">
+        update
+            biz_decision
+            <set>
+                <if test="isPass != null and isPass">
+                    decision_status = 1,
+                </if>
+                progress_rate = progress_rate + #{progressRate},
+                modify_by = #{modifyBy}
+            </set>
+
+        where id = #{id}
+    </update>
+
+
+    <sql id="query_list_where_case">
+        <where>
+            <if test="projectIds != null and projectIds.size > 0">
+                and project_id in
+                <foreach collection="projectIds" item="projectId" open="(" close=")" separator=",">
+                    #{projectId}
+                </foreach>
+            </if>
+            <if test="title != null and title !=''">
+                and title like CONCAT('%',#{title},'%')
+            </if>
+            <if test="startTime != null">
+                and start_time >= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and end_time <![CDATA[ <= ]]> #{endTime}
+            </if>
+            and status = "1"
+        </where>
+    </sql>
+
+    <select id="selectList" resultType=
+            "com.github.wxiaoqi.security.app.vo.decision.out.DecisionListVo">
+        select
+        id,project_id projectId,event_type eventType,title,content,
+        start_time startTime,end_time endTime,publish_status publishStatus,
+        progress_rate progressRate,create_time createTime,decision_status decisionStatus
+        from biz_decision
+        <include refid="query_list_where_case"/>
+        order by create_time desc
+        <if test="start != null">
+            limit #{start},#{limit}
+        </if>
+    </select>
+</mapper>

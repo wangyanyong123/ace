@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.im.mapper.BizFriendChatMessageMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.im.entity.BizFriendChatMessage" id="bizFriendChatMessageMap">
+        <result property="id" column="id"/>
+        <result property="fromUserId" column="from_user_id"/>
+        <result property="toUserId" column="to_user_id"/>
+        <result property="message" column="message"/>
+        <result property="createTime" column="create_time"/>
+        <result property="isRead" column="is_read"/>
+        <result property="msgType" column="msg_type"/>
+        <result property="smallImg" column="small_img"/>
+        <result property="isSend" column="is_send"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="readTime" column="read_time"/>
+        <result property="userType" column="user_type"/>
+        <result property="projectId" column="project_id"/>
+        <result property="houseId" column="house_id"/>
+    </resultMap>
+    <select id="isHasMessage" resultType="java.lang.Integer">
+        select count(*) from biz_friend_chat_message where (is_read != 1 OR is_read is null OR is_read = '') and to_user_id = #{userId}
+    </select>
+    <select id="getMsgLogList" resultType="com.github.wxiaoqi.security.im.tio.msg.Message">
+        SELECT id as id
+        ,from_user_id as fromUserId
+        ,to_user_id as toUserId
+        ,message as message
+        ,create_time as createTime
+        ,is_read as readFlag
+        ,msg_type as msgType
+        ,small_img as smallImg
+        FROM biz_friend_chat_message
+        WHERE (to_user_id = #{toUserId} AND from_user_id = #{fromUserId}) OR (to_user_id = #{fromUserId} AND from_user_id = #{toUserId}) AND is_send = '1'
+        ORDER BY create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <update id="updateRead">
+        UPDATE biz_friend_chat_message
+        SET is_read = '1',update_time = NOW(), read_time = NOW()
+        WHERE is_send = '1' AND (is_read != 1 OR is_read is null OR is_read = '')
+        AND to_user_id = #{toUserId}
+        AND from_user_id = #{fromUserId}
+    </update>
+</mapper>

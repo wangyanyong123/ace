@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizRegionMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizRegion" id="bizRegionMap">
+        <result property="id" column="ID"/>
+        <result property="regionPid" column="region_PId"/>
+        <result property="regionCode" column="region_Code"/>
+        <result property="regionName" column="region_Name"/>
+        <result property="regionFullname" column="region_FullName"/>
+        <result property="longitude" column="longitude"/>
+        <result property="latitude" column="latitude"/>
+        <result property="shortName" column="short_Name"/>
+        <result property="pingyinName" column="pingyin_Name"/>
+        <result property="ipingyinName" column="ipingyin_Name"/>
+        <result property="enclosedPackage" column="enclosed_package"/>
+        <result property="isEnabled" column="is_enabled"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询所有省份(直辖市)-->
+    <select id="getAllRegionList" resultType="com.github.wxiaoqi.security.jinmao.vo.nodelivery.out.ResultRegionList">
+        SELECT
+            r.ID id,
+            r.region_Code regionCode,
+            r.region_Name regionName,
+            r.region_FullName regionFullName
+		FROM biz_region r
+		WHERE
+			r.status = '1'
+		AND
+			r.region_PId = ''
+    </select>
+    <!--查询商户下的不配送区域-->
+    <select id="selectNoDeliveryRegion" resultType="java.lang.String">
+        SELECT
+			DISTINCT( d.region_code) regionCode
+		FROM biz_company_no_delivery d
+		WHERE
+			d.status=  '1'
+		AND
+		    d.company_id = #{id}
+    </select>
+    <!--根据ID查询区域信息-->
+    <select id="selectRegionInfoById" resultType="com.github.wxiaoqi.security.jinmao.vo.nodelivery.out.ResultRegionList" >
+        SELECT
+            r.ID id,
+            r.region_Code regionCode,
+            r.region_Name regionName,
+            r.region_FullName regionFullName
+		FROM biz_region r
+		WHERE
+			r.status = '1'
+		AND
+			r.id = #{id}
+    </select>
+
+    <!--不配送区域添加删除状态-->
+    <update id="deleteNoDeliveryById" >
+        UPDATE biz_company_no_delivery
+        SET status = '0'
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectNoDeliveryRegionList" resultType="com.github.wxiaoqi.security.jinmao.vo.nodelivery.out.ResultNoDelivery">
+        SELECT
+            d.id,
+            d.region_name regionName
+	    FROM biz_company_no_delivery d
+	    WHERE
+		    d.status = '1'
+	    AND
+            d.company_id = #{tenantId}
+        GROUP BY regionName
+    </select>
+</mapper>

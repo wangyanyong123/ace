@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizUserGradeRuleMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizUserGradeRule" id="bizUserGradeRuleMap">
+        <result property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="integral" column="integral"/>
+        <result property="gradeTitle" column="grade_title"/>
+        <result property="gradeImg" column="grade_img"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="getGradeRule" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.UserGradeVo">
+        SELECT integral,grade_title gradeTitle,grade_img gradeImg from biz_user_grade_rule where status = '1' ORDER BY integral
+    </select>
+
+    <select id="getAllTask" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.TaskVo">
+        SELECT task_name taskName,integral taskIntegral from biz_task_intergral_rule where status = '1' ORDER BY integral
+    </select>
+
+    <select id="getAllSignDay" resultType="com.github.wxiaoqi.security.app.vo.intergral.out.SignInfo">
+        SELECT integral,sign_day day from biz_user_sign_rule where status = '1' and sign_type = '2' ORDER BY sign_day
+    </select>
+
+    <select id="getNormalSign" resultType="java.lang.Integer">
+        SELECT integral day from biz_user_sign_rule where status = '1' and sign_type = '1'
+    </select>
+</mapper>

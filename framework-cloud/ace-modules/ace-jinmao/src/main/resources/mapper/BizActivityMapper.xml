@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizActivityMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizActivity" id="bizActivityMap">
+        <result property="id" column="ID"/>
+        <result property="projectId" column="project_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="title" column="title"/>
+        <result property="activitCcover" column="activit_ccover"/>
+        <result property="summary" column="summary"/>
+        <result property="address" column="address"/>
+        <result property="begTime" column="beg_Time"/>
+        <result property="endTime" column="end_Time"/>
+        <result property="applyEndTime" column="apply_end_Time"/>
+        <result property="isFree" column="is_free"/>
+        <result property="actCost" column="act_cost"/>
+        <result property="isCancel" column="is_cancel"/>
+        <result property="cancelTime" column="cancel_time"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="personNum" column="person_Num"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询各小组活动列表-->
+    <select id="selectActivityList" resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.ActivityVo">
+        SELECT
+        DISTINCT(A.id),A.title,A.type,A.begTime,A.endTime,A.actCost,A.address,A.personNum,A.enableStatus,
+        A.groupName,A.createTime
+        FROM(
+        (select
+        DISTINCT(a.id),
+        title,
+        a.type,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        IFNULL(act_cost,0) actCost,
+        address,
+        person_Num personNum,
+        a.enable_status enableStatus,
+        g.name groupName,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_activity a
+        INNER  JOIN biz_group g on g.id=a.group_id and g.status = '1' and g.enable_status = '2'
+        #INNER JOIN base_tenant_project p on a.project_id = p.project_id and p.status = '1'
+        where
+        a.status = '1' and a.type = '1'
+        )
+        UNION
+        (select
+        DISTINCT(a.id),
+        title,
+        a.type,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        IFNULL(act_cost,0) actCost,
+        address,
+        person_Num personNum,
+        a.enable_status enableStatus,
+        '' groupName,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_activity a
+        #INNER JOIN base_tenant_project p on a.project_id = p.project_id and p.status = '1'
+        where
+        a.status = '1' and a.type = '2')
+        )A
+        INNER JOIN base_tenant_project p on A.projectId = p.project_id and p.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and p.tenant_id  = #{tenantId}
+        </if>
+        <if test="enableStatus != 0">
+            and A.enableStatus = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            A.title LIKE CONCAT('%',#{searchVal},'%')
+            OR A.groupName LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY A.createTime DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询活动数量-->
+    <select id="selectActivityCount" resultType="java.lang.Integer">
+        SELECT
+        count(DISTINCT(A.id))
+        FROM(
+        (select
+        DISTINCT(a.id),
+        title,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        IFNULL(act_cost,0) actCost,
+        address,
+        person_Num personNum,
+        a.enable_status enableStatus,
+        g.name groupName,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_activity a
+        INNER  JOIN biz_group g on g.id=a.group_id and g.status = '1' and g.enable_status = '2'
+        #INNER JOIN base_tenant_project p on a.project_id = p.project_id and p.status = '1'
+        where
+        a.status = '1' and a.type = '1'
+        )
+        UNION
+        (select
+        DISTINCT(a.id),
+        title,
+        IFNULL(DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s'),'') begTime,
+        IFNULL(DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s'),'') endTime,
+        IFNULL(act_cost,0) actCost,
+        address,
+        person_Num personNum,
+        a.enable_status enableStatus,
+        '' groupName,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i:%s') createTime
+        from
+        biz_activity a
+        #INNER JOIN base_tenant_project p on a.project_id = p.project_id and p.status = '1'
+        where
+        a.status = '1' and a.type = '2')
+        )A
+        INNER JOIN base_tenant_project p on A.projectId = p.project_id and p.status = '1'
+        where
+        1=1
+        <if test="type != 3 ">
+            and p.tenant_id  = #{tenantId}
+        </if>
+        <if test="enableStatus != 0">
+            and A.enableStatus = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            A.title LIKE CONCAT('%',#{searchVal},'%')
+            OR A.groupName LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY A.createTime DESC
+    </select>
+
+    <!--查询该租户下所属项目-->
+    <select id="selectProjectByTenantId"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.ProjectVo">
+        select * from(
+            (select
+            DISTINCT(bcp.project_id) projectId,
+            project_name projectName
+            from
+            biz_crm_project bcp
+            INNER JOIN base_tenant_project btp on bcp.project_id=btp.project_id and btp.status = '1'
+            where
+            bcp.status = '1'
+            <if test="type != 3 ">
+                and tenant_id = #{tenantId}
+            </if>
+        )
+        <if test="type = 3 ">
+            UNION
+            (select
+            DISTINCT(project_id) projectId,
+            project_name projectName
+            from
+            biz_crm_project
+            where
+            status = '1')
+        </if>
+        )A
+    </select>
+
+    <!--查询项目下所属小组-->
+    <select id="selectGroupByProjectId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.GroupVo">
+        select
+        id groupId,
+        name groupName
+        from
+        biz_group
+        where
+        status = '1'
+        and enable_status = '2'
+        and project_id = #{projectId}
+    </select>
+
+    <!--查询小组活动详情-->
+    <select id="selectActivityInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.ActivityInfo">
+        select
+        id,
+        title,
+        type,
+        activit_ccover activitCcover,
+        summary,
+        address,
+        DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i:%s') begTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i:%s') endTime,
+        DATE_FORMAT(apply_end_Time,'%Y-%m-%d %H:%i:%s') applyEndTime,
+        is_free isFree,
+        act_cost actCost,
+        is_cancel isCancel,
+        cancel_time cancelTime,
+        contactor_name contactorName,
+        contact_tel contactTel,
+        person_Num personNum
+        from
+        biz_activity
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <!--根据活动id查询项目名称-->
+    <select id="selectProjectById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.ProjectVo">
+        select
+        DISTINCT(p.project_id) projectId,
+        project_name projectName
+        from
+        biz_activity a
+        INNER JOIN biz_crm_project p on a.project_id=p.project_id and p.status = '1'
+        where
+        a.status = '1'
+        and a.id = #{id}
+    </select>
+
+
+    <!--根据活动id查询小组名称-->
+    <select id="selectGroupById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.GroupVo">
+        select
+        g.id groupId,
+        name groupName
+        from
+        biz_activity a
+        INNER JOIN biz_group g on a.group_id=g.id and g.status = '1'
+        where
+        a.status = '1'
+        and a.id = #{id}
+    </select>
+
+    <!--活动操作(0-删除,2-发布,3-撤回)-->
+    <update id="updateActivityStatus">
+        UPDATE biz_activity
+        SET
+  	         <if test="status == 0">
+                 status = '0',
+             </if>
+            <if test="status != 0">
+                enable_status = #{status},
+            </if>
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+     <select id="selectProjectIdByTenantId" parameterType="java.lang.String" resultType="java.lang.String">
+         select project_id from base_tenant_project where status = '1' and tenant_id =#{tenantId}
+     </select>
+
+
+    <select id="selectUserTypeByUserId" parameterType="java.lang.String" resultType="java.lang.String">
+        select CASE WHEN is_business ='1' THEN '商业人员' END AS t1 from base_app_server_user where id = #{userId}
+    </select>
+
+
+    <!--查询用户反馈列表-->
+    <select id="selectFeedbackList" resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.FeedbackVo">
+        select
+        id,
+        f.user_id userId,
+        user_name userName,
+        user_tel userTel,
+        content,
+        source,
+        DATE_FORMAT(f.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        IFNULL(p.project_name,'') projectName
+        from
+        biz_feedback f
+        left JOIN biz_crm_project p on f.project_id = p.project_id and p.status = '1'
+        where
+        f.status = '1'
+        <if test="type != '3' and projectId != null and projectId != ''">
+            and f.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(f.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(f.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR user_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY f.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectFeedbackCount" resultType="java.lang.Integer">
+        select
+        count(*) total
+        from
+        biz_feedback f
+        left JOIN biz_crm_project p on f.project_id = p.project_id and p.status = '1'
+        where
+        f.status = '1'
+        <if test="type != '3' and projectId != null and projectId != ''">
+            and f.project_id = #{projectId}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(f.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(f.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            user_name LIKE CONCAT('%',#{searchVal},'%')
+            OR user_tel LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY f.create_Time DESC
+    </select>
+
+
+    <!--查询活动下的报名列表-->
+    <select id="selectUserApplyList" resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.UserApplyVo">
+        select
+        DISTINCT u.id,
+        u.nickname userName,
+        u.mobile_phone userTel,
+        a.sign_type signType,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i') applyTime
+        from
+        biz_activity_apply a
+        LEFT JOIN base_app_client_user u on a.user_id=u.id and  u.status = '1'
+        where
+        a.status = '1'
+        and u.id is NOT null
+        and a.apply_status = '1'
+        and a.pay_status = '2'
+        <if test="signType != 0">
+            and a.sign_type = #{signType}
+        </if>
+        and activity_Id = #{id}
+        order by a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectUserApplyCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT u.id)
+        from
+        biz_activity_apply a
+        LEFT JOIN base_app_client_user u on a.user_id=u.id and  u.status = '1'
+        where
+        a.status = '1'
+        and u.id is NOT null
+        and a.apply_status = '1'
+        and a.pay_status = '2'
+        <if test="signType != 0">
+            and a.sign_type = #{signType}
+        </if>
+        and activity_Id = #{id}
+        order by a.create_Time desc
+    </select>
+
+
+
+    <!--导出报名人列表-->
+    <select id="selectExportUserApplyList"  parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.UserApplyVo">
+        select
+        DISTINCT u.id userId,
+        u.nickname userName,
+        u.mobile_phone userTel,
+        CASE a.sign_type
+        WHEN '1' THEN '未签到'
+        WHEN '2' THEN '已签到'
+        END AS signType,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i') applyTime
+        from
+        biz_activity_apply a
+        LEFT JOIN base_app_client_user u on a.user_id=u.id and u.status = '1'
+        where
+        a.status = '1'
+        and u.id is NOT null
+        and a.apply_status = '1'
+        and a.pay_status = '2'
+        and activity_Id = #{id}
+        order by a.create_Time desc
+    </select>
+
+
+    <select id="selectAllQRList" parameterType="java.lang.String"
+       resultType="com.github.wxiaoqi.security.jinmao.vo.activity.out.QRVo">
+        select
+        size,
+        qr_url qrUrl
+        from
+        biz_activity_qr
+        where
+        status = '1'
+        and activity_Id = #{id}
+        order by size+0
+    </select>
+
+</mapper>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BasePropertyServiceAreaMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BasePropertyServiceArea" id="basePropertyServiceAreaMap">
+        <result property="id" column="id"/>
+        <result property="appServerId" column="app_server_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="buildId" column="build_id"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询物业人员服务范围-->
+    <select id="selectServiceAreaInfo" parameterType="java.lang.String"
+       resultType="com.github.wxiaoqi.security.jinmao.vo.Service.OutParam.ResultServiceAreaInfoVo">
+        select
+        bb.housing_resources_id buildId,
+        bcb.name blockName,
+        record_building_name buildName
+        from
+        base_property_service_area a
+        inner JOIN biz_crm_project bcp ON bcp.project_id = a.project_id AND bcp.`status` = '1'
+        inner JOIN biz_crm_building bb ON bb.housing_resources_id = a.build_id AND bb.`status` = '1'
+        inner JOIN biz_crm_block bcb ON bcb.block_id = bb.block_id AND bcb.`status` = '1'
+        INNER JOIN base_tenant_project tp on bcp.project_id = tp.project_id and tp.status ='1'
+        INNER JOIN base_user u on u.tenant_id = tp.tenant_id and u.status = '1' and u.tenant_id = #{tenantId}
+        where
+        a.app_server_id = #{id}
+    </select>
+
+    <select id="selectServiceArea" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.Service.OutParam.ResultServiceAreaInfoVo">
+        select
+        bcb.block_id blockId,
+        bcb.name blockName,
+        housing_resources_id buildId,
+        record_building_name buildName
+        from
+        biz_crm_project p
+        inner JOIN biz_crm_block bcb ON bcb.project_id = p.project_id AND bcb.`status` = '1'
+        INNER JOIN biz_crm_building b on b.block_id=bcb.block_id and b.status = '1'
+        WHERE
+        p.status = '1'
+        and p.project_id = #{projectId}
+        ORDER BY bcb.block_code desc, building_num+'0'
+    </select>
+
+    <!--查询物业服务范围
+    <select id="selectServiceArea" resultType="com.github.wxiaoqi.security.jinmao.vo.Service.OutParam.ResultServiceAreaTreeVo">
+        select * from (
+        (select
+        p.id pid,
+        b.id id,
+        b.build_name name
+        from
+        biz_project p
+        INNER JOIN biz_build b on b.project_id=p.id and b.status = '1'
+        WHERE
+        p.status = '1')
+        UNION
+        (
+        select
+        '-1' pid,
+        'ae9e8a45-e8a0-11e8-9ab6-7cd30ac3345a' id,
+        p.project_name name
+        from
+        biz_project p
+        INNER JOIN biz_build b on b.project_id=p.id and b.status = '1'
+        WHERE
+        p.status = '1' )) T
+    </select>
+-->
+    <delete id="deleteServiceAreaBySId" parameterType="java.lang.String">
+        delete from base_property_service_area where app_server_id = #{id} and project_id = #{projectId}
+    </delete>
+
+</mapper>

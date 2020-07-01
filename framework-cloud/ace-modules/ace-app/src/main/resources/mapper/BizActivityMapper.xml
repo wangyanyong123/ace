@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizActivityMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizActivity" id="bizActivityMap">
+        <result property="id" column="ID"/>
+        <result property="groupId" column="group_id"/>
+        <result property="title" column="title"/>
+        <result property="activitCcover" column="activit_ccover"/>
+        <result property="summary" column="summary"/>
+        <result property="address" column="address"/>
+        <result property="begTime" column="beg_Time"/>
+        <result property="endTime" column="end_Time"/>
+        <result property="applyEndTime" column="apply_end_Time"/>
+        <result property="isFree" column="is_free"/>
+        <result property="actCost" column="act_cost"/>
+        <result property="isCancel" column="is_cancel"/>
+        <result property="cancelTime" column="cancel_time"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="personNum" column="person_Num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--查询小组活动贴列表-->
+    <select id="selectActivityList" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ActivityVo">
+        select
+        a.id,
+        a.type,
+        g.name groupName,
+        a.title,
+        a.address,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.person_Num personNum,
+        a.activit_ccover activitCcover,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum
+        from
+        biz_activity a
+        INNER JOIN biz_group g on a.group_id=g.id and  g.status = '1' and g.enable_status ='2'
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and a.group_id = #{groupId}
+        order by a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询当前项目下的活动列表-->
+    <select id="selectActivityListByProject" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ActivityVo">
+        select * from(
+        ( select
+        a.id,
+        a.type,
+        g.name groupName,
+        a.title,
+        a.address,
+        a.person_Num personNum,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.activit_ccover activitCcover,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i') createTime
+        from
+        biz_activity a
+        INNER JOIN biz_group g on a.group_id=g.id and  g.status = '1' and g.enable_status ='2'
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(a.end_Time))/(60*60*24) &lt; #{day}
+        )
+        UNION
+        (
+        select
+        a.id,
+        a.type,
+        '' groupName,
+        a.title,
+        a.address,
+        a.person_Num personNum,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.activit_ccover activitCcover,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum,
+        a.project_id projectId,
+        DATE_FORMAT(a.create_Time,'%Y-%m-%d %H:%i') createTime
+        from
+        biz_activity a
+        where
+        a.status = '1'
+        and a.type = '2'
+        and a.enable_status = '2'
+        and (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(a.end_Time))/(60*60*24) &lt; #{day}
+        )
+        )A
+        where
+        1=1 and A.projectId =#{projectId}
+        ORDER BY A.createTime desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询活动报名人头像-->
+    <select id="selectApplyPhoto" parameterType="java.lang.String" resultType="com.github.wxiaoqi.security.api.vo.img.ImgInfo">
+        select
+        DISTINCT(IFNULL(u.profile_photo,'')) url
+        from
+        biz_activity_apply a
+        INNER JOIN base_app_client_user u on a.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        a.status = '1'
+        and a.apply_status = '1'
+        and activity_Id = #{activityId}
+        ORDER BY a.create_Time desc
+        limit 5
+    </select>
+
+    <!--查询活动报名人头像-->
+    <select id="selectApplyPhotoByThree" parameterType="java.lang.String" resultType="com.github.wxiaoqi.security.api.vo.img.ImgInfo">
+        select
+        DISTINCT(IFNULL(u.profile_photo,'')) url
+        from
+        biz_activity_apply a
+        INNER JOIN base_app_client_user u on a.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        a.status = '1'
+        and a.apply_status = '1'
+        and activity_Id = #{activityId}
+        ORDER BY a.create_Time desc
+        limit 3
+    </select>
+
+    <!--查询用户是否已报名-->
+    <select id="selectIsApplyByUser" resultType="java.lang.Integer">
+        select
+        COUNT(user_id) total
+        from
+        biz_activity_apply
+        where
+        status = '1'
+        and apply_status = '1'
+        and pay_status = '2'
+        and activity_Id = #{activityId}
+        and user_id = #{userId}
+    </select>
+
+
+    <!--查询活动报名人数-->
+    <select id="selectActivityApplyNum" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT(user_id)) total
+        from
+        biz_activity_apply
+        where
+        status = '1'
+        and apply_status = '1'
+        and pay_status = '2'
+        and activity_Id = #{activityId}
+    </select>
+
+    <!--查询活动详情-->
+    <select id="selectActivityInfo" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ActivityInfo">
+        select
+        a.id,
+        a.project_id projectId,
+        a.group_id groupId,
+        title,
+        a.type,
+        IFNULL(activit_ccover,'') activitCcover,
+        a.summary,
+        CASE WHEN act_cost  THEN act_cost
+        WHEN act_cost = '0' THEN '免费' END AS actCost,
+        DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i') endTime,
+        address,
+        is_free isFree,
+        person_Num personNum,
+        contactor_name contactorName,
+        contact_tel contactTel,
+        DATE_FORMAT(apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,(select COUNT(DISTINCT(user_id)) total from biz_activity_apply where status = '1' and apply_status = '1' and activity_Id =  #{id}) applyNum,
+        (select COUNT(*) from biz_comment where status = '1' and pid = '-1' and show_type = '1' and object_id = #{id}) commentNum,
+        IFNULL((select is_comment isForbid from biz_report where status = '1' and is_comment = '0' and be_user_id = #{userId} limit 1),'1') isForbid,
+        cancel_time cancelTime,
+        IFNULL(g.name,'') groupName
+        from
+        biz_activity a
+        LEFT JOIN biz_group g on g.id=a.group_id
+        where
+        a.status = '1'
+        and a.id = #{id}
+    </select>
+
+
+    <!--查询用户是否加入该活动所发的小组-->
+    <select id="selectIsGroupMember" resultType="java.lang.String">
+        select
+        a.id
+        from
+        biz_activity a
+        INNER JOIN biz_group_member m on a.group_id =m.group_id and m.follow_status = '1' and m.status = '1'
+        INNER JOIN base_app_client_user u on m.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and u.id = #{userId}
+        and a.id = #{activityId}
+    </select>
+
+
+    <!-- 支付宝、微信回调通知成功后 活动操作报名状态-->
+    <update id="updateActivityApplyStatus">
+        UPDATE biz_activity_apply
+        SET
+  	         apply_status = '1',
+             pay_status = '2',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND sub_id = #{subId}
+    </update>
+
+    <!--活动退款-->
+    <update id="updateActivityRefundStatus">
+        UPDATE biz_activity_apply
+        SET
+  	         apply_status = '2',
+             pay_status = '3',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND id = #{id}
+    </update>
+
+     <!--退款审核-->
+    <update id="updateRefundAuditStatus">
+        UPDATE biz_activity_apply
+        SET
+  	         <if test="status == 1">
+                 apply_status = '3',
+                 pay_status = '4',
+             </if>
+             <if test="status == 2">
+                 apply_status = '4',
+                 pay_status = '3',
+             </if>
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND sub_id = #{subId}
+    </update>
+
+
+    <select id="selectCompanyIdById" parameterType="java.lang.String" resultType="java.lang.String">
+        select t.id from
+        biz_activity a
+        INNER JOIN base_tenant_project p on a.project_id=p.project_id and p.status = '1'
+        INNER JOIN base_tenant t on t.id=p.tenant_id and t.tenant_type = '1'
+        where
+        a.status = '1'
+        and a.id = #{id}
+        limit 1
+    </select>
+
+
+
+    <select id="selectIsActivityBySubId" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.entity.BizActivityApply">
+        select id,user_name userName,activity_Id activityId,sub_id subId from biz_activity_apply where status = '1' and sub_id = #{subId}
+    </select>
+
+
+
+     <select id="selectIsSigntype" resultType="java.lang.String">
+        select id from
+        biz_activity_apply
+        where
+        status = '1'
+        and apply_status = '1'
+        and pay_status = '2'
+        and activity_Id = #{id}
+        and user_id = #{userId}
+        order by create_Time desc
+        limit 1
+     </select>
+    <!--判断该用户是否签到-->
+    <select id="selectIsSigntypeById" resultType="java.lang.Integer">
+        select count(id) from
+        biz_activity_apply
+        where
+        status = '1'
+        and apply_status = '1'
+        and pay_status = '2'
+        and sign_type = '2'
+        and activity_Id = #{id}
+        and user_id = #{userId}
+        order by create_Time desc
+        limit 1
+     </select>
+
+
+    <update id="updatesignTypeStatus">
+        UPDATE biz_activity_apply
+        SET
+        sign_type = '2',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{applyId}
+    </update>
+
+
+    <!--查询app邻里活动-->
+    <select id="selectHoodActivityList" resultType="com.github.wxiaoqi.security.app.vo.activity.out.ActivityVo">
+        select
+        a.id,
+        a.title,
+        a.address,
+        DATE_FORMAT(a.apply_end_Time,'%Y-%m-%d %H:%i') applyEndTime,
+        a.summary,
+        a.person_Num personNum,
+        contactor_name contactorName,
+        a.activit_ccover activitCcover,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; a.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= a.end_Time THEN '3'
+        END AS activityStatus,
+        (select COUNT(DISTINCT(aa.user_id)) total from biz_activity_apply aa where aa.status = '1' and aa.apply_status = '1' and aa.activity_Id = a.id) applyNum
+        from
+        biz_activity a
+        where
+        a.status = '1'
+        and a.enable_status = '2'
+        and a.type = '2'
+        and project_id = #{projectId}
+        order by a.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+</mapper>

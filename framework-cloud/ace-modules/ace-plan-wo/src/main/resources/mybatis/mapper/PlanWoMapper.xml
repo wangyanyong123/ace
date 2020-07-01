@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.wxiaoqi.security.plan.mapper.PlanWoMapper">
+
+    <select id="getPlanWoListByDate" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoDto">
+        SELECT t.SITE_ID projectCode,t.task_id taskId,t.task_code taskCode, t.task_describe taskDescribe,w.wo_type woType,t.ASSIGNED_TIME assignedTime,s.CRM_PROJECTID projectId
+        from AFM.app_t_taskmessage t
+        INNER JOIN AFM.wo w on t.task_id=w.wo_id
+        left join AFM.site s on s.SITE_ID=t.SITE_ID
+        WHERE t.INFORM_TYPE=4
+        and t.TASK_TYPE='P'
+        and w.wo_source='P'
+        and t.TASK_STATUS='Processed'
+        <if test="projectCodes != null" >
+          and t.SITE_ID in
+            <foreach collection="projectCodes" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="createDate != null" >
+            and t.inform_time &gt; to_date(#{createDate},'yyyy-mm-dd hh24:mi:ss')
+            and t.inform_time &lt; SYSDATE
+        </if>
+        order by w.DATE_CREATED desc,t.SITE_ID
+    </select>
+
+    <select id="getWoTrListByWoId" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoTrDto">
+        SELECT DISTINCT r.tr_id trId, r.tr_desc trDesc from AFM.wotr wt
+        left join AFM.TR r on wt.tr_id = r.tr_id
+        WHERE wo_id=#{woId}
+    </select>
+    <select id="getPlanWoRListByWoId" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoRDto">
+        SELECT w.RM_ID roomCode,w.EQ_ID eqId,w.pmp_id pmpId,r.crm_rmid roomId
+        from AFM.wr w
+        left join AFM.rm r on w.RM_ID = r.rm_id
+        where w.wo_id=#{woId}
+        group by w.RM_ID,w.EQ_ID,w.pmp_id,r.crm_rmid
+    </select>
+    <select id="getPlanWoEqListByEqId" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoEqDto">
+        SELECT eq_id eqId,eq_name eqName,eq_code eqCode from AFM.EQ
+        WHERE eq_id=#{eqId}
+    </select>
+    <select id="getPlanWoPmpListByPmpId" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoPmpDto">
+        SELECT DESCRIPTION description, PMP_TYPE pmpType, PMP_ID pmpId,DATA_STATUS dataStatus,PMP_NAME pmpName,EXTEND_TYPE extendType,TR_lIST trList from AFM.pmp
+        WHERE pmp_id=#{pmpId}
+    </select>
+    <select id="getPlanWoPmpsListByPmpId" resultType="com.github.wxiaoqi.security.plan.dto.PlanWoPmpsDto">
+        SELECT DOC doc,INSTRUCTIONS instructions,PMP_ID pmpId,PMPS_ID pmpsId,OP_TYPE opType, OP_VAL opVal from AFM.pmps
+        WHERE pmp_id=#{pmpId}
+    </select>
+
+</mapper>

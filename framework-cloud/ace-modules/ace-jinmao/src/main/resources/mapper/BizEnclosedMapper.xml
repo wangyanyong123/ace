@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizEnclosedMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizEnclosed" id="bizEnclosedMap">
+        <result property="id" column="ID"/>
+        <result property="enclosedPid" column="enclosed_PID"/>
+        <result property="enclosedCode" column="enclosed_Code"/>
+        <result property="enclosedName" column="enclosed_Name"/>
+        <result property="projectId" column="project_Id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--根据ID查询围合详情-->
+    <select id="selectEnclosedById" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.EnclosedInfoVo">
+        SELECT
+            e.id,
+            e.enclosed_PID enclosedPid,
+            e.enclosed_Code enclosedCode,
+            e.enclosed_Name enclosedName,
+            e.project_id projectId
+        FROM biz_enclosed e
+        LEFT JOIN biz_crm_project p on e.project_id = p.project_id AND p.status = '1'
+        WHERE
+          e.status= '1'
+        AND
+          e.id = #{id}
+    </select>
+
+    <!--查询围合树-->
+    <select id="selectEnclosedTreeList" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.EnclosedTreeVo">
+        SELECT
+          id,
+          enclosed_Name name,
+          enclosed_PID pid,
+          project_id projectId
+        FROM
+          biz_enclosed
+        WHERE
+          status = '1'
+        and
+          project_id = #{projectId}
+    </select>
+
+    <!--获取顶级围合-->
+    <select id="selectTopEnclosedInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.EnclosedInfoVo">
+        SELECT
+          id,
+          enclosed_Name enclosedName,
+          enclosed_PID enclosedPid,
+          project_id projectId
+        FROM
+          biz_enclosed
+        WHERE
+          status = '1'
+        and
+          enclosed_PID = '-1'
+    </select>
+    <!--删除围合-->
+    <update id="deleteEnclosedById">
+        update biz_enclosed
+        set status = '0'
+        where id = #{id}
+    </update>
+    <!--删除道闸-->
+    <update id="deleteFacilitiesById">
+        update biz_facilities
+        set status = '0'
+        where id = #{id}
+    </update>
+    <!--查询道闸信息-->
+    <select id="selectFacilitiesList" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.FacilitiesInfoVo">
+        SELECT
+            f.id,
+            f.facilities_name name,
+            f.type
+        FROM biz_facilities f
+        WHERE
+        f.status = '1'
+        AND
+           f.enclosed_id = #{enclosedId}
+        <if test="searchVal != null and searchVal != '' ">
+            AND
+            f.facilities_name LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        ORDER BY f.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+    <!--删除围合单元关联-->
+    <update id="deleteEnclosedOnUnit">
+        UPDATE biz_crm_unit u
+	    SET u.enclosed_id = ''
+        WHERE
+          u.enclosed_id = #{enclosedId}
+    </update>
+    <select id="selectUnitEnclosedIsDelete" resultType="java.lang.Integer">
+        SELECT
+		  COUNT(enclosed_id)
+        FROM biz_crm_unit u
+        WHERE
+        u.enclosed_id = #{enclosedId}
+    </select>
+</mapper>

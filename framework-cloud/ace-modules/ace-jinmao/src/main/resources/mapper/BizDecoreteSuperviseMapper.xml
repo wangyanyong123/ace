@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizDecoreteSuperviseMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizDecoreteSupervise" id="bizDecoreteSuperviseMap">
+        <result property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="servicePrice" column="service_price"/>
+        <result property="costPrice" column="cost_price"/>
+        <result property="promoImge" column="promo_imge"/>
+        <result property="serviceIntro" column="service_intro"/>
+        <result property="publishStatus" column="publish_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_stamp"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <select id="getDecoreteSuperviseList" resultType="com.github.wxiaoqi.security.jinmao.vo.decoretesupervise.out.DecoreteListVo">
+        SELECT DISTINCT(s.id),p.project_name projectName,s.publish_status status  from biz_decorete_supervise s
+        inner join  biz_crm_project p on p.project_id = s.project_id and p.status = '1'
+        left JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        where s.status ='1'
+        <if test="type != 3 ">
+            and tp.tenant_id = #{tenantId}
+        </if>
+        <if test="projectId!=null and projectId != ''">
+            and s.project_id = #{projectId}
+        </if>
+        <if test="status != 3">
+            AND
+            s.publish_status = #{status}
+        </if>
+        ORDER BY s.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getDecoreteSuperviseCount" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT(s.id)) total  from biz_decorete_supervise s
+        inner join  biz_crm_project p on p.project_id = s.project_id and p.status = '1'
+        INNER JOIN base_tenant_project tp ON tp.project_id = p.project_id and tp.status = '1'
+        where s.status ='1'
+        <if test="type != 3 ">
+            and tp.tenant_id = #{tenantId}
+        </if>
+        <if test="projectId!=null and projectId != ''">
+            and s.project_id = #{projectId}
+        </if>
+        <if test="status != 3">
+            AND
+            s.publish_status = #{status}
+        </if>
+    </select>
+
+    <select id="getDecoreteDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.decoretesupervise.out.DecoreteDetailVo">
+        SELECT s.id,s.project_id projectId,p.project_name projectName,s.service_price servicePrice,s.cost_price costPrice,
+        s.promo_imge promoImgeStr,s.service_intro serviceIntro from biz_decorete_supervise s
+        inner join  biz_crm_project p on p.project_id = s.project_id and p.status = '1'
+        where s.status ='1'
+        and s.id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE
+            biz_decorete_supervise
+        SET
+            publish_status = #{status},
+            modify_Time = NOW()
+        WHERE
+            status = '1'
+        AND
+            id = #{id}
+    </update>
+
+    <update id="deleteDecoreteSupervise"  >
+        UPDATE
+          biz_decorete_supervise
+        SET
+          status = '0',
+          modify_Time = NOW()
+        WHERE
+          id = #{id}
+    </update>
+
+    <select id="getProjectByDecorete" resultType="java.lang.String">
+        select id from biz_decorete_supervise where project_id  = #{projectId} and status = '1'
+    </select>
+</mapper>

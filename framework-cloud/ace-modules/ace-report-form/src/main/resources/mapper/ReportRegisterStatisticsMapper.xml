@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.report.mapper.ReportRegisterStatisticsMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.report.entity.ReportRegisterStatistics" id="reportRegisterStatisticsMap">
+        <result property="id" column="id"/>
+        <result property="registerDate" column="register_date"/>
+        <result property="projectId" column="project_id"/>
+        <result property="projectName" column="project_name"/>
+        <result property="buildingName" column="building_name"/>
+        <result property="buildingId" column="building_id"/>
+        <result property="registerNumber" column="register_number"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="buildRegister" resultType="com.github.wxiaoqi.security.report.vo.BuildRegisterVo">
+        SELECT rrs.register_date registerDate,rrs.project_name projectName,cbl.`name` blockName,rrs.building_name buildingName,rrs.register_number registerNumber
+        ,owner_number OwnerNumber
+        FROM report_register_statistics rrs
+        LEFT JOIN biz_crm_building cbu ON cbu.housing_resources_id = rrs.building_id AND cbu.`status` = '1'
+        LEFT JOIN biz_crm_block cbl ON cbl.block_id = cbu.block_id AND cbl.`status` = '1'
+        WHERE 1=1 and rrs.`status` = '1'
+        <if test="projectId != null and projectId != '' ">
+            and rrs.project_id = #{projectId}
+        </if>
+        <if test="beginDate != null and beginDate != '' ">
+            <![CDATA[ and STR_TO_DATE(#{beginDate},'%Y-%m-%d') <= STR_TO_DATE(rrs.register_date,'%Y-%m-%d') ]]>
+        </if>
+        <if test="endDate != null and endDate != '' ">
+            <![CDATA[ and STR_TO_DATE(rrs.register_date,'%Y-%m-%d') <= STR_TO_DATE(#{endDate},'%Y-%m-%d') ]]>
+        </if>
+        ORDER BY STR_TO_DATE(rrs.register_date,'%Y-%m-%d') DESC,rrs.project_name,cbl.`name` ASC,cbu.building_num + 0 ASC
+        limit #{page} , #{limit}
+    </select>
+    <select id="buildRegisterCount" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM report_register_statistics
+        WHERE 1=1 and `status` = '1'
+        <if test="projectId != null and projectId != '' ">
+            and project_id = #{projectId}
+        </if>
+        <if test="beginDate != null and beginDate != '' ">
+            <![CDATA[ and STR_TO_DATE(#{beginDate},'%Y-%m-%d') <= STR_TO_DATE(register_date,'%Y-%m-%d') ]]>
+        </if>
+        <if test="endDate != null and endDate != '' ">
+            <![CDATA[ and STR_TO_DATE(register_date,'%Y-%m-%d') <= STR_TO_DATE(#{endDate},'%Y-%m-%d') ]]>
+        </if>
+    </select>
+    <insert id="buildRegisterStatistics">
+        INSERT into report_register_statistics
+            SELECT a.id
+            ,a.register_date
+            ,a.project_id
+            ,a.project_name
+            ,a.building_name
+            ,a.building_id
+            ,a.register_number
+			,b.register_number
+            ,a.`status`
+            ,a.create_time
+            ,a.modify_time
+            from (SELECT UUID() id
+            ,DATE_FORMAT(DATE_SUB(curdate(),INTERVAL 1 DAY),'%Y-%m-%d') register_date
+            ,cp.project_id
+            ,cp.project_name
+            , cb.record_building_name building_name
+            ,cb.housing_resources_id building_id
+            ,COUNT(*) register_number
+            ,'1' `status`
+            ,NOW() create_time
+            ,NULL modify_time
+            FROM biz_user_house uh
+            LEFT JOIN biz_crm_house ch ON ch.house_id = uh.house_id AND ch.`status` = '1'
+            LEFT JOIN biz_crm_floor cf ON cf.floor_id = ch.floor_id AND cf.`status` = '1'
+            LEFT JOIN biz_crm_unit cu ON cu.unit_id = cf.unit_id AND cu.`status` = '1'
+            LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id AND cb.`status` = '1'
+            LEFT JOIN biz_crm_block b ON b.block_id = cb.block_id AND b.`status` = '1'
+            LEFT JOIN biz_crm_project cp ON cp.project_id = b.project_id AND cp.`status` = '1'
+            WHERE uh.`status` = '1' AND uh.is_delete = '0' AND TO_DAYS(NOW()) - TO_DAYS(ch.create_time) > 0
+            GROUP BY cb.housing_resources_id) a
+            LEFT JOIN (SELECT UUID() id
+            ,DATE_FORMAT(DATE_SUB(curdate(),INTERVAL 1 DAY),'%Y-%m-%d') register_date
+            ,cp.project_id
+            ,cp.project_name
+            , cb.record_building_name building_name
+            ,cb.housing_resources_id building_id
+            ,COUNT(*) register_number
+            ,'1' `status`
+            ,NOW() create_time
+            ,NULL modify_time
+            FROM biz_user_house uh
+            LEFT JOIN biz_crm_house ch ON ch.house_id = uh.house_id AND ch.`status` = '1'
+            LEFT JOIN biz_crm_floor cf ON cf.floor_id = ch.floor_id AND cf.`status` = '1'
+            LEFT JOIN biz_crm_unit cu ON cu.unit_id = cf.unit_id AND cu.`status` = '1'
+            LEFT JOIN biz_crm_building cb ON cb.housing_resources_id = cu.building_id AND cb.`status` = '1'
+            LEFT JOIN biz_crm_block b ON b.block_id = cb.block_id AND b.`status` = '1'
+            LEFT JOIN biz_crm_project cp ON cp.project_id = b.project_id AND cp.`status` = '1'
+            WHERE uh.`status` = '1' AND uh.is_delete = '0' AND TO_DAYS(NOW()) - TO_DAYS(ch.create_time) > 0
+						and uh.identity_type='3'
+            GROUP BY cb.housing_resources_id) b on a.register_date=b.register_date and a.project_id=b.project_id and a.building_id=b.building_id
+    </insert>
+
+    <select id="selectProjectIdById" parameterType="java.lang.String"
+            resultType="java.lang.String">
+        select DISTINCT(tp.project_id) id
+        from base_tenant_project tp
+        INNER JOIN biz_crm_project bcp on bcp.project_id=tp.project_id and bcp.status = '1'
+        where tp.status = '1' and tenant_id = #{id}
+    </select>
+
+</mapper>

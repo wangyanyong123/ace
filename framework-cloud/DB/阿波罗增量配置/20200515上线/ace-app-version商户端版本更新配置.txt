@@ -1,0 +1,6 @@
+check.anMerchantLowVersion = 1.0.0 #android允许的最小版本 低于此版本强制更新
+check.anMerchantLastVersion = 1.0.0 #android最新版本  当前版本在最小版本和最新版本则选择更新，等于最新版本不更新
+check.anMerchantUpdateContent = 首发版本 #android更新能容，不更新不显示
+check.iosMerchantLowVersion = 1.0.0 #ios允许的最小版本 低于此版本强制更新
+check.iosMerchantLastVersion = 1.0.0 #ios最新版本  当前版本在最小版本和最新版本则选择更新，等于最新版本不更新
+check.iosMerchantUpdateContent = 首发版本 #ios更新能容，不更新不显示

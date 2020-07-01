@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizAccountStatementMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizAccountStatement" id="bizAccountStatementMap">
+        <result property="id" column="id"/>
+        <result property="billNumber" column="bill_number"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="settlementCycleStart" column="settlement_cycle_start"/>
+        <result property="settlementCycleEnd" column="settlement_cycle_end"/>
+        <result property="revenueMoney" column="revenue_money"/>
+        <result property="balanceMoney" column="balance_money"/>
+        <result property="balanceStatus" column="balance_status"/>
+        <result property="balanceImg" column="balance_img"/>
+    </resultMap>
+
+
+
+    <!--查询账单列表-->
+    <select id="selectBillList" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.StatementVo">
+        select
+        DISTINCT(s.id),
+        bill_number billNumber,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        revenue_money revenueMoney,
+        balance_money balanceMoney,
+        balance_status balanceStatus,
+        t.account,
+        t.name tenantName,
+        t.id tenantId
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        where
+        s.tenant_id = #{tenantId}
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        <if test="balanceStatus != 3 ">
+            and balance_status = #{balanceStatus}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        ORDER BY settlement_cycle_end desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectBillCount" resultType="java.lang.Integer">
+        select
+        count(DISTINCT(s.id))
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        where
+        s.tenant_id = #{tenantId}
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        <if test="balanceStatus != 3 ">
+            and balance_status = #{balanceStatus}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        ORDER BY settlement_cycle_end desc
+    </select>
+
+
+    <select id="selectExportBillList" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.StatementVo">
+        select
+        DISTINCT(bill_number) billNumber,
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle,
+        revenue_money revenueMoney,
+        balance_money balanceMoney,
+        CASE WHEN balance_status='1' THEN '待付款'
+        WHEN balance_status='2' THEN '已结算'
+        ELSE '待对账'
+        END AS balanceStatus,
+        t.account,
+        t.name tenantName
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1' and t.enable_status = '1'
+        INNER JOIN base_tenant_project p on t.id=p.tenant_id and p.status = '1'
+        where
+        s.tenant_id = #{tenantId}
+        <if test="startTime != null and startTime != '' ">
+            and DATE_FORMAT(settlement_cycle_start,'%Y-%m') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(settlement_cycle_end,'%Y-%m') &lt;= #{endTime}
+        </if>
+        <if test="balanceStatus != 3 ">
+            and balance_status = #{balanceStatus}
+        </if>
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        ORDER BY settlement_cycle_end desc
+    </select>
+
+
+    <update id="updateBalanceStatus">
+        UPDATE biz_account_statement
+        SET <if test="status == 1">
+               balance_status = #{status}
+            </if>
+            <if test="status == 2">
+               balance_status = #{status},
+               balance_img =#{balanceImg}
+            </if>
+        WHERE
+        id = #{id}
+    </update>
+
+
+    <!--查询账单详情-->
+    <select id="selectBillInfo" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.BillInfo">
+         select
+        s.id,
+        s.tenant_id tenantId,
+        s.balance_img balanceImg,
+        revenue_money revenueMoney,
+        balance_money balanceMoney,
+        balance_status balanceStatus,
+        IFNULL(c.is_print,0) isPrint,
+        t.account,
+        t.name tenantName,
+        t.contactor_name contactorName,
+        t.contact_tel contactTel
+        from
+        biz_account_statement s
+        INNER JOIN base_tenant t on s.tenant_id=t.id and t.status = '1' and t.enable_status = '1'
+        left JOIN biz_credentials c on c.account_id=s.id
+        where
+        s.id = #{id}
+        and s.tenant_id = #{tenantId}
+    </select>
+
+
+    <select id="selectSettlementById" parameterType="java.lang.String" resultType="java.lang.String">
+        select
+        CONCAT(DATE_FORMAT(settlement_cycle_start,'%Y-%m-%d'),'~',DATE_FORMAT(settlement_cycle_end,'%Y-%m-%d'))  settlementCycle
+        from
+        biz_account_statement
+        where
+        id = #{id}
+    </select>
+
+    <!--查询账单明细列表-->
+    <select id="selectBillDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.BillDetailList">
+        select
+        s.sub_code subCode,
+        s.title,
+        s.contact_name contactName,
+        s.contact_tel contactTel,
+        b.pay_type payType,
+        p.sub_num subNum,
+        p.price,
+        p.cost,
+        w.subscribe_status subscribeStatus,
+        w.id woId,
+        DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') finishWoTime
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status = '4'
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &gt;=#{startTime}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &lt;=#{endTime}
+        ORDER BY w.finish_wo_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+
+    <!--查询账单明细列表 支付款的所有状态-->
+    <select id="selectBillAllDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.BillDetailList">
+        select
+        s.sub_code subCode,
+        s.title,
+        s.contact_name contactName,
+        s.contact_tel contactTel,
+        b.pay_type payType,
+        p.sub_num subNum,
+        p.price,
+        p.cost,
+        w.subscribe_status subscribeStatus,
+        DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') finishWoTime
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status in ('1','5','6')
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &gt;=#{startTime}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &lt;#{endTime}
+        ORDER BY s.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectBillDetailAllCount" resultType="java.lang.Integer">
+        select
+        count(s.id)
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status in ('1','5','6')
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &gt;=#{startTime}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &lt;#{endTime}
+        ORDER BY s.create_Time desc
+    </select>
+
+
+
+
+    <select id="selectBillDetailCount" resultType="java.lang.Integer">
+        select
+        count(s.id)
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status = '4'
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &gt;=#{startTime}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &lt;=#{endTime}
+        ORDER BY w.finish_wo_time desc
+    </select>
+
+
+    <select id="selectExportBillDetail" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.BillDetailList">
+        select
+        s.sub_code subCode,
+        s.title,
+        s.contact_name contactName,
+        s.contact_tel contactTel,
+        CASE WHEN b.pay_type = '1' THEN '支付宝'
+        WHEN b.pay_type = '2' THEN '微信'
+        ELSE '其它'
+        END AS payType,
+        p.sub_num subNum,
+        p.price,
+        p.cost,
+        CASE WHEN w.subscribe_status = '4' THEN '已完成'
+        ELSE '已退款'
+        END AS subscribeStatus,
+        DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') finishWoTime
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status = '4'
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &gt;=#{startTime}
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') &lt;=#{endTime}
+        ORDER BY w.finish_wo_time desc
+    </select>
+
+
+    <select id="selectExportBillDetailAll" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.BillDetailList">
+        select
+        s.sub_code subCode,
+        s.title,
+        s.contact_name contactName,
+        s.contact_tel contactTel,
+        CASE WHEN b.pay_type = '1' THEN '支付宝'
+        WHEN b.pay_type = '2' THEN '微信'
+        ELSE '其它'
+        END AS payType,
+        p.sub_num subNum,
+        p.price,
+        p.cost,
+        CASE WHEN w.subscribe_status = '1' THEN '处理中'
+        WHEN w.subscribe_status = '5' THEN '待确认'
+        WHEN w.subscribe_status = '6' THEN '退款中'
+        END AS subscribeStatus,
+        DATE_FORMAT(w.finish_wo_time ,'%Y-%m-%d') finishWoTime
+        from
+        biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id=w.id and w.status = '1'
+        INNER JOIN biz_account_book b on s.id=b.sub_id and b.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        INNER JOIN biz_sub_product p on s.id=p.sub_id and p.status = '1'
+        where
+        s.status = '1'
+        and w.subscribe_status in ('1','5','6')
+        and w.company_Id = #{tenantId}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &gt;=#{startTime}
+        and DATE_FORMAT(s.create_Time ,'%Y-%m') &lt;#{endTime}
+        ORDER BY s.create_Time desc
+    </select>
+
+
+
+    <!--统计各商户收益金额-->
+    <select id="selectTenantMoneyById" resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.StatisticsVo">
+        SELECT a.id,a.tenantName,a.dateTime,a.actualCost
+        FROM
+        (
+        select
+        t.id,
+        t.name tenantName
+        ,DATE_FORMAT(w.finish_wo_time ,'%Y-%m') dateTime,
+        sum(s.actual_cost) actualCost
+        from biz_subscribe s
+        INNER JOIN biz_subscribe_wo w on s.id =w.id and w.status = '1'
+        INNER JOIN base_tenant t on w.company_Id=t.id and t.status = '1'
+        where s.status = '1'
+        and t.tenant_type = '2'
+        and t.enable_status = '1'
+        and w.subscribe_status = '4' and w.finish_wo_time is not null
+        and DATE_FORMAT(w.finish_wo_time ,'%Y-%m') &lt; DATE_FORMAT(NOW() ,'%Y-%m')
+        GROUP BY t.id,DATE_FORMAT(w.finish_wo_time ,'%Y-%m')) a
+        LEFT JOIN biz_account_statement bas ON a.id = tenant_id AND a.dateTime = DATE_FORMAT(bas.settlement_cycle_start ,'%Y-%m')
+        WHERE bas.id is NULL
+    </select>
+
+
+    <!--查询凭证信息-->
+    <select id="selectAccountInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.statement.out.AccountInfo">
+        select
+        c.account_num accountNum,
+        c.remark,
+        c.createPerson,
+        tc.account_type accountType,
+        tc.account_name accountName,
+        tc.account_number accountNumber,
+        tc.account_book_name accountBookName,
+        s.balance_money balanceMoney,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d') createTime
+        from
+        biz_credentials c
+        INNER JOIN base_tenant_contract tc on tc.enterprise_id=c.tenant_id and tc.status = '1'
+        INNER JOIN biz_account_statement s on c.account_id=s.id
+        where
+        c.status = '1'
+        and c.account_id = #{id}
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizGroupLeaderMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizGroupLeader" id="bizGroupLeaderMap">
+        <result property="id" column="id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!--判断当前登录用户所在小组中的角色是否是组长-->
+    <select id="selectIsGroupByUserId" resultType="java.lang.String">
+        select
+        id
+        from
+        biz_group_leader
+        where
+        status = '1'
+        and group_id = #{groupId}
+        and user_id = #{userId}
+    </select>
+
+    <!--查询小组组长-->
+    <select id="selectGroupLeaderList" resultType="com.github.wxiaoqi.security.app.vo.group.out.ResultLeaderInfoVo">
+        SELECT
+            l.id,
+            l.user_id userId,
+            u.nickname leaderName,
+            IFNULL(u.profile_photo,'') leaderPhoto
+        FROM biz_group_leader l
+        left JOIN base_app_client_user u on u.id = l.user_id AND u.status = '1'
+        WHERE
+	        l.status = '1'
+	    AND
+	        l.group_id = #{groupId}
+    </select>
+</mapper>

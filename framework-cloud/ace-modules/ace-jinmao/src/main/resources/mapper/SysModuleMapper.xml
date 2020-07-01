@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.SysModuleMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.SysModule" id="sysModuleMap">
+        <result property="id" column="ID"/>
+        <result property="pid" column="pid"/>
+        <result property="code" column="code"/>
+        <result property="system" column="system"/>
+        <result property="name" column="name"/>
+        <result property="enUs" column="en_us"/>
+        <result property="showType" column="show_type"/>
+        <result property="moduleType" column="module_type"/>
+        <result property="url" column="url"/>
+        <result property="iosVersion" column="ios_version"/>
+        <result property="androidVersion" column="android_version"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <!-- 获取所有的模块和该项目选中的模块-->
+    <select id="selectAllModules" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultModuleVo.ModuleRTPCBeanVo">
+      SELECT
+	  DISTINCT(sm.ID) moduleId
+	  ,sm.pid
+	  ,sm.name
+	  ,sm.code
+	  ,IFNULL(smp.sort,999) AS sort
+      from sys_module sm
+      LEFT JOIN sys_module_project smp on sm.id=smp.module_id and smp.status='1' AND smp.project_Id = #{projectId}
+      where
+	  sm.status= '1'
+	  AND sm.system = #{system}
+      order by sm.code
+   </select>
+
+    <select id="selectProjectModules" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultModuleVo.ProjectModuleRTPCBean">
+        SELECT
+        sm.ID AS moduleId
+        ,smp.project_id AS projectId
+        ,sm.pid
+        ,smp.sort
+        FROM sys_module sm
+        INNER JOIN sys_module_project smp ON smp.module_Id = sm.ID AND smp.status = '1' AND smp.project_Id = #{projectId}
+        where
+        sm.status = '1'
+        and sm.is_leaf ='1'
+        AND sm.system = #{system}
+        ORDER BY smp.sort
+    </select>
+
+    <!-- 查询当前项目下的当前模块-->
+    <select id="selectByIdAndProjectId" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultModuleVo.ProjectModuleRTPCBean">
+        SELECT
+        sm.ID AS moduleId
+        ,sm.name
+        ,sm.pid
+        ,sm.code
+        ,IFNULL(smp.sort,'') AS sort
+        FROM sys_module sm
+        INNER JOIN sys_module_project smp ON smp.module_Id = sm.ID AND smp.status = '1' AND smp.project_Id = #{projectId}
+        where
+        sm.status = '1'
+        AND sm.ID = #{moduleId}
+        limit 1
+    </select>
+
+    <!-- 根据code，length获取父级节点模块-->
+    <select id="selectParentModulesByCode" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultModuleVo.ProjectModuleRTPCBean">
+        SELECT
+        ID
+        ,name
+        FROM sys_module
+        where
+        status = '1'
+        AND system = #{system}
+        AND (code LIKE CONCAT(#{code},'%') AND LENGTH(code) &lt; #{length})
+        ORDER BY code DESC
+    </select>
+
+    <select id="selectModulePidByModuleId" resultType="java.lang.String">
+        select pid from  sys_module
+        where
+        status = '1'
+        AND id = #{moduleId}
+    </select>
+
+    <!--  根据projectId和moduleId获取子元素的名称，sort-->
+    <select id="selectChildrenModule" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultModuleVo.ProjectModuleRTPCBean">
+        SELECT
+        sm.ID AS moduleId
+        ,sm.name
+        ,smp.sort
+        FROM sys_module sm
+        INNER JOIN sys_module_project smp ON smp.module_Id = sm.ID AND smp.status = '1'AND smp.project_Id = #{projectId}
+        where
+        sm.status = '1'
+        AND sm.pid = #{pid}
+        ORDER BY smp.sort
+    </select>
+
+    <!--更新项目模块-->
+    <update id="updateModuleProject" parameterType="com.github.wxiaoqi.security.jinmao.vo.ParamsModuleVo.ModuleSortParam">
+        UPDATE sys_module_project
+        SET sort = #{sort}
+        where
+        status = '1'
+        AND module_id = #{moduleId}
+        AND project_id = #{projectId}
+    </update>
+</mapper>

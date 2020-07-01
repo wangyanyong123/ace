@@ -1,0 +1,5 @@
+apollo:
+    meta: http://39.105.78.122:64101
+    bootstrap:
+        enabled : true
+        namespaces : ace-spring,ace-cloud2,ace-mybatis,ace-tool

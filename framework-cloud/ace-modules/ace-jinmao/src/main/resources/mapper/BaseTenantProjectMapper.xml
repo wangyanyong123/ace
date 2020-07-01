@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BaseTenantProjectMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BaseTenantProject" id="baseTenantProjectMap">
+        <result property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <select id="selectProjectByTenantId" parameterType="java.lang.String" resultType="java.lang.String">
+        select project_id projectId from base_tenant_project where status = '1' and tenant_id = #{tenantId} limit 1
+    </select>
+
+    <select id="selectProjectNameByTenantId" parameterType="java.lang.String" resultType="java.lang.String">
+        select bcp.project_name
+        from base_tenant_project btp
+        LEFT JOIN biz_crm_project bcp ON btp.project_id = bcp.project_id AND bcp.`status` = '1'
+        where btp.status = '1' and btp.tenant_id = #{tenantId}
+        LIMIT 1
+    </select>
+
+    <delete id="deleteProjectByMerchantId" parameterType="java.lang.String" >
+        delete from base_tenant_project where tenant_id = #{tenantId}
+    </delete>
+
+    <!--查询商品下的服务范围-->
+    <select id="selectProjectNamesById" parameterType="java.lang.String" resultType="java.lang.String">
+       SELECT
+			p.project_name projectName
+        FROM  base_tenant t
+          INNER JOIN base_tenant_project tp on tp.tenant_id = t.id
+          INNER JOIN biz_crm_project p on tp.project_id=p.project_id and p.status = '1'
+		  WHERE
+		  t.status = '1'
+		  AND
+		  t.tenant_type = '2'
+		  AND
+		  t.id = #{id}
+    </select>
+    <select id="selectByTenantType" resultMap="baseTenantProjectMap">
+        SELECT
+            `id`, `tenant_id`, `project_id`,  `status`
+        FROM
+            base_tenant t
+        INNER JOIN base_tenant_project tp ON t.id = tp.tenant_id
+        WHERE
+            t.tenant_type = "4"  AND t. STATUS = '1'  AND tp.`status` = '1'
+    </select>
+    <select id="existedProjectIdList" resultType="string">
+        SELECT
+            tp.project_id
+        FROM
+            base_tenant t
+        INNER JOIN base_tenant_project tp ON t.id = tp.tenant_id
+        WHERE
+            t.tenant_type = #{tenantType}
+            <if test="projectIds != null and projectIds.length > 0">
+                and tp.project_id in
+                <foreach collection="projectIds" item="projectId" open="(" close=")" separator=",">
+                    #{projectId}
+                </foreach>
+            </if>
+        AND t. STATUS = '1'
+        AND tp.`status` = '1'
+    </select>
+    <select id="selectProjectIdList" resultType="String">
+        select project_id  from base_tenant_project where tenant_id = #{tenantId} and status = '1'
+    </select>
+    <update id="deleteByTenantId">
+        update base_tenant_project set status = '0',modify_by = #{modifyBy},modify_time = #{modifyTime}
+        where tenant_id = #{tenantId}
+        and project_id in
+        <foreach collection="projectIdList" item="projectId" separator="," open="(" close=")">
+            #{projectId}
+        </foreach>
+        and status = '1'
+    </update>
+</mapper>

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizProductSpecMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizProductSpec" id="bizProductSpecMap">
+        <result property="id" column="ID"/>
+        <result property="productId" column="product_id"/>
+        <result property="specName" column="spec_name"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="price" column="price"/>
+        <result property="lowestNum" column="lowest_num"/>
+        <result property="unit" column="unit"/>
+        <result property="specImage" column="spec_image"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <select id="selectSpecInfo" resultType="com.github.wxiaoqi.security.app.vo.product.out.SpecVo"
+            parameterType="java.lang.String">
+        select
+        original_price originalPrice,
+        price,
+        unit
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        order by sort
+        LIMIT 1
+    </select>
+
+    <!--查询商品所属规格-->
+    <select id="selectSpecListByProductId" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecInfo">
+        select
+        id,
+        spec_name specName,
+        price,
+        original_price originalPrice,
+        IFNULL(lowest_num,'') lowestNum,
+        unit,
+        spec_Type_Code specTypeCode,
+        spec_Type_Val specTypeVal,
+        spec_image specImage
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        order by sort
+    </select>
+
+    <!--查询家政超市的规格类型-->
+    <select id="selectAllSpecTypeList" resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecInfo">
+        select
+        id,
+        spec_Type_Code specTypeCode,
+        spec_Type_Val specTypeVal
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        order by sort
+    </select>
+
+    <!--查询家政超市商品规格-->
+    <select id="selectSpecListByProductIdAndCode"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecInfo">
+        select
+        id,
+        spec_name specName,
+        price,
+        original_price originalPrice,
+        lowest_num lowestNum,
+        unit,
+        spec_Type_Code specTypeCode,
+        spec_Type_Val specTypeVal,
+        spec_image specImage
+        from
+        biz_product_spec
+        where
+        status = '1'
+        and product_id = #{productId}
+        and spec_Type_Code = #{specCode}
+        order by sort
+    </select>
+
+    <select id="selectSpecInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecInfo">
+        SELECT ps.id id,ps.product_id productId,bp.product_name productName,ps.spec_name specName,ps.price price,
+        ps.spec_image specImage,bp.beg_Time begTime,bp.end_Time endTime,bp.product_image productImage,ps.unit unit
+        from biz_product_spec ps
+        INNER JOIN biz_product bp on ps.product_id=bp.id and bp.status='1' and bp.bus_Status='3'
+        where ps.id=#{specId} and ps.product_id=#{productId} and bp.company_id=#{companyId} and ps.status='1'
+    </select>
+
+    <select id="getReservationSpecInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecInfo">
+        SELECT ps.id id,ps.product_id productId,bp.name productName,ps.spec_name specName,ps.price price,
+        ps.spec_image specImage,bp.reservation_logo productImage,ps.unit unit
+        from biz_product_spec ps
+        INNER JOIN biz_reservation bp on ps.product_id=bp.id and bp.status='1' and bp.reserva_Status='3'
+        where ps.id=#{specId} and ps.product_id=#{productId} and bp.company_id=#{companyId} and ps.status='1'
+    </select>
+
+    <select id="getSpecInfoById" parameterType="map" resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecCodeVo">
+        SELECT ps.id id,ps.product_id productId,ps.spec_name specName,ps.price price,ps.unit unit,
+        ps.spec_Type_Code specTypeCode, ps.spec_Type_Val specTypeVal
+        from biz_product_spec ps
+        where ps.id=#{specId} and ps.product_id=#{productId} and ps.status='1'
+    </select>
+
+    <resultMap id="SpecDataForCreateOrder" type="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecDataForCreateOrder">
+        <id column="spec_id" property="specId"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_id" property="productId"/>
+        <result column="product_name" property="productName"/>
+        <result column="product_image" property="productImage"/>
+        <result column="bus_Status" property="busStatus"/>
+        <result column="unit" property="unit"/>
+        <result column="bus_id" property="busId"/>
+        <result column="bus_name" property="busName"/>
+        <result column="beg_Time" property="begTime"/>
+        <result column="end_Time" property="endTime"/>
+        <result column="spec_name" property="specName"/>
+        <result column="spec_image" property="specImage"/>
+        <result column="price" property="salesPrice"/>
+        <result column="lowest_num" property="lowestNum"/>
+        <collection property="projectIdList" ofType="string">
+            <result column="project_id"/>
+        </collection>
+    </resultMap>
+    <select id="selectSpecDataForCreateOrder" resultMap="SpecDataForCreateOrder">
+        SELECT
+        p.ID product_id, p.product_name,p.product_image,p.bus_Status,p.beg_Time,p.end_Time,
+        bus.id bus_id,bus.bus_Name,spec.unit,p.tenant_id ,
+        spec.ID spec_id,spec.spec_name,spec.spec_image,spec.price,spec.lowest_num,pp.project_id
+        FROM
+        biz_product_spec spec
+        INNER JOIN biz_product p ON (spec.product_id = p.id and p.`status` = '1')
+        INNER JOIN biz_product_classify pc on (p.id = pc.product_id  and pc.`status` = '1')
+        INNER JOIN biz_business bus on (bus.id = pc.bus_id and bus.status ='1')
+        LEFT  JOIN biz_product_project pp on (p.id = pp.product_id and pp.`status` = '1')
+        where spec.`status` = '1'
+        and  spec.id in
+        <foreach collection="specIdList" item="specId" open="(" close=")" separator=",">
+            #{specId}
+        </foreach>
+    </select>
+    <select id="selectReservationSpecDataForCreateOrder" resultMap="SpecDataForCreateOrder">
+        SELECT
+        s.ID product_id,
+        s. NAME product_name,
+        s.selection_image product_image,
+        s.reserva_Status bus_Status,
+        bus.id bus_id,
+        bus.bus_Name,
+        spec.unit,
+        spec.ID spec_id,
+        spec.spec_name,
+        spec.spec_image,
+        spec.price,
+        spec.lowest_num,
+        pp.project_id
+        FROM
+        biz_product_spec spec
+        INNER JOIN biz_reservation s ON (
+        spec.product_id = s.id
+        AND s.`status` = '1'
+        )
+        INNER JOIN biz_product_classify pc ON (
+        s.id = pc.product_id
+        AND pc.`status` = '1'
+        )
+        INNER JOIN biz_business bus ON (
+        bus.id = pc.bus_id
+        AND bus. STATUS = '1'
+        )
+        LEFT JOIN biz_product_project pp ON (
+        s.id = pp.product_id
+        AND pp.`status` = '1'
+        )
+        WHERE
+        spec.`status` = '1'
+        AND spec.id in
+        <foreach collection="specIdList" item="specId" open="(" close=")" separator=",">
+            #{specId}
+        </foreach>
+    </select>
+</mapper>

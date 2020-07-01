@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.search.mapper.BrainpowerQuestionMapper">
+
+
+    <!--查询问题库列表-->
+    <select id="selectQuestionList" resultType="com.github.wxiaoqi.security.api.vo.brainpower.out.QuestionVo">
+        select
+        q.id,
+        question,
+        classify,
+        answer,
+        f.function_point functionPoint,
+        DATE_FORMAT(q.create_Time,'%Y-%m-%d %H:%i') createTime,
+        q.enable_status enableStatus,
+        IFNULL(solve_number,0) solveNumber,
+        IFNULL(unsolve_number,0) unsolveNumber
+        from
+        biz_brainpower_question q
+        INNER JOIN biz_brainpower_function f on q.function_id=f.id and f.status = '1'
+        INNER JOIN biz_question_classify c on c.question_id=q.id and c.status = '1'
+        where
+        q.status = '1'
+        <if test="functionId != null and functionId != '' ">
+            and q.function_id = #{functionId}
+        </if>
+        <if test="enableStatus != 0">
+            and q.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            question LIKE CONCAT('%',#{searchVal},'%')
+            OR classify LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY q.create_Time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+</mapper>

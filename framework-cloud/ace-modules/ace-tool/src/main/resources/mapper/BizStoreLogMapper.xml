@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.store.mapper.BizStoreLogMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.store.entity.BizStoreLog" id="bizStoreLogMap">
+        <result property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="specId" column="spec_id"/>
+        <result property="operationType" column="operation_type"/>
+        <result property="operationTypeDesc" column="operation_type_desc"/>
+        <result property="historyNum" column="history_num"/>
+        <result property="accessNum" column="access_num"/>
+        <result property="currentNum" column="current_num"/>
+        <result property="isLimit" column="is_limit"/>
+        <result property="timeSlot" column="time_slot"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+</mapper>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.SettlementMapper">
+
+
+    <!--根据实际支付id获取支付宝配置信息-->
+    <select id="selectAliByActualId" parameterType="String" resultType="map">
+       SELECT  alipay_account_no as accountNo, alipay_account_name as accountName,
+			alipay_partner as partner, alipay_key as `key` , rsa,
+			app_id appId,app_rsa2 appRsa2,app_ali_public_key appAliPublicKey
+		FROM biz_settlement_ali a
+		INNER JOIN base_tenant t on t.id=a.tenant_id and t.status='1' and  t.tenant_type='1'
+		INNER JOIN base_tenant_project tp on t.id=tp.tenant_id and tp.status='1'
+		INNER JOIN biz_subscribe_wo sw on sw.project_id=tp.project_id and sw.status='1'
+		INNER JOIN biz_account_book b ON sw.id = b.sub_id and b.status='1'
+		WHERE  a.status='1'
+		and (b.actual_Id=#{actualId} or b.account_pid=#{actualId})
+		order by a.create_time desc
+	    limit 1
+    </select>
+
+	<!--获取支付宝商城管理账号配置信息-->
+	<select id="selectAliPayInMall" parameterType="String" resultType="map">
+       SELECT  alipay_account_no as accountNo, alipay_account_name as accountName,
+			alipay_partner as partner, alipay_key as `key` , rsa,
+			app_id appId,app_rsa2 appRsa2,app_ali_public_key appAliPublicKey
+		FROM biz_settlement_ali a
+		WHERE  a.status='1' and a.is_PayInMall='1'
+		order by a.create_time desc
+	    limit 1
+    </select>
+
+    <!--根据实际支付id获取微信配置信息-->
+    <select id="selectByWechatAccountId" parameterType="String" resultType="map">
+       SELECT    wechat_appid as appId, wechat_code as code, wechat_certificate as certificate,
+			wechat_fee as fee, wechat_account as account, wechat_key as `key`
+		FROM biz_settlement_wechat a
+		INNER JOIN base_tenant t on t.id=a.tenant_id and t.status='1' and  t.tenant_type='1'
+		INNER JOIN base_tenant_project tp on t.id=tp.tenant_id and tp.status='1'
+		INNER JOIN biz_subscribe_wo sw on sw.project_id=tp.project_id and sw.status='1'
+		INNER JOIN biz_account_book b ON sw.id = b.sub_id and b.status='1'
+		WHERE  a.status='1'
+		and (b.actual_Id=#{actualId} or b.account_pid=#{actualId})
+		order by a.create_time desc
+	    limit 1
+    </select>
+
+	<!--获取微信商城管理账号配置信息-->
+	<select id="selectByWechatPayInMall" parameterType="String" resultType="map">
+       SELECT    wechat_appid as appId, wechat_code as code, wechat_certificate as certificate,
+			wechat_fee as fee, wechat_account as account, wechat_key as `key`
+		FROM biz_settlement_wechat a
+		WHERE  a.status='1' and a.is_PayInMall='1'
+		order by a.create_time desc
+	    limit 1
+    </select>
+
+</mapper>

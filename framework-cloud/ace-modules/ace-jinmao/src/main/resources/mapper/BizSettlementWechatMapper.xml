@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizSettlementWechatMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizSettlementWechat" id="bizSettlementWechatMap">
+        <result property="id" column="ID"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="wechatAppid" column="wechat_appid"/>
+        <result property="wechatCode" column="wechat_code"/>
+        <result property="wechatCertificate" column="wechat_certificate"/>
+        <result property="wechatFee" column="wechat_fee"/>
+        <result property="wechatAccount" column="wechat_account"/>
+        <result property="wechatKey" column="wechat_key"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+        <result property="isPayInMall" column="is_PayInMall"/>
+    </resultMap>
+
+    <!--根据租户id查询微信账号详情-->
+    <select id="selectWechatInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.CompanyManagement.OutParam.ResultWechatVo">
+        SELECT
+        id,
+        tenant_id tenantId,
+        wechat_appid wechatAppid,
+        wechat_code wechatCode,
+        wechat_certificate wechatCertificate,
+        wechat_fee wechatFee,
+        wechat_account wechatAccount,
+        wechat_key wechatKey
+        FROM
+        biz_settlement_wechat
+        WHERE
+        status = '1'
+
+        <if test="id != '1'.toString()">
+            and  tenant_id = #{id}
+        </if>
+        <if test="id == '1'.toString()">
+            and  is_payInMall= #{id}
+        </if>
+
+    </select>
+
+
+    <update id="updateByPrimarySelective" parameterType="com.github.wxiaoqi.security.jinmao.entity.BizSettlementWechat" >
+        update biz_settlement_wechat
+        <set >
+            <if test="id != null" >
+                ID = #{id},
+            </if>
+            <if test="wechatAppid != null" >
+                wechat_appid = #{wechatAppid},
+            </if>
+            <if test="wechatCode != null" >
+                wechat_code = #{wechatCode},
+            </if>
+            <if test="wechatCertificate != null" >
+                wechat_certificate = #{wechatCertificate},
+            </if>
+            <if test="wechatFee != null" >
+                wechat_fee = #{wechatFee},
+            </if>
+            <if test="wechatAccount != null" >
+                wechat_account = #{wechatAccount},
+            </if>
+            <if test="wechatKey != null" >
+                wechat_key = #{wechatKey},
+            </if>
+            <if test="status != null" >
+                status = #{status},
+            </if>
+            <if test="timeStamp != null" >
+                time_Stamp = #{timeStamp},
+            </if>
+            <if test="createBy != null" >
+                create_By = #{createBy},
+            </if>
+            <if test="createTime != null" >
+                create_Time = #{createTime},
+            </if>
+            <if test="modifyBy != null" >
+                modify_By = #{modifyBy},
+            </if>
+            <if test="modifyTime != null" >
+                modify_Time = #{modifyTime},
+            </if>
+        </set>
+        where tenant_id = #{tenantId}
+    </update>
+</mapper>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizDecoreteApplyMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizDecoreteApply" id="bizDecoreteApplyMap">
+        <result property="id" column="id"/>
+        <result property="decoreteId" column="decorete_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="contactorName" column="contactor_name"/>
+        <result property="contactTel" column="contact_tel"/>
+        <result property="address" column="address"/>
+        <result property="decoreteStage" column="decorete_stage"/>
+        <result property="coveredArea" column="covered_area"/>
+        <result property="cost" column="cost"/>
+        <result property="decoreteStatus" column="decorete_status"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询当前项目下的装修监理服务-->
+    <select id="selectDecoreteList" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.decorete.out.DecoreteVo">
+        select
+        id,
+        promo_imge promoImge
+        from
+        biz_decorete_supervise
+        where
+        status = '1'
+        and publish_status = '1'
+        and project_id = #{projectId}
+    </select>
+
+     <!--查询装修监理服务的详情-->
+    <select id="selectDecoreteInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.decorete.out.DecoreteVo">
+        select
+        id,
+        service_price servicePrice,
+        cost_price costPrice,
+        service_intro serviceIntro
+        from
+        biz_decorete_supervise
+        where
+        status = '1'
+        and publish_status = '1'
+        and id = #{id}
+    </select>
+
+    <!--查询当前项目下的用户预约装修监理记录-->
+    <select id="selectUserDecoreteListByProjectId" resultType="com.github.wxiaoqi.security.app.vo.decorete.out.MyDecoreteVo">
+        select
+        da.id,
+        da.sub_id woId,
+        address,
+        DATE_FORMAT(da.create_time,'%Y-%m-%d %H:%i') createTime,
+        CASE WHEN decorete_status = '0'   THEN '待支付'
+        WHEN decorete_status = '1' THEN '待接单'
+        WHEN decorete_status = '2' THEN '监理中'
+        WHEN decorete_status = '3' THEN '已完成'
+        WHEN decorete_status = '4' THEN '已取消'
+        WHEN decorete_status = '5' THEN '已评价'
+        END AS decoreteStatus
+        from
+        biz_decorete_apply da
+        INNER JOIN biz_decorete_supervise s on s.id=da.decorete_id
+        where
+        da.status = '1'
+        and da.user_id = #{userId}
+        and s.project_id = #{projectId}
+        order by da.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询装修监理详情-->
+    <select id="selectUserDecoreteInfo" parameterType="java.lang.String"
+    resultType="com.github.wxiaoqi.security.app.vo.decorete.out.MyDecoreteInfo">
+        select
+        DISTINCT(w.id) woId,
+        a.id,
+        a.contactor_name contactorName,
+        a.contact_tel contactTel,
+        a.address,
+        a.decorete_stage decoreteStage,
+        a.covered_area coveredArea,
+        a.cost,
+        DATE_FORMAT(sw.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        sw.process_id processId
+        from
+        biz_wo w
+        INNER JOIN biz_subscribe_wo sw on w.id=sw.id  and sw.status='1' AND sw.wo_type = '5'
+        INNER JOIN biz_decorete_apply a on sw.user_id=a.user_id and w.id=a.sub_id
+        where
+        w.status = '1'
+        and w.id = #{woId}
+    </select>
+
+
+    <!-- 支付宝、微信回调通知成功后 待支付状态改为待接单-->
+    <update id="updateDecoreteApplyStatus">
+        UPDATE biz_decorete_apply
+        SET
+  	         decorete_status = '1',
+  	         modify_Time = NOW(),
+  	         modify_By = #{userId}
+        where
+  		status = 1
+  		AND sub_id = #{subId}
+    </update>
+
+
+    <select id="selectActualInfoBySubId" parameterType="java.lang.String"
+      resultType="com.github.wxiaoqi.security.app.vo.propertybill.out.UserBillOutVo">
+        select actual_Id actualId, actual_cost actualPrice, sub_id subId from  biz_account_book where status = '1' and sub_id= #{subId}
+    </select>
+
+
+    <select id="selectBusNameById" parameterType="java.lang.String" resultType="java.lang.String">
+        select bus_Name from biz_business where status = '1' and id = #{busId}
+    </select>
+
+</mapper>

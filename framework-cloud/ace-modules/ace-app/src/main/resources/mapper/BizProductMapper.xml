@@ -1,0 +1,872 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizProductMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizProduct" id="bizProductMap">
+        <result property="id" column="ID"/>
+        <result property="companyId" column="company_id"/>
+        <result property="productCode" column="product_code"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="productSummary" column="product_summary"/>
+        <result property="productAfterSale" column="product_after_sale"/>
+        <result property="productImagetextInfo" column="product_imagetext_info"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="price" column="price"/>
+        <result property="unit" column="unit"/>
+        <result property="sales" column="sales"/>
+        <result property="productNum" column="product_Num"/>
+        <result property="groupbuyNum" column="groupbuy_Num"/>
+        <result property="correctNumber" column="correct_Number"/>
+        <result property="begTime" column="beg_Time"/>
+        <result property="endTime" column="end_Time"/>
+        <result property="isGroupFlag" column="is_group_flag"/>
+        <result property="likeNum" column="like_Num"/>
+        <result property="busStatus" column="bus_Status"/>
+        <result property="priceDesc" column="price_desc"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="applyTime" column="apply_time"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+    <update id="addStockById" >
+        update biz_product set sales=sales+#{sales} WHERE id=#{productId}
+  	</update>
+
+    <!--查询商品分类下的上架商品-->
+    <select id="selectProductListByClassifyId"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductVo">
+        select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id
+        INNER JOIN biz_business_classify bc on c.classify_id = bc.id and bc.status ='1' and bc.bus_status = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        <if test="projectId != null and projectId != ''">
+            and p.project_id = #{projectId}
+        </if>
+        and bc.id = #{classifyId}
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getProductCoupon" resultType="com.github.wxiaoqi.security.app.vo.product.out.CouponInfoVo">
+        SELECT DISTINCT(c.id),c.value ,c.min_value minValue,c.discount_num discountNum from biz_coupon c
+        INNER JOIN biz_coupon_use u on c.id = u.coupon_id and u.status = '1' and u.use_status = '0'
+        INNER JOIN biz_coupon_product p on c.id = p.coupon_id and p.status = '1' and p.product_id = #{productId}
+        where c.status = '1' and c.use_status in ('1','2') ORDER BY c.create_time desc
+        limit 1
+    </select>
+
+    <select id="getProductCouponList" resultType="com.github.wxiaoqi.security.app.vo.product.out.CouponInfoVo">
+        SELECT DISTINCT(c.id),c.value ,c.min_value minValue,c.discount_num discountNum from biz_coupon c
+        INNER JOIN biz_coupon_use u on c.id = u.coupon_id and u.status = '1'
+        INNER JOIN biz_coupon_product p on c.id = p.coupon_id and p.status = '1' and p.product_id = #{productId}
+        where c.status = '1' and c.use_status in ('1','2')  ORDER BY c.create_time desc
+    </select>
+
+    <select id="getCartCouponList" resultType="com.github.wxiaoqi.security.app.vo.product.out.CouponInfoVo">
+        SELECT DISTINCT(c.id),c.value ,c.min_value minValue,c.discount_num discountNum from biz_coupon c
+        INNER JOIN biz_coupon_use u on c.id = u.coupon_id and u.status = '1'
+        where c.status = '1' and c.use_status in ('1','2') and c.tenant_id = #{tenantId} ORDER BY c.create_time desc
+    </select>
+
+    <select id="getPostageList" resultType="com.github.wxiaoqi.security.app.vo.product.out.PostageInfoVo">
+        SELECT DISTINCT(tp.id),tp.start_amount startAmount,tp.end_amount endAmount,tp.postage postage from base_tenant_postage tp
+        INNER JOIN biz_product p on p.company_id = tp.tenant_id and p.status= '1'
+        where tp.status = '1' and tp.tenant_id = #{tenantId}
+    </select>
+
+    <!--查询商品详情-->
+    <select id="selectProductInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        selection_image selectionImage,
+        IFNULL(product_imagetext_info,'') productImagetextInfo,
+        price,
+        original_price originalPrice,
+        product_Num productNum,
+        limit_Num limitNum,
+        case when product_Num = '-1' then '无上限' when product_Num = '0' then '无上限' else (product_Num-sales) end as stockNum,
+        CASE when product_Num = '-1' then '1'  when product_Num = '0' then '1'
+        when (product_Num-sales) > 0 then '1'
+        else '2' end as isStock,
+        case when limit_Num = '-1' then '2'
+        when (select IFNULL(sum(p.sub_num),0) from biz_sub_product p
+        INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1' and w.subscribe_status != '3' where
+        p.status = '1'and w.user_id =#{userId} and p.product_Id =#{id}) &lt; limit_Num then '2' else '1' end as isBuy
+        from
+        biz_product
+        where
+        status = '1'
+        and bus_Status = '3'
+        and id = #{id}
+    </select>
+
+    <select id="selectShareProductInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        selection_image selectionImage,
+        IFNULL(product_imagetext_info,'') productImagetextInfo,
+        price,
+        original_price originalPrice,
+        product_Num productNum,
+        limit_Num limitNum,
+        case when product_Num = '-1' then '无上限' when product_Num = '0' then '无上限' else (product_Num-sales) end as stockNum,
+        CASE when product_Num = '-1' then '1'  when product_Num = '0' then '1'
+        when (product_Num-sales) > 0 then '1'
+        else '2' end as isStock,
+        '2' as isBuy
+        from
+        biz_product
+        where
+        status = '1'
+        and bus_Status = '3'
+        and id = #{id}
+    </select>
+
+
+    <!--查询拼团抢购下的商品列表-->
+    <select id="selectGroupProductList" resultType="com.github.wxiaoqi.security.app.vo.product.out.GroupProductVo">
+        select
+        DISTINCT(A.id),A.productName,A.productImage,A.price,A.originalPrice,A.productNum,A.groupbuyNum,
+        A.type,A.groupStatus,A.begTime,A.endTime
+        from (
+        ( select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '3' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('2','4')
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time
+        )UNION
+        (select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '1' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('2')
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time
+        )UNION
+        (select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '1' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('4')
+        and bp.product_Num &gt; bp.sales
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time
+        )UNION
+        (select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '4' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('2')
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time
+        and (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(bp.end_Time))/(60*60*24) &lt;#{day}
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time)
+        UNION
+        (select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '4' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('4')
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time
+        and (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(bp.end_Time))/(60*60*24) &lt; #{day}
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time
+        )UNION
+        (select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        original_price originalPrice,
+        bp.product_Num productNum,
+        bp.groupbuy_Num groupbuyNum,
+        b.type,
+        '2' viewSort,
+        DATE_FORMAT(bp.beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(bp.end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN bp.product_Num &lt;= bp.sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;bp.end_Time THEN '3'
+        END AS groupStatus
+        from
+        biz_product bp
+        left JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and b.type in ('4')
+        and bp.product_Num &lt;= bp.sales
+        and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time
+        <if test="projectId != null and projectId !=''">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="cityCodeList != null and cityCodeList.size > 0">
+            and exists (select pd.id from biz_product_delivery pd
+            where bp.id = pd.product_id and pd.status = '1'
+            and pd.city_code in
+            <foreach collection="cityCodeList" item="cityCode" open="(" close=")" separator=",">
+                #{cityCode}
+            </foreach>
+            )
+        </if>
+        ORDER BY bp.end_Time
+        ))A
+        <where>
+            <if test="groupStatus != null">
+                and A.groupStatus= #{groupStatus}
+            </if>
+            <if test="type != null">
+                and A.type= #{type}
+            </if>
+        </where>
+        ORDER BY A.viewSort+0
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询拼购商品详情-->
+    <select id="selectGroupProductInfo"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.GroupProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        selection_image selectionImage,
+        price,
+        original_price original_price,
+        IFNULL(product_imagetext_info,'') productImagetextInfo,
+        groupbuy_Num groupbuyNum,
+        DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt; end_Time THEN '3'
+        END AS groupStatus,
+        ( select COUNT(DISTINCT(w.user_id)) from biz_sub_product p
+        INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1' and w.group_status in('1','2')
+        where p.status = '1' and p.product_Id = #{id}) + (
+            SELECT
+                COUNT(*)
+            FROM
+                biz_product_order o
+            INNER JOIN biz_product_order_detail od ON o.id = od.order_id
+            AND od.`status` = '1'
+            WHERE
+                od.product_id = #{id}
+            AND o.id NOT IN (
+                SELECT
+                    r.id
+                FROM
+                    biz_product_order r
+                INNER JOIN biz_product_order_detail rd ON r.id = rd.order_id
+                AND rd.`status` = '1'
+                WHERE
+                    rd.product_id = #{id}
+                AND r.order_status = 45
+                AND r.refund_status = 0
+            )
+            AND o.order_status != 5
+            AND o.`status` = '1'
+        ) sales
+        from
+        biz_product
+        where
+        status = '1'
+        and bus_Status = '3'
+        and id = #{id}
+    </select>
+
+     <!--查询疯抢商品详情-->
+    <select id="selectBerserkProductInfo" resultType="com.github.wxiaoqi.security.app.vo.product.out.GroupProductInfo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        selection_image selectionImage,
+        price,
+        original_price original_price,
+        IFNULL(product_imagetext_info,'') productImagetextInfo,
+        groupbuy_Num groupbuyNum,
+        product_Num productNum,
+        DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; beg_Time THEN '1'
+        WHEN product_Num &lt;= sales and DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '4'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt; end_Time THEN '3'
+        END AS groupStatus,
+        sales buyNum
+        from
+        biz_product
+        where
+        status = '1'
+        and bus_Status = '3'
+        and id = #{id}
+    </select>
+
+    <!--断库存是否够并减库存-->
+    <update id="updateStockById" >
+    	update biz_product set sales=sales+#{sales} WHERE sales+#{sales} &lt;= product_Num and id=#{productId}
+  	</update>
+
+    <!--判断家政超市库存是否够并减库存-->
+    <update id="updateResStockById" >
+    	update biz_reservation set sales=sales+#{sales} WHERE sales+#{sales} &lt;= product_Num and id=#{productId}
+  	</update>
+
+    <!--家政超市加库存-->
+    <update id="updateResStockNoLimitById" >
+    	update biz_reservation set sales=sales+#{sales} WHERE id=#{productId}
+  	</update>
+
+
+    <update id="updateSalesNumById" >
+    	update biz_product set sales=sales-1
+    	WHERE
+        status = '1'
+        AND id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+  	</update>
+
+    <update id="updateResSalesNumById" >
+        update biz_reservation set sales=sales-1
+        WHERE
+        status = '1'
+        AND id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <select id="selectProductIdByWoId" parameterType="java.lang.String" resultType="java.lang.String">
+        select product_Id from biz_sub_product where sub_id = #{woId}
+    </select>
+
+
+    <!--查询用户是否已抢购-->
+    <select id="selectIsSeckilByUserId" resultType="java.lang.Integer">
+        select count(w.id) from biz_subscribe_wo w
+        INNER JOIN biz_sub_product p on p.sub_Id = w.id and p.status = '1'
+        where w.user_id = #{userId} and w.bus_id= #{busId} and p.product_Id = #{productId}
+        and subscribe_status in ('0','1','2','4','5') order by w.create_time desc
+    </select>
+
+    <!--查询用户是否已抢购-->
+    <select id="selectIsSeckilByUserIdNew" resultType="java.lang.Integer">
+        SELECT
+            count(o.id)
+        FROM
+            biz_product_order o
+        INNER JOIN biz_product_order_detail od on o.id = od.order_id
+        where o.user_id = #{userId} and  od.product_id = #{productId}
+        and o.order_type = 3 and o.order_status != 45
+    </select>
+
+
+    <!--查询参团人头像-->
+    <select id="selectGroupBuyPhoto" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.api.vo.img.ImgInfo">
+        select
+        DISTINCT(u.profile_photo) url
+        from
+        biz_sub_product p
+        INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1' and w.group_status in('1','2')
+        INNER JOIN base_app_client_user u on w.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'
+        where
+        p.status = '1'
+        and p.product_Id = #{productId}
+        ORDER BY p.create_Time desc
+        limit 3
+    </select>
+
+    <!--查询参团人头像-->
+    <select id="selectGroupBuyUserPhoto" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.api.vo.img.ImgInfo">
+     select
+        DISTINCT(u.profile_photo) url
+        from
+        biz_product_order_detail od
+        INNER JOIN biz_product_order o on o.id = od.order_id
+        INNER JOIN base_app_client_user u on o.user_id=u.id
+        where
+         od.product_Id = #{productId}
+		 and od.status = '1' and o.status = '1' and o.order_status not in (5,45)
+		 and u.profile_photo is not null and u.profile_photo !=''
+        ORDER BY o.create_Time desc
+        limit 3
+    </select>
+
+
+    <!--查询商品挑选所属规格-->
+    <select id="selectProductSpecInfoById" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductSpecVo">
+        select
+        id,
+        product_name productName,
+        product_image productImage,
+        price
+        from
+        biz_product
+        where
+        status = '1'
+        and bus_Status = '3'
+        and id = #{id}
+    </select>
+
+    <!--查询首页推荐商品-->
+    <select id="selectRecommendProductInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.RecommendVo">
+        SELECT
+        DISTINCT(bp.id),
+        bp.product_name productName,
+        bp.product_image productImage
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1' and b.type = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        <if test="projectId != null and projectId != ''">
+            and r.project_id = #{projectId}
+        </if>
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        limit 5
+    </select>
+
+
+    <!--查询首页推荐商品列表-->
+    <select id="selectRecommendListByClassifyId"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductVo">
+        select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1' and b.type = '1'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        <if test="projectId != null and projectId !=''">
+            and r.project_id = #{projectId}
+        </if>
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <!--查询首页团购-->
+    <select id="selectRecommendGroupInfo"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.RecommendVo">
+        SELECT
+        DISTINCT(bp.id),
+        bp.product_name productName,
+        bp.product_image productImage
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1' and b.type = '2'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and p.project_id = #{projectId}
+        and b.id = #{groupBusId}
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        limit 5
+    </select>
+
+
+    <!--查询首页团购列表-->
+    <select id="selectRecommendGroupList"
+            resultType="com.github.wxiaoqi.security.app.vo.product.out.ProductVo">
+        select
+        DISTINCT(bp.id),
+        product_name productName,
+        product_image productImage,
+        price,
+        groupbuy_Num groupbuyNum,
+        DATE_FORMAT(beg_Time,'%Y-%m-%d %H:%i') begTime,
+        DATE_FORMAT(end_Time,'%Y-%m-%d %H:%i') endTime,
+        CASE WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt; bp.beg_Time THEN '1'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt;= bp.beg_Time AND DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &lt;= bp.end_Time THEN '2'
+        WHEN DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') &gt; bp.end_Time THEN '3'
+        END AS groupStatus
+        from
+        biz_product bp
+        INNER JOIN biz_product_classify c on bp.id =c.product_id and c.status = '1'
+        INNER JOIN biz_business b on c.bus_id = b.id and b.status ='1'and b.type = '2'
+        INNER JOIN biz_product_project p on bp.id=p.product_id and p.status = '1'
+        INNER JOIN biz_product_recommend r on bp.id = r.product_id and r.status = '1'
+        where
+        bp.status = '1'
+        and bp.bus_Status = '3'
+        and p.project_id = #{projectId}
+        and b.id = #{groupBusId}
+        ORDER BY r.view_sort ASC,bp.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <update id="udpateProductSalesById" >
+    	update biz_product set sales=sales+#{subNum} WHERE id=#{productId}
+  	</update>
+
+
+    <update id="udpateReservationSalesById" >
+    	update biz_reservation set sales=sales+#{subNum} WHERE id=#{productId}
+  	</update>
+
+
+    <!--查询商品的用户评价新方法-->
+    <select id="selectProductCommentDetail" resultType="com.github.wxiaoqi.security.app.vo.product.out.UserCommentVo">
+        SELECT
+        u.nickname nickName,
+        u.profile_photo profilePhoto,
+        c.appraisal_val appraisalVal,
+        c.description,
+        c.img_ids imgUrl,
+        DATE_FORMAT(
+        c.create_time,
+        '%Y-%m-%d %H:%i'
+        ) createTime
+        FROM
+        biz_reservation_order_comment c
+        LEFT JOIN base_app_client_user u ON c.create_by = u.id
+        AND c. STATUS = 1
+        WHERE
+        c.product_id = #{productId}
+        ORDER BY
+        c.create_time DESC
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+     <!--查询商品的用户评价&#45;&#45;旧方法-->
+    <!--<select id="selectProductCommentDetail" resultType="com.github.wxiaoqi.security.app.vo.product.out.UserCommentVo">-->
+        <!--select-->
+        <!--DISTINCT(w.user_id),-->
+        <!--IFNULL(u.nickname,u.`name`) nickName,-->
+        <!--u.profile_photo profilePhoto,-->
+        <!--DATE_FORMAT(l.create_Time,'%Y-%m-%d %H:%i') createTime,-->
+        <!--l.description,-->
+        <!--l.appraisal_val appraisalVal,-->
+        <!--l.img_id imgUrl-->
+        <!--from-->
+        <!--biz_sub_product p-->
+        <!--INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1'-->
+        <!--INNER JOIN biz_transaction_log l on w.id=wo_id and l.status = '1' and l.appraisal_val != '-1' and l.appraisal_val != '0'-->
+        <!--INNER JOIN base_app_client_user u on w.user_id=u.id and u.is_auth ='1' and u.is_deleted = '1' and u.status = '1'-->
+        <!--where-->
+        <!--p.status = '1'-->
+        <!--and p.product_Id = #{productId}-->
+        <!--ORDER BY l.create_Time desc-->
+        <!--<if test="page != null and limit != null">-->
+            <!--LIMIT #{page},#{limit}-->
+        <!--</if>-->
+    <!--</select>-->
+
+    <!-- 查询已结束但未成团的团购产品 -->
+    <select id="selectNotCompleteGroupBuyProduct" resultMap="bizProductMap" parameterType="java.lang.String">
+        SELECT p.id,p.company_id,p.product_name,p.sales,p.product_Num,p.groupbuy_Num,p.beg_Time,p.end_Time,p.is_group_flag,p.bus_Status
+        from biz_product  p
+        INNER JOIN biz_product_classify pc on p.id=pc.product_id and pc.status='1'
+        where pc.bus_id =#{busId}
+        and p.is_group_flag='0'
+        and p.bus_Status='3'
+        and p.status='1'
+        and p.end_time &lt; now()
+    </select>
+
+    <!-- 根据订单id 查询产品信息-->
+    <select id="selectProductInfoBySubId" resultType="map" parameterType="java.lang.String">
+        SELECT sw.bus_id busId,IFNULL(p.bus_status,r.reserva_Status) busStatus,p.beg_Time begTime,p.end_Time endTime
+        from biz_subscribe_wo sw
+        INNER JOIN biz_sub_product sb on sw.id=sb.sub_id and sb.status='1'
+        left JOIN biz_product p on sb.product_id=p.id and p.status='1'
+        left join biz_reservation r on sb.product_id=r.id and r.status='1'
+        where sw.id=#{subId} and sw.status='1'
+    </select>
+
+
+    <!--查询商家信息-->
+    <select id="selectCompanyInfoById" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.app.vo.product.out.CompanyVo">
+        select
+        name,
+        address,
+        contact_tel contactTel,
+        summary,
+        qualific_img qualificImg,
+        is_invoice isInvoice
+        from
+        base_tenant
+        where
+        status= '1'
+        and enable_status = '1'
+        and id = #{id}
+    </select>
+
+    <update id="updateCouponStatusByProduct">
+        UPDATE biz_coupon c
+        set c.use_status = '4'
+        where c.id in
+        <foreach collection="couponIds" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+    <update id="updateResSalesNum">
+        update biz_reservation set sales=sales-#{subNum}
+        WHERE status = '1' AND id = #{productId}
+    </update>
+    <update id="updateSalesNum">
+        update biz_product set sales=sales-#{subNum}
+        WHERE status = '1' AND id = #{productId}
+    </update>
+
+    <select id="selectCouponIds"  resultType="java.lang.String">
+        SELECT c.id from biz_coupon c
+        INNER JOIN biz_coupon_product p on p.coupon_id = c.id and p.status = '1'
+        where c.status = '1' and NOW() > DATE_FORMAT(c.end_use_time,'%Y-%m-%d %H:%i') and c.use_status in ('1','2') and p.product_id in
+        <foreach collection="productList" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+    <select id="getUserBuyNumById" resultType="java.lang.Integer">
+        select IFNULL(sum(p.sub_num),0) from biz_sub_product p
+        INNER JOIN biz_subscribe_wo w on p.sub_Id=w.id and w.status = '1' and w.subscribe_status != '3' where
+        p.status = '1'and w.user_id =#{userId} and p.product_Id =#{id}
+    </select>
+    <select id="selectProductVoByWoId" resultType="com.github.wxiaoqi.security.app.vo.product.in.ProductVo">
+        select product_Id productId,sub_num subNum from biz_sub_product where sub_id = #{woId}
+    </select>
+    <select id="getBusNameByPid" resultType="string">
+        SELECT
+            bus.bus_Name
+        FROM
+            biz_product_classify pc
+        INNER JOIN biz_business bus ON pc.bus_id = bus.id
+        where pc.product_id = #{productId} limit 1
+    </select>
+</mapper>

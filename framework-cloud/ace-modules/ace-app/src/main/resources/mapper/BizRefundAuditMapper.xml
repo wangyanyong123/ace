@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizRefundAuditMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizRefundAudit" id="bizRefundAuditMap">
+        <result property="id" column="id"/>
+        <result property="subId" column="sub_id"/>
+        <result property="subCode" column="sub_code"/>
+        <result property="subTitle" column="sub_title"/>
+        <result property="subCreateTime" column="sub_create_time"/>
+        <result property="userId" column="user_id"/>
+        <result property="applyPrice" column="apply_price"/>
+        <result property="actualId" column="actual_id"/>
+        <result property="busType" column="bus_type"/>
+        <result property="applyType" column="apply_type"/>
+        <result property="applyId" column="apply_id"/>
+        <result property="companyId" column="company_Id"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+    <select id="getOutTradeNoBySubId" resultType="java.lang.String">
+        SELECT actual_Id outTradeNo
+        FROM biz_account_book
+        WHERE `status` = '1' AND pay_status = '2' AND (refund_status != '2' OR refund_status is NULL) AND sub_id = #{subId}
+        LIMIT 1
+    </select>
+
+    <select id="getRefundAuditList" parameterType="map" resultType="com.github.wxiaoqi.security.api.vo.order.out.RefundOrderAuditInfoVo">
+        SELECT bra.id
+        ,bsw.id subId
+        ,bsw.`code`
+        ,bs.title productName
+        ,CASE WHEN IFNULL(bacu.`name`, '')=''
+        THEN (CASE WHEN IFNULL(bacu.nickname,'')='' THEN bacu.mobile_phone ELSE bacu.nickname END)
+        ELSE bacu.`name` END AS userName
+        ,bacu.mobile_phone mobilePhone
+        ,bu.`name`
+        ,convert(bs.actual_cost,decimal(18,2)) cost
+        ,bs.delivery_addr deliveryAddr
+        ,IFNULL(DATE_FORMAT(bsw.create_Time,'%Y-%m-%d %H:%i:%s'),'') createTime
+        ,bra.audit_status auditStatus
+        from biz_refund_audit bra
+        LEFT JOIN base_user bu ON bra.company_Id = bu.tenant_id AND bu.`status` = '1'
+        LEFT JOIN biz_subscribe_wo bsw ON bsw.id = bra.sub_id AND bsw.`status` = '1'
+        LEFT JOIN base_app_client_user bacu ON bacu.id = bsw.user_id AND bacu.`status` = '1'
+        LEFT JOIN biz_subscribe bs ON bs.id = bra.sub_id AND bs.`status` = '1'
+        WHERE bra.`status` = '1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(bsw.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(bsw.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and bsw.project_id=#{projectId}
+        </if>
+        <if test="companyId != null and companyId!=''">
+            and bra.company_Id=#{companyId}
+        </if>
+        <if test="auditStat != null and auditStat !=''">
+            and bra.audit_status=#{auditStat}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (bsw.`code` LIKE CONCAT('%',#{searchVal},'%')
+            or bu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.nickname LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+        GROUP BY bra.id
+        order by bsw.create_time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="getRefundAuditListTotal" parameterType="map"  resultType="int">
+        SELECT  count(DISTINCT bra.id)
+        from biz_refund_audit bra
+        LEFT JOIN base_user bu ON bra.company_Id = bu.tenant_id AND bu.`status` = '1'
+        LEFT JOIN biz_subscribe_wo bsw ON bsw.id = bra.sub_id AND bsw.`status` = '1'
+        LEFT JOIN base_app_client_user bacu ON bacu.id = bsw.user_id AND bacu.`status` = '1'
+        LEFT JOIN biz_subscribe bs ON bs.id = bra.sub_id AND bs.`status` = '1'
+        WHERE bra.`status` = '1'
+        <if test="startDate != null and startDate!=''">
+            and DATE_FORMAT(bsw.create_time,'%Y-%m-%d')&gt;=#{startDate}
+        </if>
+        <if test="endDate != null and endDate!='' " >
+            and DATE_FORMAT(bsw.create_time,'%Y-%m-%d')&lt;=#{endDate}
+        </if>
+        <if test="projectId != null and projectId!=''">
+            and bsw.project_id=#{projectId}
+        </if>
+        <if test="companyId != null and companyId!=''">
+            and bra.company_Id=#{companyId}
+        </if>
+        <if test="auditStat != null and auditStat !=''">
+            and bra.audit_status=#{auditStat}
+        </if>
+        <if test="searchVal != null and searchVal!=''">
+            and (bsw.`code` LIKE CONCAT('%',#{searchVal},'%')
+            or bu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.`name` LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.nickname LIKE CONCAT('%',#{searchVal},'%')
+            or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+        </if>
+    </select>
+
+    <select id="viewReason" resultType="java.lang.String">
+        SELECT bab.refund_fail_reason
+        from biz_refund_audit bra
+        LEFT JOIN biz_account_book bab ON bab.sub_id = bra.sub_id AND bab.`status` = '1'
+        WHERE bra.`status` = '1' AND bra.id = #{auditId}
+    </select>
+
+
+    <sql id="RefundAuditListWhereCase">
+        <where>
+            <if test="companyId != null and companyId !=''">
+                and bra.company_id = #{companyId}
+            </if>
+
+            <if test="auditStat != null and auditStat !=''">
+                and bra.audit_status = #{auditStat}
+            </if>
+
+            <if test="projectId != null and projectId !=''">
+                and bra.project_id = #{projectId}
+            </if>
+            <if test="startTime != null">
+                and DATE_FORMAT(bra.create_time,'%Y-%m-%d') >= #{startTime}
+            </if>
+
+            <if test="endTime != null">
+                and DATE_FORMAT(bra.create_time,'%Y-%m-%d') <![CDATA[ < ]]> #{endTime}
+            </if>
+            <if test="searchVal != null and searchVal!=''">
+                and (bra.`sub_code` LIKE CONCAT('%',#{searchVal},'%')
+                or bacu.`name` LIKE CONCAT('%',#{searchVal},'%')
+                or bacu.nickname LIKE CONCAT('%',#{searchVal},'%')
+                or bacu.mobile_phone LIKE CONCAT('%',#{searchVal},'%'))
+            </if>
+            and bra.status = '1'
+        </where>
+    </sql>
+    <select id="selectRefundAuditList"
+            resultType="com.github.wxiaoqi.security.api.vo.order.out.RefundOrderAuditInfoVo">
+        SELECT
+        bra.id,
+        bra.bus_type busType,
+        bra.sub_id subId,
+        bra.sub_code code,
+        bra.sub_title productName,
+        bra.sub_create_time createTime,
+        bra.user_id userId,
+        bacu.name userName,
+        bacu.nickname,
+        bacu.mobile_phone mobilePhone,
+        bra.apply_price cost,
+        bra.actual_id actualId,
+        bra.audit_status auditStatus,
+        bt.`name`
+        FROM
+            biz_refund_audit bra
+        left JOIN base_app_client_user bacu on bra.user_id = bacu.id
+        LEFT JOIN base_tenant bt on bra.company_Id = bt.id
+        <include refid="RefundAuditListWhereCase"/>
+        order by bra.create_time desc
+        <if test="start != null and limit > 0">
+            limit #{start},#{limit}
+        </if>
+    </select>
+    <select id="countRefundAuditList"
+            resultType="int">
+        SELECT
+            count(1)
+        FROM
+        biz_refund_audit bra
+        left JOIN base_app_client_user bacu on bra.user_id = bacu.id
+        <include refid="RefundAuditListWhereCase"/>
+    </select>
+
+    <select id="selectValidRefundAuditListBySubId" resultMap="bizRefundAuditMap">
+        select
+            `id`, `sub_id`, `sub_code`, `sub_title`, `sub_create_time`, `user_id`,
+            `apply_price`, `actual_id`, `bus_type`, `apply_type`, `apply_id`,
+            `company_Id`, `audit_status`
+         from biz_refund_audit
+         where sub_id = #{subId} and audit_status != '4' and status = '1'
+    </select>
+
+    <select id="getValidApplyPrice" resultType="BigDecimal">
+        select
+            ifnull(sum(ifnull(apply_price, 0)),0)
+        from biz_refund_audit where actual_id =#{actualId}
+          and audit_status != '4' and status = '1'
+    </select>
+
+</mapper>

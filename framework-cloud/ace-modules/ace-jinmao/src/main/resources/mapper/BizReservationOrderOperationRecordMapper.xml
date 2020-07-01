@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizReservationOrderOperationRecordMapper">
+
+    <select id="queryReservationOrderOperationRecord"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.reservation.order.out.ReservationOrderOperationRecord">
+        SELECT
+            record.order_id orderId,
+            record.step_status stepStatus,
+            record.curr_step currStep,
+            record.description,
+            record.create_time createTime
+        FROM
+            biz_reservation_order_operation_record record
+        INNER JOIN biz_reservation_order o ON o.id = record.order_id
+        AND o.`status` = '1'
+        WHERE
+             record. STATUS = '1'
+             AND  o.id = #{orderId}
+        ORDER BY
+            record.create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizCrmProjectMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizCrmProject" id="bizCrmProjectMap">
+        <result property="projectId" column="project_id"/>
+        <result property="projectCode" column="project_code"/>
+        <result property="projectName" column="project_name"/>
+        <result property="cityId" column="city_id"/>
+        <result property="cityCode" column="city_code"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="projectStage" column="project_stage"/>
+        <result property="businessUnitName" column="business_unit_name"/>
+        <result property="owningBusinessUnit" column="owning_business_unit"/>
+        <result property="beginDate" column="begin_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="modifiedOn" column="modified_on"/>
+    </resultMap>
+
+    <!-- 查询项目列表-->
+    <select id="selectProjectName" resultType="com.github.wxiaoqi.security.jinmao.vo.ResultProjectVo.ProjectListVo">
+        SELECT
+        project_id id,
+        project_name projectName
+        FROM biz_crm_project
+        where
+        status = '1'
+    </select>
+    <select id="selectProjectById" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.ProjectInfoVo">
+        SELECT
+            p.project_id projectId,
+            p.project_name projectName
+        FROM biz_crm_project p
+        WHERE
+        p.status = '1'
+        AND
+        p.project_id = #{projectId}
+    </select>
+
+    <select id="selectProjectTreeList" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.ProjectTreeVo">
+       SELECT id,parentId,name,flag FROM (
+   <!-- (SELECT
+        c.city_id id,
+        '-1' parentId,
+        c.name name,
+        '1' flag,
+        c.city_code+0 num
+    FROM
+        biz_crm_city c
+    WHERE
+        c.status = '1'
+    AND  city_id &lt;&gt; '0'
+    ORDER BY num asc,name asc)
+    UNION-->
+    (SELECT
+        p.project_id id,
+        '-1' parentId,
+        p.project_name name,
+        '2' flag,
+        p.project_code+0 num
+    FROM biz_crm_project p
+    LEFT JOIN biz_crm_city c on p.city_id = c.city_id AND c.status = '1'
+    WHERE p.status = '1'  and p.project_name &lt;&gt; '' and p.project_id = #{projectId}
+    ORDER BY num asc,name asc)
+    UNION
+    (SELECT
+        b.block_id id,
+        b.project_id parentId,
+        b.name name,
+        '3' flag,
+        b.block_code+0 num
+    FROM biz_crm_block b
+    LEFT JOIN biz_crm_project p on b.project_id = p.project_id AND p.status = '1'
+    LEFT JOIN biz_crm_city c ON c.city_id = p.city_id AND c.status = '1'
+    WHERE b.status = '1'  and b.name &lt;&gt; '' AND b.property_type = 'House'
+    order by block_num + 0 ASC ,name asc)
+    UNION
+    (SELECT
+        b.housing_resources_id id,
+        b.block_id parentId,
+        b.sale_building_name name,
+        '4' flag,
+        b.building_num+0 num
+     FROM biz_crm_building b
+    LEFT JOIN biz_crm_block bb on b.block_id = bb.block_id AND bb.status = '1'
+    LEFT JOIN biz_crm_project p on bb.project_id = p.project_id AND p.status = '1'
+    LEFT JOIN biz_crm_city c ON c.city_id = p.city_id AND c.status = '1'
+    WHERE b.status = '1'  and b.sale_building_name &lt;&gt; ''
+    ORDER BY b.building_num + 0 ASC ,b.record_building_name asc
+    )
+    UNION
+    (SELECT
+        u.unit_id id,
+        u.building_id parentId,
+        u.name name,
+        '5' flag,
+        u.unit_code+0 num
+        FROM biz_crm_unit u
+    LEFT JOIN biz_crm_building b on u.building_id = b.housing_resources_id AND b.status = '1'
+    LEFT JOIN biz_crm_block bb on b.block_id = bb.block_id AND bb.status = '1'
+    LEFT JOIN biz_crm_project p on bb.project_id = p.project_id AND p.status = '1'
+    LEFT JOIN biz_crm_city c ON c.city_id = p.city_id AND c.status = '1'
+    WHERE u.status = '1'  and u.name &lt;&gt; '' AND u.property_type = 'House'
+    ORDER BY unit_num + 0 ASC ,name asc
+    )
+    )A
+    ORDER BY  A.flag,A.num,A.name asc
+    </select>
+    <!--根据围合ID查询选择单元-->
+    <select id="selectChosenUnitByEnclosedId" resultType="com.github.wxiaoqi.security.jinmao.vo.enclosed.out.UnitInfoVo">
+        SELECT
+            u.unit_id unitId,
+            u.name,
+            u.enclosed_id enclosedId
+        FROM biz_crm_unit u
+        LEFT JOIN biz_crm_building b ON u.building_id = b.housing_resources_id AND b.status = '1'
+        LEFT JOIN biz_crm_block bb on b.block_id = bb.block_id AND bb.status = '1'
+        LEFT JOIN biz_crm_project p ON bb.project_id = p.project_id AND p.status = '1'
+        WHERE
+            u.status = '1'
+        AND
+            u.enclosed_id = #{enclosedId}
+        ORDER BY unit_num + 0 ASC
+    </select>
+</mapper>

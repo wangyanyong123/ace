@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BaseAppClientUserMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BaseAppClientUser" id="baseAppClientUserMap">
+        <result property="id" column="id"/>
+        <result property="mobilePhone" column="mobile_phone"/>
+        <result property="password" column="password"/>
+        <result property="profilePhoto" column="profile_photo"/>
+        <result property="nickname" column="nickname"/>
+        <result property="name" column="name"/>
+        <result property="birthday" column="birthday"/>
+        <result property="email" column="email"/>
+        <result property="sex" column="sex"/>
+        <result property="type" column="type"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="isAuth" column="is_auth"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="status" column="status"/>
+        <result property="crtTime" column="crt_time"/>
+        <result property="updTime" column="upd_time"/>
+        <result property="crmUserId" column="crm_user_id"/>
+        <result property="isSignService" column="is_sign_service"/>
+        <result property="registOs" column="regist_os"/>
+        <result property="memberId" column="memberId"/>
+    </resultMap>
+
+    <select id="getUserNameById" resultType="com.github.wxiaoqi.security.app.vo.clientuser.out.UserVo">
+        SELECT id
+                ,CASE WHEN IFNULL(`name`, '')='' THEN (CASE WHEN IFNULL(nickname,'')='' THEN mobile_phone ELSE nickname END) ELSE `name` END AS name
+                ,mobile_Phone mobilePhone
+        FROM base_app_client_user
+        WHERE id = #{userId}
+    </select>
+
+
+    <select id="selectUserIntegralById" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select
+        credits_value creditsValue
+        from
+        base_app_client_user
+        WHERE id = #{userId}
+    </select>
+
+    <select id="getUserNameByTelOrName" resultType="com.github.wxiaoqi.security.app.vo.clientuser.out.UserVo">
+        SELECT id
+                ,CASE WHEN IFNULL(`name`, '')='' THEN (CASE WHEN IFNULL(nickname,'')='' THEN mobile_phone ELSE nickname END) ELSE `name` END AS name
+                ,mobile_Phone mobilePhone
+        FROM base_app_client_user
+        WHERE mobile_phone = #{tel} or name=#{name}
+    </select>
+</mapper>

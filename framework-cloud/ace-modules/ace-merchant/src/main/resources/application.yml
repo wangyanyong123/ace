@@ -1,0 +1,27 @@
+spring:
+    profiles:
+      active: localhost
+    application:
+        name: ace-merchant
+
+# 配置swagger
+swagger:
+    enabled: true
+    base-package: com.github.wxiaoqi.security.merchant
+    title: ace-merchant
+    version: 1.0.0.SNAPSHOT
+    description: 金茂商户端接口
+    contact:
+        name: admin
+
+
+logging:
+    level:
+#        tk.mybatis: DEBUG
+        com.github.wxiaoqi.security.app: DEBUG
+    file: /mnt/logs/ace-merchant.log
+    file.max-size: 10MB
+    file.max-history : 365
+    pattern:
+      file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+      console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

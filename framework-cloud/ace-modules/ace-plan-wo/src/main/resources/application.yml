@@ -1,0 +1,26 @@
+spring:
+    application:
+        name: ace-plan-wo
+    profiles:
+      active: localhost
+
+# 配置swagger
+swagger:
+    enabled: true
+    base-package: com.github.wxiaoqi.security.plan
+    title: ace-plan-wo
+    version: 1.0.0.SNAPSHOT
+    description: 计划工单
+    contact:
+        name: admin
+
+logging:
+    level:
+#        tk.mybatis: DEBUG
+        com.github.wxiaoqi.security.plan: DEBUG
+    file: /mnt/logs/ace-plan-wo.log
+    file.max-size: 10MB
+    file.max-history : 365
+    pattern:
+      file: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'
+      console: '[%date{yyyy-MM-dd HH:mm:ss.SSS}] %X{logthreadId} %-5level %logger{80} %line - %msg%n'

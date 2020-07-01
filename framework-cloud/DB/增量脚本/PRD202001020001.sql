@@ -1,0 +1,1 @@
+INSERT INTO sys_module SET ID='1cd4711b524341ff8fd0516448c75fd6', pid='4CBAEA0F5D754CACBD7AFD03726A7A5E', `code`='M0511', system='1', `name`='服务协议', show_type='1', module_type='5', time_Stamp=NOW(), create_By='admin';

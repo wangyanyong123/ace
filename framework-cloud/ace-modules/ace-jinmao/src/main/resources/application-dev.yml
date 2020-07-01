@@ -1,0 +1,11 @@
+apollo:
+    meta: http://172.16.240.249:64101
+    bootstrap:
+        enabled : true
+        namespaces : ace-spring,ace-cloud,ace-mybatis,ace-rabbitmq,ace-jinmao
+
+
+vrobot:
+    sync:
+        userInfo:
+            url: http://120.78.132.239:8765/api/admin/sync/userInfo

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizBrainpowerQuestionMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizBrainpowerQuestion" id="bizBrainpowerQuestionMap">
+        <result property="id" column="id"/>
+        <result property="functionId" column="function_id"/>
+        <result property="question" column="question"/>
+        <result property="jumpLink" column="jump_link"/>
+        <result property="describe" column="describe"/>
+        <result property="picture" column="picture"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="solveNumber" column="solve_number"/>
+        <result property="unsolveNumber" column="unsolve_number"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询问题库列表-->
+    <select id="selectQuestionList" resultType="com.github.wxiaoqi.security.api.vo.brainpower.out.QuestionVo">
+        select
+        q.id,
+        question,
+        classify,
+        answer,
+        f.function_point functionPoint,
+        DATE_FORMAT(q.create_Time,'%Y-%m-%d %H:%i') createTime,
+        q.enable_status enableStatus,
+        IFNULL(solve_number,0) solveNumber,
+        IFNULL(unsolve_number,0) unsolveNumber
+        from
+        biz_brainpower_question q
+        INNER JOIN biz_brainpower_function f on q.function_id=f.id and f.status = '1'
+        INNER JOIN biz_question_classify c on c.question_id=q.id and c.status = '1'
+        where
+        q.status = '1'
+        and f.enable_status = '2'
+        <if test="functionId != null and functionId != '' ">
+            and q.function_id = #{functionId}
+        </if>
+        <if test="enableStatus != 0">
+            and q.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            question LIKE CONCAT('%',#{searchVal},'%')
+            OR classify LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        <if test="status == 0">
+            ORDER BY q.create_Time DESC
+        </if>
+        <if test="status == 1">
+            ORDER BY solve_number+0
+        </if>
+        <if test="status == 2">
+            ORDER BY solve_number+0 DESC
+        </if>
+        <if test="status == 3">
+            ORDER BY unsolve_number+0
+        </if>
+        <if test="status == 4">
+            ORDER BY unsolve_number+0 DESC
+        </if>
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+
+    <select id="selectQuestionCount" resultType="java.lang.Integer">
+        select
+        count(q.id)
+        from
+        biz_brainpower_question q
+        INNER JOIN biz_brainpower_function f on q.function_id=f.id and f.status = '1'
+        INNER JOIN biz_question_classify c on c.question_id=q.id and c.status = '1'
+        where
+        q.status = '1'
+        and f.enable_status = '2'
+        <if test="functionId != null and functionId != '' ">
+            and q.function_id = #{functionId}
+        </if>
+        <if test="enableStatus != 0">
+            and q.enable_status = #{enableStatus}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            question LIKE CONCAT('%',#{searchVal},'%')
+            OR classify LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        ORDER BY q.create_Time DESC
+    </select>
+
+    <!--查询问题详情-->
+    <select id="selectQuestionInfo" parameterType="java.lang.String"
+            resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.QuestionInfo">
+        select
+        q.id,
+        question,
+        classify,
+        q.function_id functionId,
+        f.function_point functionPoint,
+        q.jump_code jumpCode,
+        q.jump_link jumpLink,
+        answer,
+        q.enable_status enableStatus,
+        q.picture
+        from
+        biz_brainpower_question q
+        INNER JOIN biz_brainpower_function f on q.function_id=f.id and f.status = '1'
+        INNER JOIN biz_question_classify c on c.question_id=q.id and c.status = '1'
+        where
+        q.status = '1'
+        and q.id = #{id}
+    </select>
+
+
+    <update id="delClassifyStatus">
+        UPDATE biz_question_classify
+        SET   status = '0',
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND question_id = #{questionId}
+    </update>
+
+
+    <select id="selectFunctionVo" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.FunctionVo">
+        select
+        id,
+        description,
+        function_point functionPoint,
+        enable_status enableStatus,
+        is_show isShow,
+        DATE_FORMAT(create_Time,'%Y-%m-%d %H:%i') createTime
+        from
+        biz_brainpower_function
+        where
+        status = '1'
+        and enable_status = '2'
+        ORDER BY create_Time DESC
+    </select>
+
+    <!--发布与撤回-->
+    <update id="updatequestionStatus">
+        UPDATE biz_brainpower_question
+        SET   <if test="status != null and status != ''">
+                 enable_status = #{status},
+              </if>
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+    <select id="selectClassifyList" resultType="com.github.wxiaoqi.security.jinmao.vo.brainpower.out.ClassifyVo">
+        select DISTINCT(classify) value from biz_question_classify
+    </select>
+
+
+
+</mapper>

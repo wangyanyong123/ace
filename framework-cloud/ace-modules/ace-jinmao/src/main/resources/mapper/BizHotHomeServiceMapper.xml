@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizHotHomeServiceMapper">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizHotHomeService" id="bizHotHomeServiceMap">
+        <result property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="imgUrl" column="img_url"/>
+        <result property="position" column="position"/>
+        <result property="sortNum" column="sort_num"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="busId" column="bus_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyBy" column="modify_by"/>
+        <result property="modifyTime" column="modify_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <sql id="SearchWhereCase">
+        <where>
+            <if test="tenantId != null and  tenantId !=''">
+                and hhs.tenant_id = #{tenantId}
+            </if>
+            <if test="title != null and title != ''">
+                and title = #{title}
+            </if>
+            <if test="projectId != null and projectId != ''">
+                and exists (
+                select id from biz_hot_home_service_project hhsp
+                where hhsp.hot_home_service_id = hhs.id and hhsp.status ='1'
+                and hhsp.project_id = #{projectId}
+                )
+            </if>
+            and hhs.status = '1'
+            order by hhs.sort_num desc,hhs.create_time desc
+        </where>
+    </sql>
+
+    <select id="searchCount" resultType="int">
+        select
+           count(id)
+        from biz_hot_home_service hhs
+        <include refid="SearchWhereCase"/>
+    </select>
+
+    <select id="searchResult" resultMap="bizHotHomeServiceMap">
+        select
+            hhs.id,hhs.title,hhs.position,hhs.sort_num
+        from biz_hot_home_service hhs
+        <include refid="SearchWhereCase"/>
+        <if test="start != null">
+            limit #{start},#{limit}
+        </if>
+    </select>
+
+    <select id="existByBusId" resultType="boolean">
+        select count(id) from biz_hot_home_service where bus_id = #{busId} and status = '1' limit 1
+    </select>
+
+    <resultMap id="InfoResultMap"
+               type="com.github.wxiaoqi.security.jinmao.vo.hhser.out.HotHomeServiceInfoResult"
+                extends="bizHotHomeServiceMap">
+        <result column="bus_name" property="busName"/>
+        <collection property="projectList" ofType="com.github.wxiaoqi.security.jinmao.vo.common.ObjectIdAndName">
+            <result column="project_id" property="id"/>
+            <result column="project_name" property="name"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectInfoById" resultMap="InfoResultMap">
+        SELECT
+            hhs.id ,hhs.title,hhs.img_url,hhs.position,hhs.sort_num,hhs.tenant_id,hhs.bus_id,bus.`name` bus_name,
+             hhsp.project_id,p.project_name
+        FROM
+            biz_hot_home_service hhs
+        INNER JOIN biz_hot_home_service_project hhsp ON hhs.id = hhsp.hot_home_service_id
+        LEFT JOIN biz_reservation bus on bus.id = hhs.bus_id
+        LEFT JOIN biz_crm_project p on hhsp.project_id = p.project_id
+        where hhs.id = #{id} and hhs.status ='1' and hhsp.status = '1'
+    </select>
+
+    <select id="selectProjectList" resultType="com.github.wxiaoqi.security.jinmao.vo.common.ObjectIdAndName">
+        select
+        DISTINCT(p.project_id) id,
+        p.project_name name
+        from
+        biz_crm_project p
+        <if test="busId != null and busId != ''">
+            INNER JOIN biz_product_project pp on pp.project_id=p.project_id and pp.status = '1'
+            and pp.product_id = #{busId}
+        </if>
+        where p.status = '1'
+    </select>
+</mapper>

@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.jinmao.mapper.BizCommunityTopicMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.jinmao.entity.BizCommunityTopic" id="bizCommunityTopicMap">
+        <result property="id" column="Id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="postImage" column="post_image"/>
+        <result property="showType" column="show_type"/>
+        <result property="isTop" column="is_top"/>
+        <result property="upNum" column="up_num"/>
+        <result property="status" column="status"/>
+        <result property="timeStamp" column="time_Stamp"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+
+
+    <!--查询社区话题列表-->
+    <select id="selectCommunityTopicList" resultType="com.github.wxiaoqi.security.jinmao.vo.communityTopic.out.CommunityTopicVo">
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        IFNULL(u.nickname,u.`name`) userName,
+        title,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        t.show_type showType,
+        t.is_top isTop
+        from
+        biz_community_topic t
+        INNER JOIN biz_community_topic_project p on t.id=p.community_topic_id and p.status = '1'
+        left JOIN base_app_client_user u ON t.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where t.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and t.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and t.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(t.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(t.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND (
+            title LIKE CONCAT('%',#{searchVal},'%')
+            OR u.name LIKE CONCAT('%',#{searchVal},'%')
+            OR u.nickname LIKE CONCAT('%',#{searchVal},'%')
+            )
+        </if>
+        order by t.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <select id="selectNewCommunityTopicList" resultType="com.github.wxiaoqi.security.jinmao.vo.communityTopic.out.CommunityTopicVo">
+        select
+        DISTINCT(t.id),
+        t.user_id userId,
+        title,
+        DATE_FORMAT(t.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        t.show_type showType,
+        t.is_top isTop
+        from
+        biz_community_topic t
+        INNER JOIN biz_community_topic_project p on t.id=p.community_topic_id and p.status = '1'
+        where t.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and t.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and t.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(t.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(t.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND title LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+        order by t.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+    </select>
+
+    <!--查询社区话题列表数量-->
+    <select id="selectCommunityTopicCount" resultType="java.lang.Integer">
+        select
+        COUNT(DISTINCT(t.id))
+        from
+        biz_community_topic t
+        INNER JOIN biz_community_topic_project p on t.id=p.community_topic_id and p.status = '1'
+        where t.status = '1'
+        <if test="projectId != null and projectId != '' ">
+            and p.project_id = #{projectId}
+        </if>
+        <if test="showType != null and showType != '' ">
+            and t.show_type = #{showType}
+        </if>
+        <if test="isTop != null and isTop != '' ">
+            and t.is_top = #{isTop}
+        </if>
+        <if test="startTime != null and startTime != '' ">
+            AND DATE_FORMAT(t.create_Time,'%Y-%m-%d') &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != '' ">
+            and DATE_FORMAT(t.create_Time,'%Y-%m-%d') &lt;= #{endTime}
+        </if>
+        <if test="searchVal != null and searchVal != '' ">
+            AND title LIKE CONCAT('%',#{searchVal},'%')
+        </if>
+    </select>
+
+    <!--查询社区话题详情-->
+    <select id="selectCommunityTopicInfo" parameterType="java.lang.String"
+        resultType="com.github.wxiaoqi.security.jinmao.vo.communityTopic.out.CommunityTopicInfo">
+        select
+        id,
+        title,
+        content,
+        post_image postImage
+        from
+        biz_community_topic
+        where
+        status = '1'
+        and id = #{id}
+    </select>
+
+    <select id="selectUserNameByUserId" parameterType="java.lang.String" resultType="java.lang.String">
+        select name from base_user where id = #{userId}
+    </select>
+
+    <!--社区话题操作置顶,隐藏-->
+    <update id="updateCommunityTopicStatusById">
+        UPDATE biz_community_topic
+        SET
+        <if test="status == 0">
+            show_type = '0',
+        </if>
+        <if test="status == 1">
+            show_type = '1',
+        </if>
+        <if test="status == 3">
+            is_top = '1',
+        </if>
+        <if test="status == 4">
+            is_top = '0',
+        </if>
+
+        modify_Time = NOW(),
+        modify_By = #{userId}
+        where
+        status = 1
+        AND id = #{id}
+    </update>
+
+
+
+    <!--查询评论列表-->
+    <select id="selectComunityTopicCommentList" resultType="com.github.wxiaoqi.security.jinmao.vo.fosts.out.CommentVo">
+        select * from (
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '一级' type,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        '4' sort2
+        from
+        biz_comment c
+        left JOIN base_app_client_user u on c.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid = '-1'
+        and c.object_id = #{objectId}
+        ORDER BY c.create_Time desc
+        <if test="page != null and limit != null">
+            LIMIT #{page},#{limit}
+        </if>
+        )
+        UNION
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '二级' type,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort2
+        from
+        biz_comment c
+        INNER JOIN biz_comment p on c.pid=p.id
+        left JOIN base_app_client_user u on c.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid != ''
+        and c.pid != '-1'
+        and c.object_id = #{objectId}
+        ORDER BY pid,c.create_Time desc
+        ) )A
+        ORDER BY A.sort desc,sort2 desc
+    </select>
+
+    <!--查询评论列表数量-->
+    <select id="selectComunityTopicCommentCount" resultType="java.lang.Integer">
+        select count(*) from (
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '一级' type,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        '4' sort2
+        from
+        biz_comment c
+        left JOIN base_app_client_user u on c.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid = '-1'
+        and c.object_id = #{objectId}
+        ORDER BY c.create_Time desc
+        )
+        UNION
+        (select
+        c.id,
+        c.pid,
+        c.content,
+        IFNULL(u.nickname,u.`name`) nickName,
+        u.mobile_phone mobilePhone,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') createTime,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') time,
+        CASE c.show_type WHEN '1' THEN '已显示'
+        WHEN '0' THEN '已隐藏'
+        END AS showType,
+        '二级' type,
+        DATE_FORMAT(p.create_Time,'%Y-%m-%d %H:%i:%s') sort,
+        DATE_FORMAT(c.create_Time,'%Y-%m-%d %H:%i:%s') sort2
+        from
+        biz_comment c
+        INNER JOIN biz_comment p on c.pid=p.id
+        left JOIN base_app_client_user u on c.user_id=u.id and u.is_deleted = '1' and u.status = '1'
+        where
+        c.status = '1'
+        and c.pid != ''
+        and c.pid != '-1'
+        and c.object_id = #{objectId}
+        ORDER BY pid,c.create_Time desc
+        ) )A
+        ORDER BY A.sort desc,sort2 desc
+    </select>
+
+
+</mapper>

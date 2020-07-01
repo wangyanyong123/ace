@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.wxiaoqi.code.mapper.CodeUtilMapper">
+    <select id="getCode" statementType="CALLABLE">
+		<![CDATA[
+    		{call USP_GetCode (#{result,mode=OUT,jdbcType=VARCHAR},#{searchKey,mode=IN,jdbcType=VARCHAR},#{prefixCode,mode=IN,jdbcType=VARCHAR},#{codeSize,mode=IN,jdbcType=VARCHAR},#{sequenceType,mode=IN,jdbcType=VARCHAR})}
+		]]>
+	</select>
+</mapper>

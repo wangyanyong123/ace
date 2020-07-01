@@ -1,0 +1,14 @@
+package ${package}.mapper;
+
+import ${package}.entity.${className};
+import com.github.wxiaoqi.security.common.mapper.CommonMapper;
+
+/**
+ * ${comments}
+ * 
+ * @author ${author}
+ * @Date ${datetime}
+ */
+public interface ${className}Mapper extends CommonMapper<${className}> {
+	
+}

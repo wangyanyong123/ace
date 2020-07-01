@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizProductGoodtoVisitMapper">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="com.github.wxiaoqi.security.app.entity.BizProductGoodtoVisit" id="bizProductGoodtoVisitMap">
+        <result property="id" column="id"/>
+        <result property="productId" column="product_id"/>
+        <result property="title" column="title"/>
+        <result property="subHeading" column="sub_heading"/>
+        <result property="content" column="content"/>
+        <result property="recommendImages" column="recommend_images"/>
+        <result property="signer" column="signer"/>
+        <result property="signerLogo" column="signer_logo"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="enableStatus" column="enable_status"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_By"/>
+        <result property="createTime" column="create_Time"/>
+        <result property="modifyBy" column="modify_By"/>
+        <result property="modifyTime" column="modify_Time"/>
+    </resultMap>
+    <!--查询好物探访商品列表-->
+    <select id="getGoodVisitList" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.GoodVisitVo">
+       SELECT
+		    distinct (gv.id) id,
+			gv.product_id productId,
+			gv.signer,
+			gv.signer_logo singerLogo,
+			gv.title,
+			gv.sub_heading subHeading,
+			gv.recommend_images recommendImages
+		FROM biz_product_goodto_visit gv
+		inner JOIN biz_product_project p on p.product_id = gv.product_id AND p.status = '1'
+		INNER JOIN biz_product pp ON pp.ID = gv.product_id AND pp.status = '1' AND pp.bus_Status = '3'
+		where
+			gv.status = '1' and gv.enable_status = '2'
+		AND
+			p.project_id = #{projectId}
+		ORDER BY gv.create_Time DESC
+		<if test="page != null and limit != null">
+			LIMIT #{page},#{limit}
+		</if>
+    </select>
+	<!--查询好物详情用户头像和浏览量-->
+	<select id="selectGoodVisitUserPhoto" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.GoodVisitUserPhoto">
+		SELECT
+		u.id userId,
+		u.profile_photo profilePhoto
+		FROM base_app_client_user u
+		INNER JOIN biz_content_reader_detail rd on rd.user_id = u.id AND rd.status = '1'
+		WHERE
+		u.status = '1'
+		AND
+		rd.content_id = #{id}
+		ORDER BY rd.modify_time DESC
+		LIMIT 3
+	</select>
+    <!--查询好物探访详情-->
+    <select id="getGoodVisitDetails" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.GoodVisitDetailsVo">
+        SELECT
+			gv.id id,
+			gv.product_id productId,
+			gv.title,
+			gv.sub_heading subHeading,
+			gv.content,
+			gv.signer,
+			gv.signer_logo signerLogo
+		FROM biz_product_goodto_visit gv
+		WHERE
+       	 	gv.status = '1'
+        AND
+     	   	gv.id = #{id}
+    </select>
+    <!--查询好物探访商品简介-->
+    <select id="getProductInfo" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.ProductInfoVo">
+        SELECT
+			p.id id,
+			p.product_name productName,
+			ps.price productPrice,
+			p.product_image productImage,
+			ps.unit unit
+		FROM biz_product p
+		INNER JOIN biz_product_spec ps on ps.product_id = p.id and ps.status = '1' AND ps.sort ='1'
+		WHERE
+			p.status = '1'
+		AND
+     		p.id = #{productId}
+    </select>
+
+	<!--<select id="selectContentByProductId" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.ContentAndUser">-->
+		<!--SELECT-->
+		<!--gv.id content_id,-->
+		<!--cr.user_id-->
+		<!--FROM biz_content_reader_detail cr-->
+		<!--INNER JOIN biz_product_goodto_visit gv on cr.content_id = gv.id and gv.status = '1'-->
+		<!--WHERE-->
+			<!--cr.status = '1'-->
+		<!--AND-->
+			<!--gv.product_id = #{productId}-->
+	<!--</select>-->
+
+	<!--<select id="selectUserAndContent" resultType="com.github.wxiaoqi.security.app.vo.goodvisit.out.ContentAndUser">-->
+		<!--SELECT-->
+			<!--rd.content_id contentId,-->
+			<!--rd.user_id userId,-->
+		<!--FROM biz_content_reader_detail rd-->
+		<!--INNER JOIN biz_content_reader cr on cr.content_id = rd.content_id AND cr.status = '1'-->
+		<!--INNER JOIN base_app_client_user u on u.id = rd.user_id AND u.status = '1'-->
+		<!--WHERE-->
+			<!--rd.status = '1'-->
+
+	<!--</select>-->
+</mapper>

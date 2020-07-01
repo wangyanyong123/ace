@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.wxiaoqi.security.app.mapper.BizPnsCallMapper">
+
+    <update id="updateByBindId">
+        UPDATE biz_pns_call BPC SET BPC.binding_flag = #{bindingFlag} , BPC.delete_time = NOW() WHERE BPC.bind_id = #{bindId}
+    </update>
+
+    <select id="getCompanyTel" resultType="String">
+        SELECT
+            u.mobile_phone
+        FROM
+            biz_subscribe_wo sw
+        INNER JOIN base_app_server_user u ON u.tenant_id = sw.company_Id AND  u.`status` = 1 AND u.enable_status = 1
+        WHERE
+            sw.id = #{id}
+        ORDER BY
+        u.create_Time DESC
+        LIMIT 0,1
+    </select>
+
+    <select id="getNewCompanyTel" resultType="String">
+        SELECT
+            u.mobile_phone
+        FROM
+            biz_reservation_order o
+        INNER JOIN base_app_server_user u ON o.tenant_id = u.tenant_id
+        AND u.`status` = 1
+        AND u.enable_status = 1
+        WHERE
+            o.id = #{id}
+        ORDER BY
+            u.create_Time DESC
+        LIMIT 0,1
+    </select>
+
+</mapper>
